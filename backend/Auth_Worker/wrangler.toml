@@ -3,29 +3,30 @@ main = "src/index.js"
 compatibility_date = "2025-11-15"
 compatibility_flags = ["nodejs_compat"]
 
-#[vars]
-#JWT_SECRET = "__REPLACE_WITH_SECRET__"
-#JWT_EXPIRES_IN = "3600" # seconds
-
-
-
+# Do not store private keys in vars for production. Use `wrangler secret put`.
 [vars]
-# Do not store keys here in production. Use `wrangler secret put PRIVATE_KEY` and `wrangler secret put PUBLIC_KEY`.
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+# Example (commented out)
+# PEPPER = "replace-me-locally"
 
-[bindings]
-# Example bindings — set these in your environment
-# D1 database binding
+# D1 database binding (top-level)
 [[d1_databases]]
 binding = "AUTH_DB"
 database_name = "auth_db"
 database_id = "20277c6e-3e08-46be-a7bb-4487517629a3"
 
-# KV namespace binding
+# KV namespace (uncomment & set id if using)
 # [[kv_namespaces]]
-# binding = "AUTH_KV"
-# id = "your-kv-id"
+# binding = "RATE_LIMIT_KV"
+# id = "your-kv-namespace-id"
 
-# R2 bucket for logs
+# R2 (not used per your request)
 # [[r2_buckets]]
 # binding = "LOGS_BUCKET"
 # bucket_name = "ecom-auth-logs"
+
+
+
+
+

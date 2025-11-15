@@ -1,14 +1,14 @@
 import Joi from 'joi'
 
 const signupSchema = Joi.object({
-  email: Joi.string().email().required(),
-  password: Joi.string().min(10).max(128).required(),
-  name: Joi.string().min(1).max(100).optional()
+  name: Joi.string().min(1).max(100).required(),
+  email: Joi.string().email({ tlds: { allow: false } }).required(),
+  password: Joi.string().min(8).max(128).required(),    
 })
 
 const loginSchema = Joi.object({
-  email: Joi.string().email().required(),
-  password: Joi.string().required()
+  email: Joi.string().email({ tlds: { allow: false } }).required(),
+  password: Joi.string().required(),
 })
 
 export function validateSignup(body) {

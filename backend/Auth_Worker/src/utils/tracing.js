@@ -4,7 +4,7 @@
 
 export function resolveConfig(env = {}) {
   // env may be undefined in some init contexts; guard with default {}
-  const SERVICE_NAME = env.SERVICE_NAME || 'cloudflare-worker-microservice';
+  const SERVICE_NAME = env.SERVICE_NAME || 'Auth_Worker_Service';
   const API_KEY = env.HONEYCOMB_API_KEY || env.HONEYCOMB_API_KEY_SECRET || '';
   const DATASET = env.HONEYCOMB_DATASET || 'workers-traces';
 

@@ -1,7 +1,7 @@
 // services/authService.js
 import { hashPassword, verifyPassword, genSalt, genRandomToken, sha256 } from '../utils/crypto.js';
 import { signJWT, verifyJWT } from '../utils/jwt.js';
-import { getUserByEmail, createUser, getUserById, createRefreshTokenRow, findRefreshTokenRow, rotateRefreshTokenRow, revokeRefreshTokenRow } from '../db/db1.js';
+import { getUserByEmail, createUser, getUserByIddb, createRefreshTokenRow, findRefreshTokenRow, rotateRefreshTokenRow, revokeRefreshTokenRow } from '../db/db1.js';
 import { logger } from '../utils/logger.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -106,7 +106,7 @@ export async function rotateRefreshToken({ refreshToken }, env) {
       }
     }, env);
 
-    const user = await getUserById(row.user_id, env);
+    const user = await getUserByIddb(row.user_id, env);
     const accessToken = await signJWT({ sub: user.id, role: user.role }, { env, expiresIn: '15m' });
 
     return { ok: true, userId: user.id, accessToken, refreshToken: newToken };
@@ -129,11 +129,11 @@ export async function revokeRefreshToken({ refreshToken }, env) {
   }
 }
 
-// export async function getUserById(id, env) {
-//   try {
-//     return await getUserById(id, env);
-//   } catch (err) {
-//     console.error('authService.getUserById error', err);
-//     return null;
-//   }
-// }
+export async function getUserById(id, env) {
+  try {
+    return await getUserByIddb(id, env);
+  } catch (err) {
+    console.error('authService.getUserById error', err);
+    return null;
+  }
+}

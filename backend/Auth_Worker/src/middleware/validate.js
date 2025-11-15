@@ -13,6 +13,7 @@ export function validate(schema) {
       }
       const { error, value } = schema.validate(body, { stripUnknown: true });
       if (error) {
+        console.log('Validation error:', error.details);
         return { ok: false, error: error.details.map(d => d.message).join(', ') };
       }
       return { ok: true, value };
