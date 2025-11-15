@@ -1,0 +1,31 @@
+name = "w2-auth-worker"
+main = "src/index.js"
+compatibility_date = "2025-11-15"
+compatibility_flags = ["nodejs_compat"]
+
+#[vars]
+#JWT_SECRET = "__REPLACE_WITH_SECRET__"
+#JWT_EXPIRES_IN = "3600" # seconds
+
+
+
+[vars]
+# Do not store keys here in production. Use `wrangler secret put PRIVATE_KEY` and `wrangler secret put PUBLIC_KEY`.
+
+[bindings]
+# Example bindings — set these in your environment
+# D1 database binding
+[[d1_databases]]
+binding = "AUTH_DB"
+database_name = "auth_db"
+database_id = "20277c6e-3e08-46be-a7bb-4487517629a3"
+
+# KV namespace binding
+# [[kv_namespaces]]
+# binding = "AUTH_KV"
+# id = "your-kv-id"
+
+# R2 bucket for logs
+# [[r2_buckets]]
+# binding = "LOGS_BUCKET"
+# bucket_name = "ecom-auth-logs"
