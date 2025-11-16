@@ -1,5 +1,6 @@
 // middleware/validate.js
 import Joi from 'joi';
+import { logInfo } from '../utils/logger.js';
 
 export function validate(schema) {
   return async (request) => {
@@ -13,7 +14,7 @@ export function validate(schema) {
       }
       const { error, value } = schema.validate(body, { stripUnknown: true });
       if (error) {
-        console.log('Validation error:', error.details);
+        logInfo('Validation error', { errors: error.details.map(d => d.message) });
         return { ok: false, error: error.details.map(d => d.message).join(', ') };
       }
       return { ok: true, value };

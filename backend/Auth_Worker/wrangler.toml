@@ -17,9 +17,9 @@ database_name = "auth_db"
 database_id = "20277c6e-3e08-46be-a7bb-4487517629a3"
 
 # KV namespace (uncomment & set id if using)
-# [[kv_namespaces]]
-# binding = "RATE_LIMIT_KV"
-# id = "your-kv-namespace-id"
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "638e27416b9a44f3b94ba4046c0fa57a"
 
 # R2 (not used per your request)
 # [[r2_buckets]]

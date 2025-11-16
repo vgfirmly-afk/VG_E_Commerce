@@ -3,39 +3,42 @@ import Joi from 'joi';
 import { validate } from '../middleware/validate.js';
 import * as authService from '../services/authService.js';
 import { requireAuth } from '../middleware/authRequired.js';
-import { logger } from '../utils/logger.js';
+import { logger, logError } from '../utils/logger.js';
+import { registerSchema, loginSchema } from '../utils/validators.js';
 
-const registerSchema = Joi.object({
-  name: Joi.string().min(1).max(100).required(),
-  email: Joi.string().email({ tlds: { allow: false } }).required(),
-  password: Joi.string().min(8).max(128).required(),
-});
 
-const loginSchema = Joi.object({
-  email: Joi.string().email({ tlds: { allow: false } }).required(),
-  password: Joi.string().required(),
-});
 
 export const register = async (request, env) => {
   try {
+    throw new Error('test');
     const validator = await validate(registerSchema)(request);
     if (!validator.ok) return new Response(JSON.stringify({ error: 'invalid_input', details: validator.error }), { status: 400, headers: { 'Content-Type': 'application/json' } });
 
-    const { name, email, password } = validator.value;
-    const result = await authService.register({ name, email, password }, env);
+    const { name, email, password, phoneNumber, address, dateOfBirth, ssn, fullName } = validator.value;
+    const result = await authService.register({ 
+      name, 
+      email, 
+      password, 
+      phoneNumber: phoneNumber || null, 
+      address: address || null, 
+      dateOfBirth: dateOfBirth || null, 
+      ssn: ssn || null, 
+      fullName: fullName || null 
+    }, env);
     if (!result.ok) {
       return new Response(JSON.stringify({ error: result.error }), { status: result.status || 400, headers: { 'Content-Type': 'application/json' } });
     }
     logger('user.register', { userId: result.userId });
     return new Response(JSON.stringify({ success: true, userId: result.userId }), { status: 201, headers: { 'Content-Type': 'application/json' } });
   } catch (err) {
-    console.error('register handler error', err);
+    logError('register handler error', err, { handler: 'register' });
     return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
 
 export const login = async (request, env) => {
   try {
+    // throw new Error('test');
     const validator = await validate(loginSchema)(request);
     if (!validator.ok) return new Response(JSON.stringify({ error: 'invalid_input', details: validator.error }), { status: 400, headers: { 'Content-Type': 'application/json' } });
 
@@ -50,7 +53,7 @@ export const login = async (request, env) => {
     // For stronger security prefer setting refresh token in HttpOnly secure cookie (set-Cookie).
     return new Response(JSON.stringify({ accessToken: result.accessToken, refreshToken: result.refreshToken }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (err) {
-    console.error('login handler error', err);
+    logError('login handler error', err, { handler: 'login' });
     return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
@@ -71,26 +74,31 @@ export const refreshToken = async (request, env) => {
     logger('token.refresh', { userId: result.userId });
     return new Response(JSON.stringify({ accessToken: result.accessToken, refreshToken: result.refreshToken }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (err) {
-    console.error('refreshToken handler error', err);
+    logError('refreshToken handler error', err, { handler: 'refreshToken' });
     return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
 
 export const logout = async (request, env) => {
   try {
+    // Get access token from Authorization header
+    const authHeader = request.headers.get('Authorization') || '';
+    const accessToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    
     const contentType = request.headers.get('Content-Type') || '';
     let body = {};
     if (contentType.includes('application/json')) body = await request.json();
     const { refreshToken } = body || {};
     if (!refreshToken) return new Response(JSON.stringify({ error: 'missing_refresh_token' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
 
-    const result = await authService.revokeRefreshToken({ refreshToken }, env);
+    // Revoke both refresh token and access token
+    const result = await authService.revokeRefreshToken({ refreshToken, accessToken }, env);
     if (!result.ok) return new Response(JSON.stringify({ error: result.error }), { status: result.status || 400, headers: { 'Content-Type': 'application/json' } });
 
     logger('user.logout', { userId: result.userId });
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (err) {
-    console.error('logout handler error', err);
+    logError('logout handler error', err, { handler: 'logout' });
     return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
@@ -108,7 +116,7 @@ export const me = async (request, env) => {
     delete user.pwd_salt;
     return new Response(JSON.stringify({ user }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (err) {
-    console.error('me handler error', err);
+    logError('me handler error', err, { handler: 'me' });
     return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

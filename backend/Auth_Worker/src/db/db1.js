@@ -2,6 +2,7 @@
 // AUTH_DB helpers for users & refresh_tokens
 // Make sure your AUTH_DB DB has the following tables:
 // 
+import { logWarn } from '../utils/logger.js';
 
 export async function getUserByEmail(email, env) {
   const res = await env.AUTH_DB.prepare('SELECT * FROM users WHERE email = ?').bind(email).all();
@@ -10,8 +11,39 @@ export async function getUserByEmail(email, env) {
 }
 
 export async function createUser(user, env) {
-  const sql = `INSERT INTO users (id, email, name, pwd_hash, pwd_salt, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-  await env.AUTH_DB.prepare(sql).bind(user.id, user.email, user.name, user.pwd_hash, user.pwd_salt, user.role, user.created_at, user.updated_at).run();
+  // Check if PII fields exist in the schema (for backward compatibility)
+  // If PII fields are provided, include them; otherwise use basic schema
+  const hasPIIFields = user.phone_number_encrypted !== undefined || 
+                       user.address_encrypted !== undefined ||
+                       user.date_of_birth_encrypted !== undefined ||
+                       user.ssn_encrypted !== undefined ||
+                       user.full_name_encrypted !== undefined;
+  
+  if (hasPIIFields) {
+    const sql = `INSERT INTO users (
+      id, email, name, pwd_hash, pwd_salt, role, created_at, updated_at,
+      phone_number_encrypted, address_encrypted, date_of_birth_encrypted, 
+      ssn_encrypted, full_name_encrypted
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    await env.AUTH_DB.prepare(sql).bind(
+      user.id, user.email, user.name, user.pwd_hash, user.pwd_salt, user.role, 
+      user.created_at, user.updated_at,
+      user.phone_number_encrypted || null,
+      user.address_encrypted || null,
+      user.date_of_birth_encrypted || null,
+      user.ssn_encrypted || null,
+      user.full_name_encrypted || null
+    ).run();
+  } else {
+    // Basic schema without PII fields
+    const sql = `INSERT INTO users (
+      id, email, name, pwd_hash, pwd_salt, role, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+    await env.AUTH_DB.prepare(sql).bind(
+      user.id, user.email, user.name, user.pwd_hash, user.pwd_salt, user.role, 
+      user.created_at, user.updated_at
+    ).run();
+  }
 }
 
 export async function getUserByIddb(id, env) {
@@ -39,4 +71,29 @@ export async function rotateRefreshTokenRow({ oldId, newRow }, env) {
 
 export async function revokeRefreshTokenRow(id, env) {
   await env.AUTH_DB.prepare('UPDATE refresh_tokens SET revoked = 1 WHERE id = ?').bind(id).run();
+}
+
+// Revoked access tokens (JWT blacklist)
+export async function addRevokedToken(jti, userId, expiresAt, env) {
+  const sql = `INSERT INTO revoked_tokens (jti, user_id, expires_at, revoked_at) VALUES (?, ?, ?, ?)`;
+  await env.AUTH_DB.prepare(sql).bind(jti, userId, expiresAt, new Date().toISOString()).run();
+}
+
+export async function isTokenRevoked(jti, env) {
+  try {
+    if (!jti) return false;
+    const res = await env.AUTH_DB.prepare('SELECT * FROM revoked_tokens WHERE jti = ?').bind(jti).all();
+    return res && res.results && res.results.length > 0;
+  } catch (err) {
+    // If table doesn't exist or query fails, assume token is not revoked
+    // This allows graceful degradation if migration hasn't been run yet
+    logWarn('isTokenRevoked: Error checking revocation, assuming not revoked', { error: err.message, jti });
+    return false;
+  }
+}
+
+// Cleanup expired revoked tokens (can be called periodically)
+export async function cleanupExpiredRevokedTokens(env) {
+  const now = Math.floor(Date.now() / 1000);
+  await env.AUTH_DB.prepare('DELETE FROM revoked_tokens WHERE expires_at < ?').bind(now).run();
 }

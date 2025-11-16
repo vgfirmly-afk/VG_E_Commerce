@@ -1,5 +1,6 @@
 // utils/jwt.js
 // Note: expects JWT_PRIVATE_KEY secret to be PEM PKCS8. No key rotation / JWKS in this implementation.
+import { logError } from './logger.js';
 
 function pemToArrayBuffer(pem) {
   const b64 = pem.replace(/-----(BEGIN|END)[\w\s]+-----/g, '').replace(/\s+/g, '');
@@ -45,8 +46,20 @@ export async function signJWT(payload = {}, { env, expiresIn = '15m' } = {}) {
       exp = now + expiresIn;
     }
 
+    // Generate unique JTI (JWT ID) for token revocation
+    const jtiBytes = new Uint8Array(16);
+    crypto.getRandomValues(jtiBytes);
+    const jti = base64UrlEncode(jtiBytes.buffer);
+
     const header = { alg: 'RS256', typ: 'JWT' };
-    const fullPayload = { ...payload, iat: now, exp, iss: env.JWT_ISSUER || env.JWT_ISSUER, aud: env.JWT_AUDIENCE || env.JWT_AUDIENCE };
+    const fullPayload = { 
+      ...payload, 
+      iat: now, 
+      exp, 
+      jti, // Add JTI for revocation tracking
+      iss: env.JWT_ISSUER || env.JWT_ISSUER, 
+      aud: env.JWT_AUDIENCE || env.JWT_AUDIENCE 
+    };
 
     const encHeader = base64UrlEncode(new TextEncoder().encode(JSON.stringify(header)));
     const encPayload = base64UrlEncode(new TextEncoder().encode(JSON.stringify(fullPayload)));
@@ -59,7 +72,7 @@ export async function signJWT(payload = {}, { env, expiresIn = '15m' } = {}) {
     const signature = base64UrlEncode(sigBuffer);
     return `${signingInput}.${signature}`;
   } catch (err) {
-    console.error('signJWT error', err);
+    logError('signJWT error', err, { function: 'signJWT' });
     throw err;
   }
 }
@@ -69,29 +82,66 @@ export async function verifyJWT(token, env) {
   try {
     const publicPem = env.JWT_PUBLIC_KEY;
     if (!publicPem) {
-      console.error('verifyJWT: PUBLIC key not set in secrets (JWT_PUBLIC_KEY). Cannot verify token.');
+      logError('verifyJWT: PUBLIC key not set in secrets (JWT_PUBLIC_KEY). Cannot verify token.', null, { function: 'verifyJWT' });
       return null;
     }
+    
+    if (!token || typeof token !== 'string') {
+      logError('verifyJWT: Invalid token format (not a string)', null, { function: 'verifyJWT', hasToken: !!token });
+      return null;
+    }
+    
     const parts = token.split('.');
-    if (parts.length !== 3) return null;
+    if (parts.length !== 3) {
+      logError('verifyJWT: Invalid token format', null, { function: 'verifyJWT', partsCount: parts.length, expected: 3 });
+      return null;
+    }
+    
     const [h, p, s] = parts;
     const signingInput = `${h}.${p}`;
-    const sig = base64UrlDecode(s);
+    
+    let sig;
+    try {
+      sig = base64UrlDecode(s);
+    } catch (err) {
+      logError('verifyJWT: Error decoding signature', err, { function: 'verifyJWT' });
+      return null;
+    }
 
     // import public key
-    const pubKeyBuf = pemToArrayBuffer(publicPem);
-    const key = await crypto.subtle.importKey('spki', pubKeyBuf, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+    let key;
+    try {
+      const pubKeyBuf = pemToArrayBuffer(publicPem);
+      key = await crypto.subtle.importKey('spki', pubKeyBuf, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+    } catch (err) {
+      logError('verifyJWT: Error importing public key', err, { function: 'verifyJWT' });
+      return null;
+    }
+    
     const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, sig, new TextEncoder().encode(signingInput));
-    if (!ok) return null;
+    if (!ok) {
+      logError('verifyJWT: Signature verification failed', null, { function: 'verifyJWT' });
+      return null;
+    }
 
-    const payloadJson = new TextDecoder().decode(base64UrlDecode(p));
-    const payload = JSON.parse(payloadJson);
+    let payload;
+    try {
+      const payloadJson = new TextDecoder().decode(base64UrlDecode(p));
+      payload = JSON.parse(payloadJson);
+    } catch (err) {
+      logError('verifyJWT: Error decoding/parsing payload', err, { function: 'verifyJWT' });
+      return null;
+    }
 
     const now = Math.floor(Date.now() / 1000);
-    if (payload.exp && now > payload.exp) return null;
+    if (payload.exp && now > payload.exp) {
+      logError('verifyJWT: Token expired', null, { function: 'verifyJWT', exp: payload.exp, now });
+      return null;
+    }
+    
     return payload;
   } catch (err) {
-    console.error('verifyJWT error', err);
+    logError('verifyJWT error', err, { function: 'verifyJWT' });
     return null;
   }
 }

@@ -21,3 +21,11 @@
    created_at TEXT,
    rotated_from TEXT
  );
+
+ -- Table to blacklist revoked access tokens (JWT jti claim)
+ CREATE TABLE IF NOT EXISTS revoked_tokens (
+   jti TEXT PRIMARY KEY,
+   user_id TEXT NOT NULL,
+   expires_at INTEGER NOT NULL,
+   revoked_at TEXT NOT NULL
+ );

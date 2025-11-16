@@ -1,6 +1,7 @@
 // utils/crypto.js
 // Worker-compatible SubtleCrypto helpers (PBKDF2 + SHA-256)
 // Exports: genSalt, hashPassword, verifyPassword, genRandomToken, sha256
+import { logError, logWarn, logInfo } from './logger.js';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -105,4 +106,121 @@ export async function sha256(input) {
   const data = encoder.encode(typeof input === 'string' ? input : JSON.stringify(input));
   const digest = await crypto.subtle.digest('SHA-256', data);
   return uint8ToBase64(new Uint8Array(digest));
+}
+
+/**
+ * AES-GCM encryption for PII data
+ * @param {string} plaintext - Data to encrypt
+ * @param {string} keyB64 - Base64-encoded encryption key (32 bytes for AES-256)
+ * @returns {Promise<string>} Base64-encoded encrypted data (iv + ciphertext)
+ */
+export async function encryptAESGCM(plaintext, keyB64) {
+  if (!plaintext) {
+    logWarn('encryptAESGCM: plaintext is empty or null');
+    return null;
+  }
+  
+  if (!keyB64) {
+    logError('encryptAESGCM: encryption key is missing', null, { function: 'encryptAESGCM' });
+    throw new Error('Encryption key is required');
+  }
+
+  try {
+    const keyBytes = base64ToUint8(keyB64);
+    
+    if (keyBytes.length !== 32) {
+      logError('encryptAESGCM: Invalid key length. Expected 32 bytes, got', null, { keyLength: keyBytes.length, expected: 32 });
+      throw new Error('Encryption key must be 32 bytes (256 bits)');
+    }
+    
+    const key = await crypto.subtle.importKey(
+      'raw',
+      keyBytes,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt']
+    );
+
+    // Generate 12-byte IV (96 bits for GCM) - MUST be unique for each encryption
+    const iv = randomBytes(12);
+    logInfo('encryptAESGCM: Generated IV', { ivLength: 12, iv: uint8ToBase64(iv) });
+    
+    const plaintextBytes = encoder.encode(plaintext);
+    logInfo('encryptAESGCM: Plaintext encoded', { plaintextLength: plaintextBytes.length });
+
+    // Encrypt with AES-GCM (returns ciphertext + 16-byte authentication tag)
+    const ciphertext = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      plaintextBytes
+    );
+    
+    logInfo('encryptAESGCM: Ciphertext generated', { ciphertextLength: ciphertext.byteLength });
+
+    // Combine IV and ciphertext: IV (12 bytes) + ciphertext (includes 16-byte auth tag)
+    // Format: [IV (12 bytes)][Ciphertext + Auth Tag (variable + 16 bytes)]
+    const combined = new Uint8Array(iv.length + ciphertext.byteLength);
+    combined.set(iv, 0);  // Set IV at the beginning
+    combined.set(new Uint8Array(ciphertext), iv.length);  // Set ciphertext + auth tag after IV
+
+    const encrypted = uint8ToBase64(combined);
+    logInfo('encryptAESGCM: Encryption complete', { combinedLength: combined.length, hasIV: true });
+    return encrypted;
+  } catch (err) {
+    logError('encryptAESGCM: Encryption failed', err, { function: 'encryptAESGCM' });
+    throw err;
+  }
+}
+
+/**
+ * AES-GCM decryption for PII data
+ * @param {string} encryptedB64 - Base64-encoded encrypted data (iv + ciphertext)
+ * @param {string} keyB64 - Base64-encoded encryption key (32 bytes for AES-256)
+ * @returns {Promise<string|null>} Decrypted plaintext or null if decryption fails
+ */
+export async function decryptAESGCM(encryptedB64, keyB64) {
+  if (!encryptedB64 || !keyB64) return null;
+
+  try {
+    const keyBytes = base64ToUint8(keyB64);
+    const key = await crypto.subtle.importKey(
+      'raw',
+      keyBytes,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['decrypt']
+    );
+
+    const combined = base64ToUint8(encryptedB64);
+    
+    if (combined.length < 12) {
+      logError('decryptAESGCM: Encrypted data too short to contain IV', null, { dataLength: combined.length, minRequired: 12 });
+      return null;
+    }
+    
+    // Extract IV (first 12 bytes) and ciphertext (rest includes 16-byte auth tag)
+    // Format: [IV (12 bytes)][Ciphertext + Auth Tag (variable + 16 bytes)]
+    const iv = combined.slice(0, 12);
+    const ciphertext = combined.slice(12);
+    
+    logInfo('decryptAESGCM: Extracted IV and ciphertext', { ivLength: 12, iv: uint8ToBase64(iv), ciphertextLength: ciphertext.length });
+
+    if (ciphertext.length < 16) {
+      logError('decryptAESGCM: Ciphertext too short (missing auth tag)', null, { ciphertextLength: ciphertext.length, minRequired: 16 });
+      return null;
+    }
+
+    const plaintext = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      ciphertext
+    );
+
+    const decrypted = decoder.decode(plaintext);
+    logInfo('decryptAESGCM: Successfully decrypted data', { decryptedLength: decrypted.length });
+    return decrypted;
+  } catch (err) {
+    logError('decryptAESGCM error', err, { function: 'decryptAESGCM' });
+    return null;
+  }
 }

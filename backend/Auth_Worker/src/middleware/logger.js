@@ -25,7 +25,14 @@ export default function withLogger(handler) {
     }
 
 
-    // log incoming request (structured)
+    // log incoming request (structured) - add to span as event
+    if (span) {
+      span.addEvent('request.start', {
+        method: request.method,
+        url: request.url,
+        timestamp: Date.now(),
+      });
+    }
     console.log("[Logger]",JSON.stringify({
       ts: new Date().toISOString(),
       msg: `${request.method} ${request.url}`,
@@ -41,7 +48,13 @@ export default function withLogger(handler) {
       if (res && typeof res.headers?.set === 'function') {
         res.headers.set('x-trace-id', traceId);
         res.headers.set('x-span-id', spanId);
-        console.log("+++++ Setting trace headers:", traceId, spanId);
+        // Add response event to span
+        if (span) {
+          span.addEvent('response.end', {
+            status: res.status,
+            timestamp: Date.now(),
+          });
+        }
       }
     } catch (e) {
       // never crash logging
