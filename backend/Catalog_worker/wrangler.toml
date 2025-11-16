@@ -1,0 +1,33 @@
+name = "w2-catalog-worker"
+main = "src/index.js"
+compatibility_date = "2025-11-15"
+compatibility_flags = ["nodejs_compat"]
+
+
+# Do not store private keys in vars for production. Use `wrangler secret put`.
+[vars]
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+# Example (commented out)
+# PEPPER = "replace-me-locally"
+
+# D1 database binding (top-level)
+[[d1_databases]]
+binding = "CATALOG_DB"
+database_name = "catalog_db"
+database_id = "fa358bd9-0c52-49aa-b0ce-302302d9be1c"
+
+# KV namespace (uncomment & set id if using)
+[[kv_namespaces]]
+binding = "CATALOG_KV"
+id = "ca68f8f4ec1d4eef8065287d94993ee5"
+
+# R2 bucket for product images
+[[r2_buckets]]
+binding = "CATALOG_IMG_BUCKET"
+bucket_name = "catalog-img-bucket"
+
+
+
+
+
