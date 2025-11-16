@@ -251,8 +251,11 @@ export async function updateSku(request, env) {
     
     const body = await request.json();
     
-    // Validate SKU data
-    const { error, value } = validateSku(body);
+    // Remove sku_code and product_id from body (they come from URL params, not user input)
+    const { sku_code, product_id, ...cleanBody } = body;
+    
+    // Validate SKU data (without sku_code and product_id)
+    const { error, value } = validateSku({ ...cleanBody, product_id: productId });
     if (error) {
       return new Response(
         JSON.stringify({ 
@@ -264,7 +267,10 @@ export async function updateSku(request, env) {
       );
     }
     
-    await adminService.updateSkuService(skuId, value, productId, env);
+    // Remove sku_code and product_id from value (they're not updatable)
+    const { sku_code: _, product_id: __, ...updates } = value;
+    
+    await adminService.updateSkuService(skuId, updates, productId, env);
     
     return new Response(
       JSON.stringify({ message: 'SKU updated successfully' }),
@@ -348,7 +354,9 @@ export async function uploadProductImage(request, env) {
     // Get form data
     const formData = await request.formData();
     const imageFile = formData.get('image');
-    const imageId = formData.get('image_id') || uuidv4();
+    
+    // Auto-generate image ID (always generate, ignore user input)
+    const imageId = uuidv4();
     
     if (!imageFile) {
       return new Response(
@@ -358,20 +366,6 @@ export async function uploadProductImage(request, env) {
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
-    }
-    
-    // Validate image ID if provided
-    if (formData.get('image_id')) {
-      const { error: imageIdError } = validateImageId(formData.get('image_id'));
-      if (imageIdError) {
-        return new Response(
-          JSON.stringify({ 
-            error: 'validation_error', 
-            message: imageIdError.details?.[0]?.message || 'Invalid image ID' 
-          }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
     }
     
     const result = await adminService.uploadProductImageService(

@@ -41,13 +41,25 @@ export default function withLogger(handler) {
     }));
 
     // call the real handler
-    const res = await handler(request, env, ctx);
+    let res;
+    try {
+      res = await handler(request, env, ctx);
+    } catch (err) {
+      console.error('[Logger] Handler error:', err);
+      res = new Response(
+        JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
     // ensure response is a Response object and set trace header
     try {
-      if (res && typeof res.headers?.set === 'function') {
-        res.headers.set('x-trace-id', traceId);
-        res.headers.set('x-span-id', spanId);
+      if (res && res instanceof Response) {
+        // Clone response to modify headers (Response headers are immutable)
+        const newHeaders = new Headers(res.headers);
+        newHeaders.set('x-trace-id', traceId);
+        newHeaders.set('x-span-id', spanId);
+        
         // Add response event to span
         if (span) {
           span.addEvent('response.end', {
@@ -55,13 +67,36 @@ export default function withLogger(handler) {
             timestamp: Date.now(),
           });
         }
+        
+        // Return new response with trace headers
+        return new Response(res.body, {
+          status: res.status,
+          statusText: res.statusText,
+          headers: newHeaders,
+        });
+      } else {
+        console.error('[Logger] Handler did not return a Response:', res);
+        return new Response(
+          JSON.stringify({ error: 'internal_error', message: 'Handler did not return a valid response' }),
+          { 
+            status: 500, 
+            headers: { 
+              'Content-Type': 'application/json',
+              'x-trace-id': traceId,
+              'x-span-id': spanId
+            } 
+          }
+        );
       }
     } catch (e) {
       // never crash logging
-      console.error('failed to set trace headers', e);
+      console.error('[Logger] Failed to set trace headers:', e);
+      // Return the original response if we can't add headers
+      return res || new Response(
+        JSON.stringify({ error: 'internal_error', message: 'Failed to process response' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
     }
-
-    return res;
   };
 }
 

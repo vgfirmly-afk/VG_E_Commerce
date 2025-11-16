@@ -9,9 +9,12 @@ import {
   getProductSkus,
   createSku,
   updateSku,
-  deleteSku
+  deleteSku,
+  getSkuById
 } from '../db/db1.js';
 import { logger, logError } from '../utils/logger.js';
+import { generateSlug, generateSkuCode, generateUniqueSlug } from '../utils/helpers.js';
+import { slugExists } from '../db/db1.js';
 
 /**
  * Invalidate product cache
@@ -34,11 +37,63 @@ export async function createProductService(productData, userId, env) {
     const productId = productData.product_id || uuidv4();
     const now = new Date().toISOString();
     
+    // Auto-generate unique slug from title (always generate, ignore user input)
+    let slug = null;
+    if (productData.title) {
+      const baseSlug = generateSlug(productData.title);
+      // Ensure slug is unique by checking database
+      slug = await generateUniqueSlug(baseSlug, (s, excludeId) => slugExists(s, excludeId, env), null);
+    }
+    
+    // Set default image if no image is provided
+    const defaultImageUrl = 'https://cdni.iconscout.com/illustration/free/thumb/free-error-404-not-found-illustration-svg-download-png-12308353.png';
+    let media = productData.media;
+    
+    // Check if image is provided in various formats
+    const hasImage = productData.image_url || 
+                     productData.product_images || 
+                     (productData.media && typeof productData.media === 'object' && productData.media.image_url) ||
+                     (productData.media && typeof productData.media === 'object' && productData.media.product_images);
+    
+    if (!hasImage) {
+      // Set default image in media field
+      const defaultImageData = {
+        image_url: defaultImageUrl,
+        product_images: [{
+          image_id: 'default',
+          url: defaultImageUrl,
+          uploaded_at: now
+        }]
+      };
+      
+      // If media already exists, merge with default image
+      if (productData.media && typeof productData.media === 'object') {
+        media = {
+          ...productData.media,
+          ...defaultImageData
+        };
+      } else if (productData.media && typeof productData.media === 'string') {
+        try {
+          const parsedMedia = JSON.parse(productData.media);
+          media = {
+            ...parsedMedia,
+            ...defaultImageData
+          };
+        } catch {
+          media = defaultImageData;
+        }
+      } else {
+        media = defaultImageData;
+      }
+    }
+    
     // Prepare product data
     // Note: JSON field consolidation is handled by consolidateProductFields in db1.js
     const product = {
       ...productData,
       product_id: productId,
+      slug: slug, // Always use auto-generated unique slug (ignores user input)
+      media: media, // Include default image if no image provided
       created_at: now,
       updated_at: now,
       created_by: userId,
@@ -74,6 +129,14 @@ export async function createProductService(productData, userId, env) {
  */
 export async function updateProductService(productId, updates, userId, env) {
   try {
+    // If title is being updated, auto-generate a new unique slug
+    if (updates.title) {
+      const baseSlug = generateSlug(updates.title);
+      // Ensure slug is unique by checking database (exclude current product)
+      const uniqueSlug = await generateUniqueSlug(baseSlug, (s, excludeId) => slugExists(s, excludeId, env), productId);
+      updates.slug = uniqueSlug;
+    }
+    
     // Prepare updates
     // Note: JSON field consolidation is handled by consolidateProductFields in db1.js
     const preparedUpdates = {
@@ -138,10 +201,13 @@ export async function createSkuService(skuData, userId, env) {
     const skuId = skuData.sku_id || uuidv4();
     const now = new Date().toISOString();
     
+    // Auto-generate SKU code (always generate, ignore user input)
+    const skuCode = generateSkuCode();
+    
     const sku = {
       sku_id: skuId,
       product_id: skuData.product_id,
-      sku_code: skuData.sku_code,
+      sku_code: skuCode, // Always use auto-generated SKU code
       attributes: skuData.attributes || {},
       created_at: now,
       updated_at: now,
@@ -165,8 +231,11 @@ export async function createSkuService(skuData, userId, env) {
  */
 export async function updateSkuService(skuId, updates, productId, env) {
   try {
+    // Remove sku_code and product_id from updates if provided (they come from URL params)
+    const { sku_code, product_id, ...cleanUpdates } = updates;
+    
     const preparedUpdates = {
-      ...updates,
+      ...cleanUpdates,
       updated_at: new Date().toISOString(),
     };
     
@@ -219,13 +288,44 @@ export async function uploadProductImageService(productId, imageId, imageFile, e
       },
     });
     
-    // Generate public URL path
-    const publicUrl = `/api/v1/products/${productId}/images/${imageId}`;
+    // Generate full public URL (R2 public access URL)
+    // Format: https://pub-18e6a1004b7947968dd09e310be97e91.r2.dev/products/{productId}/{imageId}.jpg
+    const publicUrl = `https://pub-18e6a1004b7947968dd09e310be97e91.r2.dev/${r2Path}`;
+    
+    // Save the publicUrl to the product's media JSON field in the database
+    // Replace old image instead of adding to array
+    const product = await getProductById(productId, env);
+    if (product) {
+      // Parse existing media JSON or create new
+      let media = {};
+      if (product.media) {
+        try {
+          media = typeof product.media === 'string' ? JSON.parse(product.media) : product.media;
+        } catch {
+          media = {};
+        }
+      }
+      
+      // Replace old image with new one (store as single image, not array)
+      const imageData = {
+        image_id: imageId,
+        url: publicUrl,
+        r2_path: r2Path,
+        uploaded_at: new Date().toISOString()
+      };
+      
+      // Store as single image_url (primary image) and also in product_images array for compatibility
+      media.image_url = publicUrl;
+      media.product_images = [imageData]; // Replace array with single image
+      
+      // Update the product's media field
+      await updateProduct(productId, { media: JSON.stringify(media) }, env);
+    }
     
     // Invalidate product cache
     await invalidateProductCache(productId, env);
     
-    logger('product.image.uploaded', { productId, imageId, r2Path });
+    logger('product.image.uploaded', { productId, imageId, r2Path, publicUrl });
     return { imageId, r2Path, url: publicUrl };
   } catch (err) {
     logError('uploadProductImageService: Error', err, { productId, imageId });

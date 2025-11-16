@@ -114,10 +114,49 @@ router.post('/api/v1/products/:product_id/images',
   }
 );
 
-// Fallback
-router.all('*', () => new Response(
-  JSON.stringify({ error: 'not_found', message: 'Endpoint not found' }), 
-  { status: 404, headers: { 'Content-Type': 'application/json' } }
-));
+// Fallback - catch all unmatched routes
+router.all('*', async (request) => {
+  return new Response(
+    JSON.stringify({ 
+      error: 'not_found', 
+      message: 'Endpoint not found',
+      path: new URL(request.url).pathname,
+      method: request.method
+    }), 
+    { status: 404, headers: { 'Content-Type': 'application/json' } }
+  );
+});
 
-export default router;
+// Export router with safety wrapper
+const safeRouter = {
+  async handle(request, env, ctx) {
+    try {
+      const response = await router.handle(request, env, ctx);
+      // Ensure we always return a Response
+      if (!response || !(response instanceof Response)) {
+        console.error('Router returned invalid response:', response);
+        return new Response(
+          JSON.stringify({ 
+            error: 'internal_error', 
+            message: 'Router did not return a valid response',
+            path: new URL(request.url).pathname
+          }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      return response;
+    } catch (err) {
+      console.error('Router handle error:', err);
+      return new Response(
+        JSON.stringify({ 
+          error: 'internal_error', 
+          message: err?.message ?? String(err),
+          path: new URL(request.url).pathname
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+};
+
+export default safeRouter;

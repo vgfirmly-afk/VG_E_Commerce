@@ -347,6 +347,8 @@ export async function deleteSkuService(skuId, productId, env) {
  */
 function parseProductJsonFields(product) {
   const jsonFields = [
+    'metadata', 'attributes', 'inventory', 'policies', 'seo', 'stats', 'flags',
+    'relationships', 'media', 'variants', 'extended_data',
     'categories', 'tags', 'colors', 'sizes', 'materials', 'grouped_products',
     'upsell_ids', 'cross_sell_ids', 'related_products', 'product_images',
     'gallery_images', 'downloadable_files', 'product_attributes',

@@ -3,7 +3,20 @@
 import { logger, logError } from '../utils/logger.js';
 
 /**
+ * Valid database columns for products table (whitelist)
+ * This ensures we never try to insert invalid columns
+ */
+const VALID_PRODUCT_COLUMNS = new Set([
+  'product_id', 'title', 'description', 'short_description', 'slug',
+  'category', 'metadata', 'status', 'visibility', 'featured', 'new_arrival', 'best_seller', 'on_sale',
+  'attributes', 'inventory', 'policies', 'seo', 'stats', 'flags',
+  'relationships', 'media', 'variants', 'extended_data',
+  'created_at', 'updated_at', 'created_by', 'updated_by', 'published_at', 'deleted_at', 'deleted'
+]);
+
+/**
  * Consolidate flat fields into JSON fields for optimized 60-column schema
+ * Always merges flat fields into JSON, even if JSON field already exists
  */
 function consolidateProductFields(product) {
   const consolidated = { ...product };
@@ -17,240 +30,261 @@ function consolidateProductFields(product) {
     return val;
   };
   
-  // 1. Consolidate metadata (identifiers, brand, manufacturer, default_sku, category, subcategory, categories, tags)
-  if (!consolidated.metadata) {
-    const metadata = {};
-    if (consolidated.mpn || consolidated.upc || consolidated.ean || consolidated.isbn || 
-        consolidated.gtin || consolidated.model_number || consolidated.sku) {
-      metadata.identifiers = {
-        mpn: consolidated.mpn,
-        upc: consolidated.upc,
-        ean: consolidated.ean,
-        isbn: consolidated.isbn,
-        gtin: consolidated.gtin,
-        model_number: consolidated.model_number,
-        sku: consolidated.sku
-      };
-      delete consolidated.mpn;
-      delete consolidated.upc;
-      delete consolidated.ean;
-      delete consolidated.isbn;
-      delete consolidated.gtin;
-      delete consolidated.model_number;
-      delete consolidated.sku;
+  // Handle category - keep as direct column (not in metadata) for easy querying
+  // If category is provided in metadata JSON, extract it to the direct column
+  if (consolidated.metadata && typeof consolidated.metadata === 'object') {
+    if (consolidated.metadata.category !== undefined && consolidated.category === undefined) {
+      consolidated.category = consolidated.metadata.category;
     }
-    if (consolidated.brand) { metadata.brand = consolidated.brand; delete consolidated.brand; }
-    if (consolidated.manufacturer) { metadata.manufacturer = consolidated.manufacturer; delete consolidated.manufacturer; }
-    if (consolidated.default_sku) { metadata.default_sku = consolidated.default_sku; delete consolidated.default_sku; }
-    if (consolidated.category) { metadata.category = consolidated.category; delete consolidated.category; }
-    if (consolidated.subcategory) { metadata.subcategory = consolidated.subcategory; delete consolidated.subcategory; }
-    if (consolidated.categories) { metadata.categories = parseJson(consolidated.categories); delete consolidated.categories; }
-    if (consolidated.tags) { metadata.tags = parseJson(consolidated.tags); delete consolidated.tags; }
-    if (Object.keys(metadata).length > 0) {
-      consolidated.metadata = typeof consolidated.metadata === 'object' ? JSON.stringify({ ...parseJson(consolidated.metadata), ...metadata }) : JSON.stringify(metadata);
+  }
+  // If category is provided as a flat field, keep it as a direct column (don't delete it)
+  // category stays as a direct column for easy querying and indexing
+  // Note: category can be null, empty string, or a value - all are valid
+  
+  // 1. Consolidate metadata (identifiers, brand, manufacturer, default_sku, subcategory, categories, tags)
+  // Note: category is now a direct column, not in metadata
+  // Always check for flat fields, even if metadata already exists
+  const existingMetadata = parseJson(consolidated.metadata) || {};
+  const metadata = { ...existingMetadata };
+  let metadataChanged = false;
+  
+  if (consolidated.mpn || consolidated.upc || consolidated.ean || consolidated.isbn || 
+      consolidated.gtin || consolidated.model_number || consolidated.sku) {
+    metadata.identifiers = {
+      ...(existingMetadata.identifiers || {}),
+      mpn: consolidated.mpn || existingMetadata.identifiers?.mpn,
+      upc: consolidated.upc || existingMetadata.identifiers?.upc,
+      ean: consolidated.ean || existingMetadata.identifiers?.ean,
+      isbn: consolidated.isbn || existingMetadata.identifiers?.isbn,
+      gtin: consolidated.gtin || existingMetadata.identifiers?.gtin,
+      model_number: consolidated.model_number || existingMetadata.identifiers?.model_number,
+      sku: consolidated.sku || existingMetadata.identifiers?.sku
+    };
+    delete consolidated.mpn;
+    delete consolidated.upc;
+    delete consolidated.ean;
+    delete consolidated.isbn;
+    delete consolidated.gtin;
+    delete consolidated.model_number;
+    delete consolidated.sku;
+    metadataChanged = true;
+  }
+  if (consolidated.brand !== undefined) { metadata.brand = consolidated.brand; delete consolidated.brand; metadataChanged = true; }
+  if (consolidated.manufacturer !== undefined) { metadata.manufacturer = consolidated.manufacturer; delete consolidated.manufacturer; metadataChanged = true; }
+  if (consolidated.default_sku !== undefined) { metadata.default_sku = consolidated.default_sku; delete consolidated.default_sku; metadataChanged = true; }
+  // category is now a direct column - don't put it in metadata
+  if (consolidated.subcategory !== undefined) { metadata.subcategory = consolidated.subcategory; delete consolidated.subcategory; metadataChanged = true; }
+  if (consolidated.categories !== undefined) { metadata.categories = parseJson(consolidated.categories); delete consolidated.categories; metadataChanged = true; }
+  if (consolidated.tags !== undefined) { metadata.tags = parseJson(consolidated.tags); delete consolidated.tags; metadataChanged = true; }
+  
+  // Remove category from metadata if it exists there (since it's now a direct column)
+  if (metadata.category) {
+    if (!consolidated.category) {
+      consolidated.category = metadata.category;
     }
-  } else if (typeof consolidated.metadata === 'object') {
-    consolidated.metadata = JSON.stringify(consolidated.metadata);
+    delete metadata.category;
+    metadataChanged = true;
+  }
+  
+  if (metadataChanged || typeof consolidated.metadata === 'object') {
+    consolidated.metadata = JSON.stringify(metadata);
+  } else if (typeof consolidated.metadata === 'string') {
+    // Already a JSON string, keep it
   }
   
   // 2. Consolidate attributes (dimensions, color, colors, size, sizes, material, materials, pattern, style, gender, age_group, season, country_of_origin)
-  if (!consolidated.attributes) {
-    const attributes = {};
-    if (consolidated.weight || consolidated.length || consolidated.width || consolidated.height || 
-        consolidated.shipping_weight || consolidated.shipping_class) {
-      attributes.dimensions = {
-        weight: consolidated.weight,
-        weight_unit: consolidated.weight_unit || 'g',
-        length: consolidated.length,
-        width: consolidated.width,
-        height: consolidated.height,
-        dimensions_unit: consolidated.dimensions_unit || 'cm',
-        shipping_weight: consolidated.shipping_weight,
-        shipping_class: consolidated.shipping_class
-      };
-      delete consolidated.weight; delete consolidated.weight_unit; delete consolidated.length;
-      delete consolidated.width; delete consolidated.height; delete consolidated.dimensions_unit;
-      delete consolidated.shipping_weight; delete consolidated.shipping_class;
+  // Always check for flat fields, even if attributes already exists
+  const existingAttributes = parseJson(consolidated.attributes) || {};
+  const attributes = { ...existingAttributes };
+  let attributesChanged = false;
+  
+  // Check for dimension fields
+  if (consolidated.weight !== undefined || consolidated.weight_unit !== undefined || 
+      consolidated.length !== undefined || consolidated.width !== undefined || 
+      consolidated.height !== undefined || consolidated.dimensions_unit !== undefined || 
+      consolidated.shipping_weight !== undefined || consolidated.shipping_class !== undefined) {
+    attributes.dimensions = {
+      ...(existingAttributes.dimensions || {}),
+      weight: consolidated.weight !== undefined ? consolidated.weight : existingAttributes.dimensions?.weight,
+      weight_unit: consolidated.weight_unit !== undefined ? consolidated.weight_unit : (existingAttributes.dimensions?.weight_unit || 'g'),
+      length: consolidated.length !== undefined ? consolidated.length : existingAttributes.dimensions?.length,
+      width: consolidated.width !== undefined ? consolidated.width : existingAttributes.dimensions?.width,
+      height: consolidated.height !== undefined ? consolidated.height : existingAttributes.dimensions?.height,
+      dimensions_unit: consolidated.dimensions_unit !== undefined ? consolidated.dimensions_unit : (existingAttributes.dimensions?.dimensions_unit || 'cm'),
+      shipping_weight: consolidated.shipping_weight !== undefined ? consolidated.shipping_weight : existingAttributes.dimensions?.shipping_weight,
+      shipping_class: consolidated.shipping_class !== undefined ? consolidated.shipping_class : existingAttributes.dimensions?.shipping_class
+    };
+    delete consolidated.weight;
+    delete consolidated.weight_unit;
+    delete consolidated.length;
+    delete consolidated.width;
+    delete consolidated.height;
+    delete consolidated.dimensions_unit;
+    delete consolidated.shipping_weight;
+    delete consolidated.shipping_class;
+    attributesChanged = true;
+  }
+  
+  // Check for other attribute fields
+  ['color', 'colors', 'size', 'sizes', 'material', 'materials', 'pattern', 'style', 
+   'gender', 'age_group', 'season', 'country_of_origin'].forEach(field => {
+    if (consolidated[field] !== undefined) {
+      attributes[field] = parseJson(consolidated[field]);
+      delete consolidated[field];
+      attributesChanged = true;
     }
-    ['color', 'colors', 'size', 'sizes', 'material', 'materials', 'pattern', 'style', 
-     'gender', 'age_group', 'season', 'country_of_origin'].forEach(field => {
-      if (consolidated[field]) {
-        attributes[field] = parseJson(consolidated[field]);
-        delete consolidated[field];
-      }
-    });
-    if (Object.keys(attributes).length > 0) {
-      consolidated.attributes = typeof consolidated.attributes === 'object' ? JSON.stringify({ ...parseJson(consolidated.attributes), ...attributes }) : JSON.stringify(attributes);
+  });
+  
+  if (attributesChanged || typeof consolidated.attributes === 'object') {
+    consolidated.attributes = JSON.stringify(attributes);
+  } else if (typeof consolidated.attributes === 'string') {
+    // Already a JSON string, keep it
+  }
+  
+  // 3. Consolidate inventory - always merge flat fields
+  const existingInventory = parseJson(consolidated.inventory) || {};
+  const inventoryFields = ['stock_status', 'stock_quantity', 'low_stock_threshold', 'manage_stock', 
+    'allow_backorders', 'backorder_status', 'package_quantity', 'min_order_quantity', 'max_order_quantity'];
+  let inventoryChanged = false;
+  
+  inventoryFields.forEach(field => {
+    if (consolidated[field] !== undefined) {
+      existingInventory[field] = consolidated[field];
+      delete consolidated[field];
+      inventoryChanged = true;
     }
-  } else if (typeof consolidated.attributes === 'object') {
-    consolidated.attributes = JSON.stringify(consolidated.attributes);
+  });
+  
+  if (inventoryChanged || typeof consolidated.inventory === 'object') {
+    consolidated.inventory = JSON.stringify(existingInventory);
   }
   
-  // 3. Consolidate inventory
-  if (!consolidated.inventory && (consolidated.stock_status || consolidated.stock_quantity !== undefined || 
-      consolidated.low_stock_threshold !== undefined || consolidated.manage_stock !== undefined || 
-      consolidated.allow_backorders !== undefined || consolidated.backorder_status || 
-      consolidated.package_quantity !== undefined || consolidated.min_order_quantity !== undefined || 
-      consolidated.max_order_quantity !== undefined)) {
-    consolidated.inventory = JSON.stringify({
-      stock_status: consolidated.stock_status,
-      stock_quantity: consolidated.stock_quantity,
-      low_stock_threshold: consolidated.low_stock_threshold,
-      manage_stock: consolidated.manage_stock,
-      allow_backorders: consolidated.allow_backorders,
-      backorder_status: consolidated.backorder_status,
-      package_quantity: consolidated.package_quantity,
-      min_order_quantity: consolidated.min_order_quantity,
-      max_order_quantity: consolidated.max_order_quantity
-    });
-    ['stock_status', 'stock_quantity', 'low_stock_threshold', 'manage_stock', 'allow_backorders', 
-     'backorder_status', 'package_quantity', 'min_order_quantity', 'max_order_quantity'].forEach(f => delete consolidated[f]);
-  } else if (consolidated.inventory && typeof consolidated.inventory === 'object') {
-    consolidated.inventory = JSON.stringify(consolidated.inventory);
+  // 4. Consolidate policies - always merge flat fields
+  const existingPolicies = parseJson(consolidated.policies) || {};
+  const policyFields = ['warranty_period', 'warranty_type', 'return_policy', 'purchase_note'];
+  let policiesChanged = false;
+  
+  policyFields.forEach(field => {
+    if (consolidated[field] !== undefined) {
+      existingPolicies[field] = consolidated[field];
+      delete consolidated[field];
+      policiesChanged = true;
+    }
+  });
+  
+  if (policiesChanged || typeof consolidated.policies === 'object') {
+    consolidated.policies = JSON.stringify(existingPolicies);
   }
   
-  // 4. Consolidate policies
-  if (!consolidated.policies && (consolidated.warranty_period || consolidated.warranty_type || 
-      consolidated.return_policy || consolidated.purchase_note)) {
-    consolidated.policies = JSON.stringify({
-      warranty_period: consolidated.warranty_period,
-      warranty_type: consolidated.warranty_type,
-      return_policy: consolidated.return_policy,
-      purchase_note: consolidated.purchase_note
-    });
-    ['warranty_period', 'warranty_type', 'return_policy', 'purchase_note'].forEach(f => delete consolidated[f]);
-  } else if (consolidated.policies && typeof consolidated.policies === 'object') {
-    consolidated.policies = JSON.stringify(consolidated.policies);
+  // 5. Consolidate SEO - always merge flat fields
+  const existingSeo = parseJson(consolidated.seo) || {};
+  const seoFields = ['meta_title', 'meta_description', 'meta_keywords', 'permalink', 'canonical_url'];
+  let seoChanged = false;
+  
+  seoFields.forEach(field => {
+    if (consolidated[field] !== undefined) {
+      existingSeo[field] = consolidated[field];
+      delete consolidated[field];
+      seoChanged = true;
+    }
+  });
+  
+  if (seoChanged || typeof consolidated.seo === 'object') {
+    consolidated.seo = JSON.stringify(existingSeo);
   }
   
-  // 5. Consolidate SEO
-  if (!consolidated.seo && (consolidated.meta_title || consolidated.meta_description || 
-      consolidated.meta_keywords || consolidated.permalink || consolidated.canonical_url)) {
-    consolidated.seo = JSON.stringify({
-      meta_title: consolidated.meta_title,
-      meta_description: consolidated.meta_description,
-      meta_keywords: consolidated.meta_keywords,
-      permalink: consolidated.permalink,
-      canonical_url: consolidated.canonical_url
-    });
-    ['meta_title', 'meta_description', 'meta_keywords', 'permalink', 'canonical_url'].forEach(f => delete consolidated[f]);
-  } else if (consolidated.seo && typeof consolidated.seo === 'object') {
-    consolidated.seo = JSON.stringify(consolidated.seo);
+  // 6. Consolidate stats (ratings and counts) - always merge flat fields
+  const existingStats = parseJson(consolidated.stats) || {};
+  const statsFields = ['rating_average', 'rating_count', 'review_count', 'view_count', 'sales_count', 
+    'wishlist_count', 'compare_count', 'download_count', 'total_sales', 'average_rating'];
+  let statsChanged = false;
+  
+  statsFields.forEach(field => {
+    if (consolidated[field] !== undefined) {
+      existingStats[field] = consolidated[field];
+      delete consolidated[field];
+      statsChanged = true;
+    }
+  });
+  
+  if (statsChanged || typeof consolidated.stats === 'object') {
+    consolidated.stats = JSON.stringify(existingStats);
   }
   
-  // 6. Consolidate stats (ratings and counts)
-  if (!consolidated.stats && (consolidated.rating_average !== undefined || consolidated.rating_count !== undefined || 
-      consolidated.review_count !== undefined || consolidated.view_count !== undefined || 
-      consolidated.sales_count !== undefined || consolidated.wishlist_count !== undefined || 
-      consolidated.compare_count !== undefined || consolidated.download_count !== undefined || 
-      consolidated.total_sales !== undefined || consolidated.average_rating !== undefined)) {
-    consolidated.stats = JSON.stringify({
-      rating_average: consolidated.rating_average,
-      rating_count: consolidated.rating_count,
-      review_count: consolidated.review_count,
-      view_count: consolidated.view_count,
-      sales_count: consolidated.sales_count,
-      wishlist_count: consolidated.wishlist_count,
-      compare_count: consolidated.compare_count,
-      download_count: consolidated.download_count,
-      total_sales: consolidated.total_sales,
-      average_rating: consolidated.average_rating
-    });
-    ['rating_average', 'rating_count', 'review_count', 'view_count', 'sales_count', 
-     'wishlist_count', 'compare_count', 'download_count', 'total_sales', 'average_rating'].forEach(f => delete consolidated[f]);
-  } else if (consolidated.stats && typeof consolidated.stats === 'object') {
-    consolidated.stats = JSON.stringify(consolidated.stats);
+  // 7. Consolidate flags (product type and boolean flags) - always merge flat fields
+  const existingFlags = parseJson(consolidated.flags) || {};
+  const flagsFields = ['product_type', 'virtual_product', 'downloadable_product', 'external_product', 
+    'requires_shipping', 'taxable', 'tax_class', 'tax_status', 'shipping_required', 'shipping_taxable', 
+    'reviews_allowed', 'sold_individually', 'purchase_only', 'catalog_visibility'];
+  let flagsChanged = false;
+  
+  flagsFields.forEach(field => {
+    if (consolidated[field] !== undefined) {
+      existingFlags[field] = consolidated[field];
+      delete consolidated[field];
+      flagsChanged = true;
+    }
+  });
+  
+  if (flagsChanged || typeof consolidated.flags === 'object') {
+    consolidated.flags = JSON.stringify(existingFlags);
   }
   
-  // 7. Consolidate flags (product type and boolean flags)
-  if (!consolidated.flags && (consolidated.product_type || consolidated.virtual_product !== undefined || 
-      consolidated.downloadable_product !== undefined || consolidated.external_product !== undefined || 
-      consolidated.requires_shipping !== undefined || consolidated.taxable !== undefined || 
-      consolidated.tax_class || consolidated.tax_status || consolidated.shipping_required !== undefined || 
-      consolidated.shipping_taxable !== undefined || consolidated.reviews_allowed !== undefined || 
-      consolidated.sold_individually !== undefined || consolidated.purchase_only !== undefined || 
-      consolidated.catalog_visibility)) {
-    consolidated.flags = JSON.stringify({
-      product_type: consolidated.product_type,
-      virtual_product: consolidated.virtual_product,
-      downloadable_product: consolidated.downloadable_product,
-      external_product: consolidated.external_product,
-      requires_shipping: consolidated.requires_shipping,
-      taxable: consolidated.taxable,
-      tax_class: consolidated.tax_class,
-      tax_status: consolidated.tax_status,
-      shipping_required: consolidated.shipping_required,
-      shipping_taxable: consolidated.shipping_taxable,
-      reviews_allowed: consolidated.reviews_allowed,
-      sold_individually: consolidated.sold_individually,
-      purchase_only: consolidated.purchase_only,
-      catalog_visibility: consolidated.catalog_visibility
-    });
-    ['product_type', 'virtual_product', 'downloadable_product', 'external_product', 'requires_shipping', 
-     'taxable', 'tax_class', 'tax_status', 'shipping_required', 'shipping_taxable', 'reviews_allowed', 
-     'sold_individually', 'purchase_only', 'catalog_visibility'].forEach(f => delete consolidated[f]);
-  } else if (consolidated.flags && typeof consolidated.flags === 'object') {
-    consolidated.flags = JSON.stringify(consolidated.flags);
+  // 8. Consolidate relationships - always merge flat fields
+  const existingRelationships = parseJson(consolidated.relationships) || {};
+  const relationshipFields = ['parent_id', 'menu_order', 'grouped_products', 'upsell_ids', 
+    'cross_sell_ids', 'related_products', 'accessories', 'replacement_parts'];
+  let relationshipsChanged = false;
+  
+  relationshipFields.forEach(field => {
+    if (consolidated[field] !== undefined) {
+      existingRelationships[field] = parseJson(consolidated[field]);
+      delete consolidated[field];
+      relationshipsChanged = true;
+    }
+  });
+  
+  if (relationshipsChanged || typeof consolidated.relationships === 'object') {
+    consolidated.relationships = JSON.stringify(existingRelationships);
   }
   
-  // 8. Consolidate relationships
-  if (!consolidated.relationships && (consolidated.parent_id || consolidated.menu_order !== undefined || 
-      consolidated.grouped_products || consolidated.upsell_ids || consolidated.cross_sell_ids || 
-      consolidated.related_products || consolidated.accessories || consolidated.replacement_parts)) {
-    consolidated.relationships = JSON.stringify({
-      parent_id: consolidated.parent_id,
-      menu_order: consolidated.menu_order,
-      grouped_products: parseJson(consolidated.grouped_products),
-      upsell_ids: parseJson(consolidated.upsell_ids),
-      cross_sell_ids: parseJson(consolidated.cross_sell_ids),
-      related_products: parseJson(consolidated.related_products),
-      accessories: parseJson(consolidated.accessories),
-      replacement_parts: parseJson(consolidated.replacement_parts)
-    });
-    ['parent_id', 'menu_order', 'grouped_products', 'upsell_ids', 'cross_sell_ids', 
-     'related_products', 'accessories', 'replacement_parts'].forEach(f => delete consolidated[f]);
-  } else if (consolidated.relationships && typeof consolidated.relationships === 'object') {
-    consolidated.relationships = JSON.stringify(consolidated.relationships);
+  // 9. Consolidate media - always merge flat fields
+  const existingMedia = parseJson(consolidated.media) || {};
+  const mediaFields = ['product_images', 'image_url', 'image_alt', 'gallery_images', 'video_url', 
+    'video_embed', 'downloadable_files', 'download_limit', 'download_expiry'];
+  let mediaChanged = false;
+  
+  mediaFields.forEach(field => {
+    if (consolidated[field] !== undefined) {
+      existingMedia[field] = parseJson(consolidated[field]);
+      delete consolidated[field];
+      mediaChanged = true;
+    }
+  });
+  
+  if (mediaChanged || typeof consolidated.media === 'object') {
+    consolidated.media = JSON.stringify(existingMedia);
   }
   
-  // 9. Consolidate media
-  if (!consolidated.media && (consolidated.product_images || consolidated.image_url || 
-      consolidated.image_alt || consolidated.gallery_images || consolidated.video_url || 
-      consolidated.video_embed || consolidated.downloadable_files || consolidated.download_limit !== undefined || 
-      consolidated.download_expiry !== undefined)) {
-    consolidated.media = JSON.stringify({
-      product_images: parseJson(consolidated.product_images),
-      image_url: consolidated.image_url,
-      image_alt: consolidated.image_alt,
-      gallery_images: parseJson(consolidated.gallery_images),
-      video_url: consolidated.video_url,
-      video_embed: consolidated.video_embed,
-      downloadable_files: parseJson(consolidated.downloadable_files),
-      download_limit: consolidated.download_limit,
-      download_expiry: consolidated.download_expiry
-    });
-    ['product_images', 'image_url', 'image_alt', 'gallery_images', 'video_url', 'video_embed', 
-     'downloadable_files', 'download_limit', 'download_expiry'].forEach(f => delete consolidated[f]);
-  } else if (consolidated.media && typeof consolidated.media === 'object') {
-    consolidated.media = JSON.stringify(consolidated.media);
+  // 10. Consolidate variants - always merge flat fields
+  const existingVariants = parseJson(consolidated.variants) || {};
+  const variantFields = ['product_attributes', 'default_attributes', 'variations', 'variation_data', 'variant_data'];
+  let variantsChanged = false;
+  
+  variantFields.forEach(field => {
+    if (consolidated[field] !== undefined) {
+      existingVariants[field] = parseJson(consolidated[field]);
+      delete consolidated[field];
+      variantsChanged = true;
+    }
+  });
+  
+  if (variantsChanged || typeof consolidated.variants === 'object') {
+    consolidated.variants = JSON.stringify(existingVariants);
   }
   
-  // 10. Consolidate variants
-  if (!consolidated.variants && (consolidated.product_attributes || consolidated.default_attributes || 
-      consolidated.variations || consolidated.variation_data || consolidated.variant_data)) {
-    consolidated.variants = JSON.stringify({
-      product_attributes: parseJson(consolidated.product_attributes),
-      default_attributes: parseJson(consolidated.default_attributes),
-      variations: parseJson(consolidated.variations),
-      variation_data: parseJson(consolidated.variation_data),
-      variant_data: parseJson(consolidated.variant_data)
-    });
-    ['product_attributes', 'default_attributes', 'variations', 'variation_data', 'variant_data'].forEach(f => delete consolidated[f]);
-  } else if (consolidated.variants && typeof consolidated.variants === 'object') {
-    consolidated.variants = JSON.stringify(consolidated.variants);
-  }
-  
-  // 11. Consolidate extended_data (everything else)
+  // 11. Consolidate extended_data (everything else) - always merge flat fields
+  const existingExtended = parseJson(consolidated.extended_data) || {};
   const extendedFields = ['custom_fields', 'social_data', 'analytics_data', 'pricing_data', 
     'inventory_data', 'shipping_data', 'tax_data', 'discount_data', 'promotion_data', 
     'bundle_data', 'subscription_data', 'membership_data', 'gift_card_data', 'auction_data', 
@@ -260,23 +294,43 @@ function consolidateProductFields(product) {
     'testimonials', 'faq', 'documentation', 'product_url', 'button_text', 'date_on_sale_from', 
     'date_on_sale_to', 'washing_instructions', 'storage_instructions', 'safety_warnings', 
     'support_url', 'documentation_url', 'user_manual_url', 'installation_guide_url', 'video_tutorials'];
+  let extendedChanged = false;
   
-  if (!consolidated.extended_data) {
-    const extended = {};
-    extendedFields.forEach(field => {
-      if (consolidated[field] !== undefined) {
-        extended[field] = parseJson(consolidated[field]);
-        delete consolidated[field];
-      }
-    });
-    if (Object.keys(extended).length > 0) {
-      consolidated.extended_data = JSON.stringify(extended);
+  extendedFields.forEach(field => {
+    if (consolidated[field] !== undefined) {
+      existingExtended[field] = parseJson(consolidated[field]);
+      delete consolidated[field];
+      extendedChanged = true;
     }
-  } else if (typeof consolidated.extended_data === 'object') {
-    consolidated.extended_data = JSON.stringify(consolidated.extended_data);
+  });
+  
+  if (extendedChanged || typeof consolidated.extended_data === 'object') {
+    consolidated.extended_data = JSON.stringify(existingExtended);
   }
   
   return consolidated;
+}
+
+/**
+ * Check if a slug exists in the database
+ */
+export async function slugExists(slug, excludeProductId = null, env) {
+  try {
+    if (!slug) return false;
+    let sql = 'SELECT COUNT(*) as count FROM products WHERE slug = ? AND deleted = 0';
+    const bindings = [slug];
+    
+    if (excludeProductId) {
+      sql += ' AND product_id != ?';
+      bindings.push(excludeProductId);
+    }
+    
+    const res = await env.CATALOG_DB.prepare(sql).bind(...bindings).first();
+    return (res?.count || 0) > 0;
+  } catch (err) {
+    logError('slugExists: Database error', err, { slug });
+    throw err;
+  }
 }
 
 /**
@@ -308,9 +362,9 @@ export async function getProducts({ category, search, page = 1, limit = 20, feat
     }
     
     if (category) {
-      // Category is now in metadata JSON, search in metadata field
-      sql += ' AND (json_extract(metadata, "$.category") = ? OR json_extract(metadata, "$.categories") LIKE ? OR metadata LIKE ?)';
-      bindings.push(category, `%${category}%`, `%${category}%`);
+      // Category is now a direct column for fast querying
+      sql += ' AND category = ?';
+      bindings.push(category);
     }
     
     if (featured !== undefined) {
@@ -342,8 +396,8 @@ export async function getProducts({ category, search, page = 1, limit = 20, feat
 export async function getProductsByCategory(category, limit = 10, env) {
   try {
     const res = await env.CATALOG_DB.prepare(
-      'SELECT * FROM products WHERE deleted = 0 AND status = ? AND (json_extract(metadata, "$.category") = ? OR json_extract(metadata, "$.categories") LIKE ? OR metadata LIKE ?) ORDER BY featured DESC, created_at DESC LIMIT ?'
-    ).bind('active', category, `%${category}%`, `%${category}%`, limit).all();
+      'SELECT * FROM products WHERE deleted = 0 AND status = ? AND category = ? ORDER BY featured DESC, created_at DESC LIMIT ?'
+    ).bind('active', category, limit).all();
     return res?.results || [];
   } catch (err) {
     logError('getProductsByCategory: Database error', err, { category, limit });
@@ -363,8 +417,9 @@ export async function searchProducts(keyword, { page = 1, limit = 20, category }
     bindings.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
     
     if (category) {
-      sql += ' AND (json_extract(metadata, "$.category") = ? OR json_extract(metadata, "$.categories") LIKE ? OR metadata LIKE ?)';
-      bindings.push(category, `%${category}%`, `%${category}%`);
+      // Category is now a direct column for fast querying
+      sql += ' AND category = ?';
+      bindings.push(category);
     }
     
     sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
@@ -379,29 +434,104 @@ export async function searchProducts(keyword, { page = 1, limit = 20, category }
 }
 
 /**
+ * Convert all object/array values to JSON strings for D1 compatibility
+ * D1 only accepts: null, number, string, or JSON string (not JavaScript objects)
+ */
+function stringifyJsonFields(data) {
+  const result = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value === null || value === undefined) {
+      result[key] = value;
+    } else if (value instanceof Date) {
+      // Convert Date objects to ISO string
+      result[key] = value.toISOString();
+    } else if (typeof value === 'string') {
+      // Already a string - check if it's valid JSON (from consolidateProductFields)
+      // If it looks like JSON, verify it's valid, otherwise keep as is
+      if ((value.startsWith('{') || value.startsWith('[')) && value.length > 1) {
+        try {
+          JSON.parse(value);
+          result[key] = value; // Valid JSON string, keep as is
+        } catch {
+          // Not valid JSON, keep as regular string
+          result[key] = value;
+        }
+      } else {
+        // Regular string, keep as is
+        result[key] = value;
+      }
+    } else if (typeof value === 'object') {
+      // Convert objects and arrays to JSON strings
+      try {
+        result[key] = JSON.stringify(value);
+      } catch (err) {
+        console.error(`Failed to stringify field ${key}:`, err);
+        result[key] = String(value);
+      }
+    } else {
+      // Primitive value (number, boolean) - keep as is
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
+/**
  * Create product
  */
 export async function createProduct(product, env) {
   try {
+    // Extract skus if present (they're handled separately, not stored in products table)
+    const { skus, ...productWithoutSkus } = product;
+    
     // Consolidate fields into JSON structure
-    const consolidated = consolidateProductFields(product);
+    const consolidated = consolidateProductFields(productWithoutSkus);
     
     // Add timestamps if not provided
     if (!consolidated.created_at) consolidated.created_at = new Date().toISOString();
     if (!consolidated.updated_at) consolidated.updated_at = new Date().toISOString();
     
+    // Ensure all object/array values are JSON strings (D1 doesn't accept objects)
+    const stringified = stringifyJsonFields(consolidated);
+    
+    // Filter to only valid database columns (whitelist)
+    const validFields = Object.keys(stringified).filter(key => {
+      // Only include fields that exist in the VALID_PRODUCT_COLUMNS whitelist
+      return VALID_PRODUCT_COLUMNS.has(key);
+    });
+    
+    // Ensure category is included if it was provided (even if empty string or null)
+    // This handles the case where category might be filtered out during consolidation
+    // Check both original product and consolidated to catch category from any source
+    if (product.category !== undefined && !validFields.includes('category')) {
+      // Category was provided in the original input, ensure it's included
+      validFields.push('category');
+      stringified.category = consolidated.category !== undefined ? consolidated.category : product.category;
+    } else if (consolidated.category !== undefined && !validFields.includes('category')) {
+      // Category was set during consolidation (e.g., from metadata), ensure it's included
+      validFields.push('category');
+      stringified.category = consolidated.category;
+    }
+    
     // Build dynamic SQL for all fields
-    const fields = Object.keys(consolidated);
+    const fields = validFields;
     const placeholders = fields.map(() => '?').join(', ');
-    const values = fields.map(field => consolidated[field]);
+    const values = fields.map(field => {
+      const value = stringified[field];
+      // Final safety check: if it's still an object, stringify it
+      if (value !== null && value !== undefined && typeof value === 'object') {
+        return JSON.stringify(value);
+      }
+      return value;
+    });
     
     const sql = `INSERT INTO products (${fields.join(', ')}) VALUES (${placeholders})`;
     await env.CATALOG_DB.prepare(sql).bind(...values).run();
     
-    logger('product.created', { productId: consolidated.product_id, title: consolidated.title });
-    return consolidated;
+    logger('product.created', { productId: stringified.product_id, title: stringified.title });
+    return stringified;
   } catch (err) {
-    logError('createProduct: Database error', err, { productId: product.product_id });
+    logError('createProduct: Database error', err, { productId: product.product_id, error: err.message });
     throw err;
   }
 }
@@ -414,14 +544,43 @@ export async function updateProduct(productId, updates, env) {
     const fields = Object.keys(updates);
     if (fields.length === 0) return null;
     
+    // Extract skus if present (they're handled separately)
+    const { skus, ...updatesWithoutSkus } = updates;
+    
     // Consolidate fields into JSON structure
-    const consolidated = consolidateProductFields(updates);
+    const consolidated = consolidateProductFields(updatesWithoutSkus);
     
-    const setFields = Object.keys(consolidated);
-    if (setFields.length === 0) return await getProductById(productId, env);
+    // Ensure all object/array values are JSON strings (D1 doesn't accept objects)
+    const stringified = stringifyJsonFields(consolidated);
     
-    const setClause = setFields.map(field => `${field} = ?`).join(', ');
-    const values = setFields.map(field => consolidated[field]);
+    // Filter to only valid database columns (whitelist)
+    const validFields = Object.keys(stringified).filter(key => {
+      // Only include fields that exist in the VALID_PRODUCT_COLUMNS whitelist
+      return VALID_PRODUCT_COLUMNS.has(key);
+    });
+    
+    // Ensure category is included if it was provided in updates (even if empty string or null)
+    if (updates.category !== undefined && !validFields.includes('category')) {
+      // Category was provided in the updates, ensure it's included
+      validFields.push('category');
+      stringified.category = consolidated.category !== undefined ? consolidated.category : updates.category;
+    } else if (consolidated.category !== undefined && !validFields.includes('category')) {
+      // Category was set during consolidation (e.g., from metadata), ensure it's included
+      validFields.push('category');
+      stringified.category = consolidated.category;
+    }
+    
+    if (validFields.length === 0) return await getProductById(productId, env);
+    
+    const setClause = validFields.map(field => `${field} = ?`).join(', ');
+    const values = validFields.map(field => {
+      const value = stringified[field];
+      // Final safety check: if it's still an object, stringify it
+      if (value !== null && value !== undefined && typeof value === 'object') {
+        return JSON.stringify(value);
+      }
+      return value;
+    });
     
     // Add updated_at and productId to the values
     const sql = `UPDATE products SET ${setClause}, updated_at = ? WHERE product_id = ? AND deleted = 0`;
@@ -433,7 +592,7 @@ export async function updateProduct(productId, updates, env) {
     logger('product.updated', { productId });
     return await getProductById(productId, env);
   } catch (err) {
-    logError('updateProduct: Database error', err, { productId });
+    logError('updateProduct: Database error', err, { productId, error: err.message });
     throw err;
   }
 }
@@ -466,6 +625,21 @@ export async function getProductSkus(productId, env) {
     return res?.results || [];
   } catch (err) {
     logError('getProductSkus: Database error', err, { productId });
+    throw err;
+  }
+}
+
+/**
+ * Get SKU by ID
+ */
+export async function getSkuById(skuId, env) {
+  try {
+    const res = await env.CATALOG_DB.prepare('SELECT * FROM skus WHERE sku_id = ?')
+      .bind(skuId)
+      .first();
+    return res || null;
+  } catch (err) {
+    logError('getSkuById: Database error', err, { skuId });
     throw err;
   }
 }

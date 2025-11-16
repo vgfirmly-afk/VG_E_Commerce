@@ -42,14 +42,48 @@ export async function listProducts(request, env) {
     
     return new Response(
       JSON.stringify({
-        products: products.map(p => ({
-          product_id: p.product_id,
-          title: p.title,
-          description: p.description,
-          default_sku: p.default_sku,
-          images: Array.isArray(p.product_images) ? p.product_images : (p.image_url ? [p.image_url] : []),
-          categories: Array.isArray(p.categories) ? p.categories : (p.category ? [p.category] : []),
-        })),
+        products: products.map(p => {
+          // Extract images from media field
+          let images = [];
+          if (p.media) {
+            const media = typeof p.media === 'string' ? JSON.parse(p.media) : p.media;
+            if (media.product_images && Array.isArray(media.product_images)) {
+              // Extract URLs from product_images array
+              images = media.product_images.map(img => img.url || img);
+            } else if (media.image_url) {
+              images = [media.image_url];
+            }
+          }
+          
+          // Extract categories from metadata or direct category field
+          let categories = [];
+          if (p.category) {
+            categories = [p.category];
+          } else if (p.metadata) {
+            const metadata = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : p.metadata;
+            if (metadata.categories && Array.isArray(metadata.categories)) {
+              categories = metadata.categories;
+            } else if (metadata.category) {
+              categories = [metadata.category];
+            }
+          }
+          
+          // Extract default_sku from metadata
+          let default_sku = null;
+          if (p.metadata) {
+            const metadata = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : p.metadata;
+            default_sku = metadata.default_sku || null;
+          }
+          
+          return {
+            product_id: p.product_id,
+            title: p.title,
+            description: p.description,
+            default_sku: default_sku,
+            images: images,
+            categories: categories,
+          };
+        }),
         page: value.page,
         limit: value.limit,
         count: products.length
@@ -236,14 +270,48 @@ export async function searchProductsHandler(request, env) {
     
     return new Response(
       JSON.stringify({
-        products: products.map(p => ({
-          product_id: p.product_id,
-          title: p.title,
-          description: p.description,
-          default_sku: p.default_sku,
-          images: Array.isArray(p.product_images) ? p.product_images : (p.image_url ? [p.image_url] : []),
-          categories: Array.isArray(p.categories) ? p.categories : (p.category ? [p.category] : []),
-        })),
+        products: products.map(p => {
+          // Extract images from media field
+          let images = [];
+          if (p.media) {
+            const media = typeof p.media === 'string' ? JSON.parse(p.media) : p.media;
+            if (media.product_images && Array.isArray(media.product_images)) {
+              // Extract URLs from product_images array
+              images = media.product_images.map(img => img.url || img);
+            } else if (media.image_url) {
+              images = [media.image_url];
+            }
+          }
+          
+          // Extract categories from metadata or direct category field
+          let categories = [];
+          if (p.category) {
+            categories = [p.category];
+          } else if (p.metadata) {
+            const metadata = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : p.metadata;
+            if (metadata.categories && Array.isArray(metadata.categories)) {
+              categories = metadata.categories;
+            } else if (metadata.category) {
+              categories = [metadata.category];
+            }
+          }
+          
+          // Extract default_sku from metadata
+          let default_sku = null;
+          if (p.metadata) {
+            const metadata = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : p.metadata;
+            default_sku = metadata.default_sku || null;
+          }
+          
+          return {
+            product_id: p.product_id,
+            title: p.title,
+            description: p.description,
+            default_sku: default_sku,
+            images: images,
+            categories: categories,
+          };
+        }),
         page: value.page,
         limit: value.limit,
         count: products.length,

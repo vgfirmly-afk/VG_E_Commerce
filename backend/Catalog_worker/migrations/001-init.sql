@@ -9,8 +9,11 @@ CREATE TABLE IF NOT EXISTS products (
   short_description TEXT,
   slug TEXT UNIQUE,
   
+  -- Category (direct column for easy querying and indexing)
+  category TEXT,
+  
   -- Product identifiers and categorization (consolidated into metadata JSON)
-  metadata TEXT, -- JSON: {identifiers: {mpn, upc, ean, isbn, gtin, model_number, sku}, brand, manufacturer, default_sku, category, subcategory, categories, tags}
+  metadata TEXT, -- JSON: {identifiers: {mpn, upc, ean, isbn, gtin, model_number, sku}, brand, manufacturer, default_sku, subcategory, categories, tags}
   
   -- Status and visibility (6 columns)
   status TEXT DEFAULT 'active',
@@ -74,6 +77,7 @@ CREATE TABLE IF NOT EXISTS skus (
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_products_status ON products(status);
 CREATE INDEX IF NOT EXISTS idx_products_slug ON products(slug);
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_products_featured ON products(featured);
 CREATE INDEX IF NOT EXISTS idx_products_created_at ON products(created_at);
 CREATE INDEX IF NOT EXISTS idx_skus_product_id ON skus(product_id);

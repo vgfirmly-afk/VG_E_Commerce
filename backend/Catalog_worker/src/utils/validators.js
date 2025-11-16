@@ -10,7 +10,7 @@ export const productSchema = Joi.object({
   title: Joi.string().min(1).max(500).required(),
   description: Joi.string().max(10000).allow(null, ''),
   short_description: Joi.string().max(500).allow(null, ''),
-  slug: Joi.string().max(500).allow(null, ''),
+  slug: Joi.string().max(500).allow(null, '').optional(), // Optional - will be auto-generated from title
   
   // Consolidated identifiers JSON: {mpn, upc, ean, isbn, gtin, model_number, sku}
   identifiers: jsonField,
@@ -220,7 +220,7 @@ export const productSchema = Joi.object({
 export const skuSchema = Joi.object({
   sku_id: Joi.string().optional(),
   product_id: Joi.string().required(),
-  sku_code: Joi.string().required(),
+  sku_code: Joi.string().optional(), // Optional - will be auto-generated
   attributes: jsonField,
 });
 
