@@ -1,0 +1,36 @@
+name = "w2-pricing-worker"
+main = "src/index.js"
+compatibility_date = "2025-11-15"
+compatibility_flags = ["nodejs_compat"]
+
+
+# Do not store private keys in vars for production. Use `wrangler secret put`.
+[vars]
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+# Example (commented out)
+# PEPPER = "replace-me-locally"
+
+# D1 database binding (top-level)
+[[d1_databases]]
+binding = "PRICING_DB"
+database_name = "pricing_db"
+database_id = "9a88aa6b-0b44-4a67-a710-2340aac6765e"
+
+# KV namespace (optional, for caching)
+#[[kv_namespaces]]
+#binding = "PRICING_KV"
+#id = "ca68f8f4ec1d4eef8065287d94993ee5"
+
+# Catalog Worker URL for reference (if needed for validation)
+# CATALOG_WORKER_URL = "http://localhost:8787"
+
+# R2 bucket for product images
+#[[r2_buckets]]
+#binding = "CA_IMG_BUCKET"
+#bucket_name = "catalog-img-bucket"
+
+
+
+
+
