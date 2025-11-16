@@ -111,7 +111,7 @@ export async function verifyJWT(token, env) {
     // import public key
     let key;
     try {
-      const pubKeyBuf = pemToArrayBuffer(publicPem);
+    const pubKeyBuf = pemToArrayBuffer(publicPem);
       key = await crypto.subtle.importKey('spki', pubKeyBuf, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
     } catch (err) {
       logError('verifyJWT: Error importing public key', err, { function: 'verifyJWT' });
@@ -126,7 +126,7 @@ export async function verifyJWT(token, env) {
 
     let payload;
     try {
-      const payloadJson = new TextDecoder().decode(base64UrlDecode(p));
+    const payloadJson = new TextDecoder().decode(base64UrlDecode(p));
       payload = JSON.parse(payloadJson);
     } catch (err) {
       logError('verifyJWT: Error decoding/parsing payload', err, { function: 'verifyJWT' });

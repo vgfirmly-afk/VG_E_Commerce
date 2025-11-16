@@ -18,7 +18,7 @@ export const loginSchema = Joi.object({
 });
 
 export function validateSignup(body) {
-  return signupSchema.validate(body, { abortEarly: false })
+  return registerSchema.validate(body, { abortEarly: false })
 }
 export function validateLogin(body) {
   return loginSchema.validate(body, { abortEarly: false })

@@ -53,7 +53,7 @@ export async function rateLimitMiddleware(request, env) {
     await kv.put(key, String(count), { expirationTtl: windowSeconds });
 
     const remaining = Math.max(0, limit - count);
-    logInfo('rateLimit: Request allowed', { ip, path, count, remaining, limit });
+    // logInfo('rateLimit: Request allowed', { ip, path, count, remaining, limit });
     
     return { 
       ok: true, 

@@ -10,7 +10,7 @@ import { registerSchema, loginSchema } from '../utils/validators.js';
 
 export const register = async (request, env) => {
   try {
-    throw new Error('test');
+    // throw new Error('test');
     const validator = await validate(registerSchema)(request);
     if (!validator.ok) return new Response(JSON.stringify({ error: 'invalid_input', details: validator.error }), { status: 400, headers: { 'Content-Type': 'application/json' } });
 

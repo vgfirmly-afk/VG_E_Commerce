@@ -78,8 +78,8 @@ export function logger(event, meta = {}) {
  */
 export function logError(message, error = null, meta = {}) {
   const span = trace.getSpan(context.active());
-  const traceId = span ? span.spanContext().traceId : 'none';
-  const spanId = span ? span.spanContext().spanId : 'none';
+  // const traceId = span ? span.spanContext().traceId : 'none';
+  // const spanId = span ? span.spanContext().spanId : 'none';
 
   const errorData = {
     ts: new Date().toISOString(),
@@ -91,8 +91,8 @@ export function logError(message, error = null, meta = {}) {
       name: error.name,
     } : null,
     ...meta,
-    trace_id: traceId,
-    span_id: spanId,
+    // trace_id: traceId,
+    // span_id: spanId,
   };
 
   // Add log to span as attribute

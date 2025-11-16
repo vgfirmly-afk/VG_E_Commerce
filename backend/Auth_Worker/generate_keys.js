@@ -1,5 +1,5 @@
-const { generateKeyPairSync, randomBytes } = require('crypto');
 
+import { generateKeyPairSync, randomBytes } from 'crypto';
 // Generate RSA key pair for JWT signing
 const { publicKey, privateKey } = generateKeyPairSync('rsa', {
   modulusLength: 2048,
