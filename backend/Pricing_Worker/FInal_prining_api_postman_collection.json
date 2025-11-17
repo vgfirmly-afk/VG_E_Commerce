@@ -1,0 +1,1005 @@
+{
+	"info": {
+		"_postman_id": "4977f2b1-b263-4f3b-8439-9613ef4de1c5",
+		"name": "Pricing Worker - API",
+		"description": "Postman collection for testing Pricing Worker API endpoints. Handles SKU pricing, price history, and grand total calculation.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "49921323",
+		"_collection_link": "https://vg-firmly-3318835.postman.co/workspace/Vengadesan-Firmly's-Workspace~2d8595d6-cd95-424f-88d4-4a4acbe5ca47/collection/49921323-4977f2b1-b263-4f3b-8439-9613ef4de1c5?action=share&source=collection_link&creator=49921323"
+	},
+	"item": [
+		{
+			"name": "Auth Worker (Get Token)",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set(\"accessToken\", response.accessToken);",
+									"    console.log(\"Access token saved to collection variables\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"P@ssw0rd123\"\n}"
+						},
+						"url": {
+							"raw": "{{authBaseUrl}}/api/v1/auth/login",
+							"host": [
+								"{{authBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Pricing Worker - Public",
+			"item": [
+				{
+					"name": "Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has ok field\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('ok');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{pricingBaseUrl}}/_/health",
+							"host": [
+								"{{pricingBaseUrl}}"
+							],
+							"path": [
+								"_",
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get SKU Price",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('sku_id');",
+									"    pm.expect(response).to.have.property('price');",
+									"    pm.expect(response).to.have.property('effective_price');",
+									"    console.log('SKU Price:', response);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{pricingBaseUrl}}/api/v1/prices/:sku_id",
+							"host": [
+								"{{pricingBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"prices",
+								":sku_id"
+							],
+							"variable": [
+								{
+									"key": "sku_id",
+									"value": "0e57d20e-0d43-444f-921f-2cc91dd639c6",
+									"description": "SKU ID to get price for"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Product Prices",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('product_id');",
+									"    pm.expect(response).to.have.property('prices');",
+									"    pm.expect(response.prices).to.be.an('array');",
+									"    console.log('Product Prices:', response);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{pricingBaseUrl}}/api/v1/prices/product/:product_id",
+							"host": [
+								"{{pricingBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"prices",
+								"product",
+								":product_id"
+							],
+							"variable": [
+								{
+									"key": "product_id",
+									"value": "{{productId}}",
+									"description": "Product ID to get prices for"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Calculate Grand Total",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('items');",
+									"    pm.expect(response).to.have.property('subtotal');",
+									"    pm.expect(response).to.have.property('total');",
+									"    pm.expect(response).to.have.property('currency');",
+									"    console.log('Grand Total:', response);",
+									"    console.log('Subtotal:', response.subtotal);",
+									"    console.log('Discount:', response.discount);",
+									"    console.log('Total:', response.total);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"items\": [\n    {\n      \"sku_id\": \"{{skuId}}\",\n      \"quantity\": 10\n    }\n  ],\n  \"promotion_code\": \"{{promotionCode}}\",\n  \"currency\": \"USD\"\n}"
+						},
+						"url": {
+							"raw": "{{pricingBaseUrl}}/api/v1/calculate-total",
+							"host": [
+								"{{pricingBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"calculate-total"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Price History",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('sku_id');",
+									"    pm.expect(response).to.have.property('history');",
+									"    pm.expect(response.history).to.be.an('array');",
+									"    console.log('Price History:', response);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{pricingBaseUrl}}/api/v1/prices/:sku_id/history?page=1&limit=20",
+							"host": [
+								"{{pricingBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"prices",
+								":sku_id",
+								"history"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Items per page"
+								}
+							],
+							"variable": [
+								{
+									"key": "sku_id",
+									"value": "{{skuId}}",
+									"description": "SKU ID to get history for"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Pricing Worker - Admin/Service",
+			"item": [
+				{
+					"name": "Initialize Price (Service)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201 or 200\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+									"});",
+									"",
+									"if (pm.response.code === 201 || pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('sku_id');",
+									"    pm.expect(response).to.have.property('price');",
+									"    pm.collectionVariables.set(\"skuId\", response.sku_id);",
+									"    console.log('Price initialized:', response);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku_id\": \"test-sku-123\",\n  \"product_id\": \"test-product-123\",\n  \"sku_code\": \"SKU-TEST-123\",\n  \"price\": 29.99,\n  \"currency\": \"USD\",\n  \"sale_price\": null,\n  \"compare_at_price\": 39.99,\n  \"cost_price\": 15.00\n}"
+						},
+						"url": {
+							"raw": "{{pricingBaseUrl}}/api/v1/prices/:sku_id",
+							"host": [
+								"{{pricingBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"prices",
+								":sku_id"
+							],
+							"variable": [
+								{
+									"key": "sku_id",
+									"value": "test-sku-123",
+									"description": "SKU ID to initialize price for"
+								}
+							]
+						},
+						"description": "This endpoint is called by Catalog Worker when a SKU is created. Can also be used to initialize price manually."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Price (Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('sku_id');",
+									"    pm.expect(response).to.have.property('price');",
+									"    console.log('Price updated:', response);",
+									"} else {",
+									"    const response = pm.response.json();",
+									"    console.log('Error:', response);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"price\": 34.99,\n  \"sale_price\": 29.99,\n  \"compare_at_price\": 39.99,\n  \"cost_price\": 18.00,\n  \"reason\": \"Price update for sale\"\n}"
+						},
+						"url": {
+							"raw": "{{pricingBaseUrl}}/api/v1/prices/:sku_id",
+							"host": [
+								"{{pricingBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"prices",
+								":sku_id"
+							],
+							"variable": [
+								{
+									"key": "sku_id",
+									"value": "{{skuId}}",
+									"description": "SKU ID to update price for"
+								}
+							]
+						},
+						"description": "Update SKU price. Creates a history entry automatically."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Price - Set Sale",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sale_price\": 19.99,\n  \"compare_at_price\": 29.99,\n  \"reason\": \"Flash sale - 33% off\"\n}"
+						},
+						"url": {
+							"raw": "{{pricingBaseUrl}}/api/v1/prices/:sku_id",
+							"host": [
+								"{{pricingBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"prices",
+								":sku_id"
+							],
+							"variable": [
+								{
+									"key": "sku_id",
+									"value": "{{skuId}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Price - Remove Sale",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sale_price\": null,\n  \"reason\": \"Sale ended\"\n}"
+						},
+						"url": {
+							"raw": "{{pricingBaseUrl}}/api/v1/prices/:sku_id",
+							"host": [
+								"{{pricingBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"prices",
+								":sku_id"
+							],
+							"variable": [
+								{
+									"key": "sku_id",
+									"value": "{{skuId}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Price (Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('message');",
+									"    console.log('Price deleted:', response);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{pricingBaseUrl}}/api/v1/prices/:sku_id",
+							"host": [
+								"{{pricingBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"prices",
+								":sku_id"
+							],
+							"variable": [
+								{
+									"key": "sku_id",
+									"value": "{{skuId}}",
+									"description": "SKU ID to delete price for"
+								}
+							]
+						},
+						"description": "Soft delete (deactivates) the SKU price. Creates a history entry."
+					},
+					"response": []
+				},
+				{
+					"name": "New Request",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Source",
+								"value": "https://w2-catalog-worker.vg-firmly.workers.dev",
+								"type": "text"
+							},
+							{
+								"key": "hasAuth",
+								"value": "true",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"sale_price\": 123}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://w2-pricing-worker.vg-firmly.workers.dev/api/v1/prices/2a4fe92c-26c3-4e11-b472-7d13a7add9f8",
+							"protocol": "https",
+							"host": [
+								"w2-pricing-worker",
+								"vg-firmly",
+								"workers",
+								"dev"
+							],
+							"path": [
+								"api",
+								"v1",
+								"prices",
+								"2a4fe92c-26c3-4e11-b472-7d13a7add9f8"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Integration Tests",
+			"item": [
+				{
+					"name": "Full Flow - Create Product with SKU",
+					"item": [
+						{
+							"name": "1. Create Product in Catalog Worker",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 201\", function () {",
+											"    pm.response.to.have.status(201);",
+											"});",
+											"",
+											"if (pm.response.code === 201) {",
+											"    const response = pm.response.json();",
+											"    pm.collectionVariables.set(\"productId\", response.product_id);",
+											"    if (response.skus && response.skus.length > 0) {",
+											"        pm.collectionVariables.set(\"skuId\", response.skus[0].sku_id);",
+											"        console.log('Product and SKU created:', response.product_id, response.skus[0].sku_id);",
+											"    }",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{accessToken}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"title\": \"Test Product for Pricing\",\n  \"description\": \"Product to test pricing integration\",\n  \"category\": \"Electronics\",\n  \"status\": \"active\",\n  \"skus\": [\n    {\n      \"attributes\": {\n        \"size\": \"Medium\",\n        \"color\": \"Black\"\n      }\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{catalogBaseUrl}}/api/v1/products",
+									"host": [
+										"{{catalogBaseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"products"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "2. Check Price Initialized (Auto)",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"if (pm.response.code === 200) {",
+											"    const response = pm.response.json();",
+											"    pm.expect(response).to.have.property('sku_id');",
+											"    pm.expect(response.price).to.equal(0.00);",
+											"    console.log('Price auto-initialized:', response);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{pricingBaseUrl}}/api/v1/prices/:sku_id",
+									"host": [
+										"{{pricingBaseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"prices",
+										":sku_id"
+									],
+									"variable": [
+										{
+											"key": "sku_id",
+											"value": "{{skuId}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "3. Update Price",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{accessToken}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"price\": 49.99,\n  \"sale_price\": 39.99,\n  \"compare_at_price\": 59.99,\n  \"reason\": \"Initial price set\"\n}"
+								},
+								"url": {
+									"raw": "{{pricingBaseUrl}}/api/v1/prices/:sku_id",
+									"host": [
+										"{{pricingBaseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"prices",
+										":sku_id"
+									],
+									"variable": [
+										{
+											"key": "sku_id",
+											"value": "{{skuId}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "4. Calculate Total with Multiple Items",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"if (pm.response.code === 200) {",
+											"    const response = pm.response.json();",
+											"    console.log('=== Grand Total Calculation ===');",
+											"    console.log('Items:', response.items);",
+											"    console.log('Subtotal:', response.subtotal);",
+											"    console.log('Discount:', response.discount);",
+											"    console.log('Total:', response.total);",
+											"    console.log('Currency:', response.currency);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"items\": [\n    {\n      \"sku_id\": \"{{skuId}}\",\n      \"quantity\": 2\n    }\n  ],\n  \"currency\": \"USD\"\n}"
+								},
+								"url": {
+									"raw": "{{pricingBaseUrl}}/api/v1/calculate-total",
+									"host": [
+										"{{pricingBaseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"calculate-total"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "5. Check Price History",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"if (pm.response.code === 200) {",
+											"    const response = pm.response.json();",
+											"    console.log('Price History:', response.history);",
+											"    pm.expect(response.history.length).to.be.greaterThan(0);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{pricingBaseUrl}}/api/v1/prices/:sku_id/history",
+									"host": [
+										"{{pricingBaseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"prices",
+										":sku_id",
+										"history"
+									],
+									"variable": [
+										{
+											"key": "sku_id",
+											"value": "{{skuId}}"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "pricingBaseUrl",
+			"value": "https://w2-pricing-worker.vg-firmly.workers.dev",
+			"type": "string"
+		},
+		{
+			"key": "catalogBaseUrl",
+			"value": "https://w2-catalog-worker.vg-firmly.workers.dev",
+			"type": "string"
+		},
+		{
+			"key": "authBaseUrl",
+			"value": "https://w2-auth-worker.vg-firmly.workers.dev",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "skuId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "productId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "promotionCode",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
