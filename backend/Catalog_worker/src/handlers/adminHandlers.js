@@ -51,7 +51,10 @@ export async function createProduct(request, env) {
     // Get user from request (set by adminAuth middleware)
     const userId = request.user?.userId || 'system';
     
-    const product = await adminService.createProductService(value, userId, env);
+    // Get ctx from request if available (passed through router)
+    const ctx = request.ctx || null;
+    
+    const product = await adminService.createProductService(value, userId, env, ctx);
     
     return new Response(
       JSON.stringify(product),
@@ -202,7 +205,10 @@ export async function createSku(request, env) {
     // Get user from request (set by adminAuth middleware)
     const userId = request.user?.userId || 'system';
     
-    const sku = await adminService.createSkuService(value, userId, env);
+    // Get ctx from request if available (passed through router)
+    const ctx = request.ctx || null;
+    
+    const sku = await adminService.createSkuService(value, userId, env, ctx);
     
     return new Response(
       JSON.stringify(sku),
@@ -270,7 +276,13 @@ export async function updateSku(request, env) {
     // Remove sku_code and product_id from value (they're not updatable)
     const { sku_code: _, product_id: __, ...updates } = value;
     
-    await adminService.updateSkuService(skuId, updates, productId, env);
+    // Get user from request (set by adminAuth middleware)
+    const userId = request.user?.userId || 'system';
+    
+    // Get ctx from request if available (passed through router)
+    const ctx = request.ctx || null;
+    
+    await adminService.updateSkuService(skuId, updates, productId, userId, env, ctx);
     
     return new Response(
       JSON.stringify({ message: 'SKU updated successfully' }),

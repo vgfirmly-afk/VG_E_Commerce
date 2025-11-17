@@ -211,8 +211,14 @@ export const productSchema = Joi.object({
   // SKUs array (handled separately in service, but allow in schema)
   skus: Joi.array().items(Joi.object({
     sku_id: Joi.string().optional(),
-    sku_code: Joi.string().required(),
-    attributes: jsonField
+    sku_code: Joi.string().optional(), // Optional - will be auto-generated
+    attributes: jsonField,
+    // Price fields (optional - will be sent to Pricing Worker)
+    price: Joi.number().min(0).optional(),
+    currency: Joi.string().length(3).default('USD').optional(),
+    sale_price: Joi.number().min(0).allow(null).optional(),
+    compare_at_price: Joi.number().min(0).allow(null).optional(),
+    cost_price: Joi.number().min(0).allow(null).optional(),
   })).optional(),
 });
 
@@ -222,6 +228,12 @@ export const skuSchema = Joi.object({
   product_id: Joi.string().required(),
   sku_code: Joi.string().optional(), // Optional - will be auto-generated
   attributes: jsonField,
+  // Price fields (optional - will be sent to Pricing Worker)
+  price: Joi.number().min(0).optional(),
+  currency: Joi.string().length(3).default('USD').optional(),
+  sale_price: Joi.number().min(0).allow(null).optional(),
+  compare_at_price: Joi.number().min(0).allow(null).optional(),
+  cost_price: Joi.number().min(0).allow(null).optional(),
 });
 
 // URL path parameter schemas

@@ -223,7 +223,7 @@ export async function initializePrice(request, env) {
     }
     
     // Get user from request (set by adminAuth middleware or service)
-    const userId = request.user?.userId || 'system';
+    const userId = request.user?.userId || 'Catalog system';
     
     // If price already exists, update it; otherwise initialize
     const { initializeSkuPrice, updateSkuPrice, getSkuPrice } = await import('../db/db1.js');

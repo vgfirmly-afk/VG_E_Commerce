@@ -1,0 +1,1067 @@
+{
+	"info": {
+		"_postman_id": "96006cb9-aa9e-47fa-b939-5d55e3863db0",
+		"name": "Catalog + Auth Workers - Complete API",
+		"description": "Postman collection for testing Catalog Worker and Auth Worker together. Automatically handles token management and variable storage.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "49921323",
+		"_collection_link": "https://vg-firmly-3318835.postman.co/workspace/Vengadesan-Firmly's-Workspace~2d8595d6-cd95-424f-88d4-4a4acbe5ca47/collection/49921323-96006cb9-aa9e-47fa-b939-5d55e3863db0?action=share&source=collection_link&creator=49921323"
+	},
+	"item": [
+		{
+			"name": "Auth Worker",
+			"item": [
+				{
+					"name": "Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{authBaseUrl}}/_/health",
+							"host": [
+								"{{authBaseUrl}}"
+							],
+							"path": [
+								"_",
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set(\"userId\", response.userId);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Admin User\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"phoneNumber\": \"+1234567890\",\n  \"address\": \"123 Main St\",\n  \"fullName\": \"Admin User\"\n}"
+						},
+						"url": {
+							"raw": "{{authBaseUrl}}/api/v1/auth/register",
+							"host": [
+								"{{authBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set(\"accessToken\", response.accessToken);",
+									"    pm.collectionVariables.set(\"refreshToken\", response.refreshToken);",
+									"    console.log(\"Tokens saved to collection variables\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{authBaseUrl}}/api/v1/auth/login",
+							"host": [
+								"{{authBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set(\"accessToken\", response.accessToken);",
+									"    pm.collectionVariables.set(\"refreshToken\", response.refreshToken);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{authBaseUrl}}/api/v1/auth/token/refresh",
+							"host": [
+								"{{authBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"token",
+								"refresh"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Auto-add access token to header",
+									"const token = pm.collectionVariables.get(\"accessToken\");",
+									"if (token) {",
+									"    pm.request.headers.add({",
+									"        key: \"Authorization\",",
+									"        value: `Bearer ${token}`",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{authBaseUrl}}/api/v1/auth/me",
+							"host": [
+								"{{authBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const token = pm.collectionVariables.get(\"accessToken\");",
+									"if (token) {",
+									"    pm.request.headers.add({",
+									"        key: \"Authorization\",",
+									"        value: `Bearer ${token}`",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{authBaseUrl}}/api/v1/auth/logout",
+							"host": [
+								"{{authBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Catalog Worker - Public",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{catalogBaseUrl}}/_/health",
+							"host": [
+								"{{catalogBaseUrl}}"
+							],
+							"path": [
+								"_",
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Products",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.products && response.products.length > 0) {",
+									"        pm.collectionVariables.set(\"productId\", response.products[0].product_id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{catalogBaseUrl}}/api/v1/products?page=1&limit=20&status=active",
+							"host": [
+								"{{catalogBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "status",
+									"value": "active"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Product by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{catalogBaseUrl}}/api/v1/products/{{productId}}",
+							"host": [
+								"{{catalogBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products",
+								"{{productId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Products",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{catalogBaseUrl}}/api/v1/search?q=the&page=1&limit=20&category=ele",
+							"host": [
+								"{{catalogBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"search"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "the"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "category",
+									"value": "ele"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Home Page",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{catalogBaseUrl}}/api/v1/home?categories=Electronics,Toys,Dress&limit=10",
+							"host": [
+								"{{catalogBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"home"
+							],
+							"query": [
+								{
+									"key": "categories",
+									"value": "Electronics,Toys,Dress"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Product Image",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{catalogBaseUrl}}/api/v1/products/{{productId}}/images/{{imageId}}",
+							"host": [
+								"{{catalogBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products",
+								"{{productId}}",
+								"images",
+								"{{imageId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "New Request",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Catalog Worker - Admin (Products)",
+			"item": [
+				{
+					"name": "Create Product",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Test Productsdf\",\n  \"description\": \"This is a test product description\",\n  \"short_description\": \"Test product\",\n  \"brand\": \"Test Brand\",\n  \"manufacturer\": \"Test Manufacturer\",\n  \"category\": \"Electronics\",\n  \"subcategory\": \"Gadgets\",\n  \"status\": \"active\",\n  \"visibility\": \"public\",   \n  \"featured\": 1,\n  \"product_type\": \"simple\",\n  \"metadata\": {\n    \"identifiers\": {\n      \"mpn\": \"MPN123\",\n      \"upc\": \"UPC123\",\n      \"sku\": \"SKU123\"\n    },\n    \"brand\": \"Test Brand\",\n    \"category\": \"Electronics\",\n    \"tags\": [\"test\", \"electronics\", \"gadgets\"]\n  },\n  \"attributes\": {\n    \"dimensions\": {\n      \"weight\": 500,\n      \"weight_unit\": \"g\",\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3,\n      \"dimensions_unit\": \"cm\"\n    },\n    \"color\": \"Black\",\n    \"size\": \"Medium\"\n  },\n  \"inventory\": {\n    \"stock_status\": \"in_stock\",\n    \"stock_quantity\": 100,\n    \"manage_stock\": 1,\n    \"min_order_quantity\": 1\n  },\n  \"skus\": [\n    {\n      \"sku_code\": \"SKU-001\",\n      \"attributes\": {\n        \"size\": \"L\",\n        \"color\": \"Red\"\n      }\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{catalogBaseUrl}}/api/v1/products/",
+							"host": [
+								"{{catalogBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Product",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const token = pm.collectionVariables.get(\"accessToken\");",
+									"if (token) {",
+									"    pm.request.headers.add({",
+									"        key: \"Authorization\",",
+									"        value: `Bearer ${token}`",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"disabled": true
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"disabled": true
+							},
+							{
+								"key": "Authorization",
+								"value": "Beare",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Test Vengat\",\n  \"description\": \"This is a test product description\",\n  \"short_description\": \"Test product\",\n  \"brand\": \"Test Brand\",\n  \"manufacturer\": \"Test Manufacturer\",\n  \"category\": \"Electronics\",\n  \"subcategory\": \"Gadgets\",\n  \"status\": \"active\",\n  \"visibility\": \"public\",   \n  \"featured\": 1,\n  \"product_type\": \"simple\",\n  \"metadata\": {\n    \"identifiers\": {\n      \"mpn\": \"MPN123\",\n      \"upc\": \"UPC123\",\n      \"sku\": \"SKU123\"\n    },\n    \"brand\": \"Test Brand\",\n    \"category\": \"Electronics\",\n    \"tags\": [\"test\", \"electronics\", \"gadgets\"]\n  },\n  \"attributes\": {\n    \"dimensions\": {\n      \"weight\": 500,\n      \"weight_unit\": \"g\",\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3,\n      \"dimensions_unit\": \"cm\"\n    },\n    \"color\": \"Black\",\n    \"size\": \"Medium\"\n  },\n  \"inventory\": {\n    \"stock_status\": \"in_stock\",\n    \"stock_quantity\": 100,\n    \"manage_stock\": 1,\n    \"min_order_quantity\": 1\n  },\n  \"media\": {\n    \"image_url\": \"https://example.com/image.jpg\",\n    \"image_alt\": \"Test Product Image\"\n  },\n  \"skus\": [\n    {\n      \"sku_code\": \"SKU-001\",\n      \"attributes\": {\n        \"size\": \"L\",\n        \"color\": \"Red\"\n      }\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{catalogBaseUrl}}/api/v1/products/{{productId}}",
+							"host": [
+								"{{catalogBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products",
+								"{{productId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Product",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const token = pm.collectionVariables.get(\"accessToken\");",
+									"if (token) {",
+									"    pm.request.headers.add({",
+									"        key: \"Authorization\",",
+									"        value: `Bearer ${token}`",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{catalogBaseUrl}}/api/v1/products/{{productId}}",
+							"host": [
+								"{{catalogBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products",
+								"{{productId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Catalog Worker - Admin (SKUs)",
+			"item": [
+				{
+					"name": "Create SKU",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"disabled": true
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\n  \"attributes\": {\n    \"size\": \"XLL\",\n    \"color\": \"Blue\",\n    \"material\": \"Cotton\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{catalogBaseUrl}}/api/v1/products/{{productId}}/skus/",
+							"host": [
+								"{{catalogBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products",
+								"{{productId}}",
+								"skus",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update SKU",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku_code\": \"SKU-002-UPDATED\",\n  \"attributes\": {\n    \"size\": \"XXL\",\n    \"color\": \"Green\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{catalogBaseUrl}}/api/v1/products/{{productId}}/skus/{{skuId}}",
+							"host": [
+								"{{catalogBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products",
+								"{{productId}}",
+								"skus",
+								"{{skuId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete SKU",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{catalogBaseUrl}}/api/v1/products/{{productId}}/skus/{{skuId}}",
+							"host": [
+								"{{catalogBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products",
+								"{{productId}}",
+								"skus",
+								"{{skuId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Catalog Worker - Admin (Images)",
+			"item": [
+				{
+					"name": "Upload Product Image",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "image",
+									"type": "file",
+									"src": "/Users/vg/Desktop/Screenshot 2025-11-16 at 6.35.45 PM.png"
+								},
+								{
+									"key": "image_id",
+									"value": "{{imageId}}",
+									"type": "text",
+									"disabled": true
+								}
+							]
+						},
+						"url": {
+							"raw": "{{catalogBaseUrl}}/api/v1/products/{{productId}}/images",
+							"host": [
+								"{{catalogBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"products",
+								"{{productId}}",
+								"images"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global pre-request script: Auto-add access token to admin requests",
+					"// This runs before every request in the collection",
+					"const url = pm.request.url.toString();",
+					"if (url.includes('/api/v1/products') && ",
+					"    (pm.request.method === 'POST' || pm.request.method === 'PUT' || pm.request.method === 'DELETE')) {",
+					"    const token = pm.collectionVariables.get('accessToken');",
+					"    if (token && !pm.request.headers.has('Authorization')) {",
+					"        pm.request.headers.add({",
+					"            key: 'Authorization',",
+					"            value: `Bearer ${token}`",
+					"        });",
+					"    }",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global test script: Handle 401 errors by refreshing token",
+					"if (pm.response.code === 401) {",
+					"    console.log('Token expired, attempting to refresh...');",
+					"    const refreshToken = pm.collectionVariables.get('refreshToken');",
+					"    ",
+					"    if (refreshToken) {",
+					"        pm.sendRequest({",
+					"            url: pm.collectionVariables.get('authBaseUrl') + '/api/v1/auth/token/refresh',",
+					"            method: 'POST',",
+					"            header: {",
+					"                'Content-Type': 'application/json'",
+					"            },",
+					"            body: {",
+					"                mode: 'raw',",
+					"                raw: JSON.stringify({ refreshToken: refreshToken })",
+					"            }",
+					"        }, function (err, res) {",
+					"            if (!err && res.code === 200) {",
+					"                const response = res.json();",
+					"                pm.collectionVariables.set('accessToken', response.accessToken);",
+					"                pm.collectionVariables.set('refreshToken', response.refreshToken);",
+					"                console.log('Token refreshed successfully');",
+					"            }",
+					"        });",
+					"    }",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "authBaseUrl",
+			"value": "https://w2-auth-worker.vg-firmly.workers.dev",
+			"type": "string"
+		},
+		{
+			"key": "catalogBaseUrl",
+			"value": "https://w2-catalog-worker.vg-firmly.workers.dev",
+			"type": "string"
+		},
+		{
+			"key": "email",
+			"value": "admin@example.com",
+			"type": "string"
+		},
+		{
+			"key": "password",
+			"value": "P@ssw0rd123",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refreshToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "productId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "skuId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "imageId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userId",
+			"value": ""
+		}
+	]
+}

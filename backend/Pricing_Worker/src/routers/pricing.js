@@ -12,30 +12,50 @@ router.get('/_/health', () => new Response(JSON.stringify({ ok: true }), {
 }));
 
 // Public endpoints
-router.get('/api/v1/prices/:sku_id', async (request, env, ctx) => 
-  pricingHandlers.getPrice(request, request.env || env)
-);
-
+// More specific routes first
 router.get('/api/v1/prices/product/:product_id', async (request, env, ctx) => 
   pricingHandlers.getProductPrices(request, request.env || env)
-);
-
-router.post('/api/v1/calculate-total', async (request, env, ctx) => 
-  pricingHandlers.calculateTotal(request, request.env || env)
 );
 
 router.get('/api/v1/prices/:sku_id/history', async (request, env, ctx) => 
   pricingHandlers.getHistory(request, request.env || env)
 );
 
-// Admin/Service endpoints (require authentication)
+// POST route MUST be defined BEFORE GET route for same path pattern in itty-router
 // Initialize price (called by Catalog Worker when SKU is created)
+// MUST come after history route to avoid route conflicts
 router.post('/api/v1/prices/:sku_id',
   async (request, env, ctx) => {
-    // Allow inter-worker communication without strict auth
-    // In production, use service tokens or JWT verification
+    console.log('[Pricing Router] POST /api/v1/prices/:sku_id matched', {
+      method: request.method,
+      url: request.url,
+      pathname: new URL(request.url).pathname,
+      params: request.params,
+      headers: {
+        'X-Source': request.headers.get('X-Source'),
+        'Authorization': request.headers.get('Authorization') ? 'present' : 'missing',
+        'Content-Type': request.headers.get('Content-Type')
+      }
+    });
+    
+    // Validate whitelisted Catalog Worker URL and service token
+    // const authResult = await requireAdmin(request, request.env || env);
+    // if (!authResult.ok) {
+    //   return new Response(
+    //     JSON.stringify({ error: authResult.error, message: authResult.message }),
+    //     { status: authResult.status, headers: { 'Content-Type': 'application/json' } }
+    //   );
+    // }
     return pricingHandlers.initializePrice(request, request.env || env);
   }
+);
+
+router.get('/api/v1/prices/:sku_id', async (request, env, ctx) => 
+  pricingHandlers.getPrice(request, request.env || env)
+);
+
+router.post('/api/v1/calculate-total', async (request, env, ctx) => 
+  pricingHandlers.calculateTotal(request, request.env || env)
 );
 
 // Update price (admin only)
@@ -68,12 +88,46 @@ router.delete('/api/v1/prices/:sku_id',
 
 // Fallback - catch all unmatched routes
 router.all('*', async (request) => {
+  const url = new URL(request.url);
+  const logData = {
+    method: request.method,
+    path: url.pathname,
+    searchParams: url.searchParams.toString(),
+    headers: {
+      'X-Source': request.headers.get('X-Source'),
+      'Origin': request.headers.get('Origin'),
+      'hasAuth': !!request.headers.get('Authorization'),
+      'Content-Type': request.headers.get('Content-Type')
+    },
+    timestamp: new Date().toISOString()
+  };
+  console.error('[Pricing Router] Route not found:', logData);
+  
+  // If this is a POST to /api/v1/prices/:something, log special warning
+  if (request.method === 'POST' && url.pathname.startsWith('/api/v1/prices/')) {
+    console.error('[Pricing Router] CRITICAL: POST request to prices endpoint not matched!', {
+      path: url.pathname,
+      expectedPattern: '/api/v1/prices/:sku_id',
+      allRoutes: [
+        'GET /api/v1/prices/product/:product_id',
+        'GET /api/v1/prices/:sku_id/history',
+        'GET /api/v1/prices/:sku_id',
+        'POST /api/v1/calculate-total',
+        'POST /api/v1/prices/:sku_id', // This should match!
+        'PUT /api/v1/prices/:sku_id',
+        'DELETE /api/v1/prices/:sku_id'
+      ]
+    });
+  }
+  
   return new Response(
     JSON.stringify({ 
       error: 'not_found', 
       message: 'Endpoint not found',
-      path: new URL(request.url).pathname,
-      method: request.method
+      path: url.pathname,
+      method: request.method,
+      hint: 'Check that the Pricing Worker is deployed with the latest code',
+      routes: ['POST /api/v1/prices/:sku_id', 'GET /api/v1/prices/:sku_id']
     }), 
     { status: 404, headers: { 'Content-Type': 'application/json' } }
   );

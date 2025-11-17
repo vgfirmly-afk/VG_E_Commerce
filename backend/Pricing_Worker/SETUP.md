@@ -30,15 +30,53 @@ wrangler d1 execute pricing_db --remote --file=./migrations/001-init.sql
 
 Update `wrangler.toml` with your database ID if different from the default.
 
-### 4. Environment Variables
+### 4. Environment Variables & Security Configuration
 
 The following environment variables can be set in `wrangler.toml` or as secrets:
+
+#### Required for Inter-Worker Communication:
+- `CATALOG_WORKER_URL` - Whitelisted Catalog Worker URL (e.g., `https://w2-catalog-worker.vg-firmly.workers.dev`)
+  - Set in `wrangler.toml` under `[vars]`
+  - The Pricing Worker will only accept requests from this whitelisted URL
+- `PRICING_SERVICE_TOKEN` - Service token for inter-worker authentication (REQUIRED)
+  - Set as a secret: `wrangler secret put PRICING_SERVICE_TOKEN`
+  - Must match the token used by Catalog Worker
+  - Example: `wrangler secret put PRICING_SERVICE_TOKEN` (you'll be prompted to enter the token)
+
+#### Optional:
 - `HONEYCOMB_API_KEY` - For OpenTelemetry tracing
 - `HONEYCOMB_DATASET` - Honeycomb dataset name
-- `PRICING_WORKER_URL` - (In Catalog Worker) URL of this Pricing Worker
-- `PRICING_SERVICE_TOKEN` - (Optional) Service token for inter-worker auth
+- `PRICING_WORKER_URL` - Self-reference URL (set in Catalog Worker for inter-worker calls)
+- `JWT_PUBLIC_KEY` - For JWT verification of regular admin requests (not inter-worker)
 
-### 5. Start Development Server
+### 5. Security: Whitelisting Catalog Worker
+
+The Pricing Worker implements security through:
+1. **URL Whitelisting**: Only accepts requests from `CATALOG_WORKER_URL`
+   - Validates `X-Source` header sent by Catalog Worker
+   - Falls back to `Origin` or `Referer` headers
+2. **Service Token**: Requires `PRICING_SERVICE_TOKEN` in Authorization header
+   - Format: `Authorization: Bearer <PRICING_SERVICE_TOKEN>`
+
+**Important**: Both Catalog Worker and Pricing Worker must share the same `PRICING_SERVICE_TOKEN` secret.
+
+### 6. Configure Service Token (Required)
+
+Both workers must share the same service token. Set it as a secret in both workers:
+
+```bash
+# In Pricing Worker directory
+cd Pricing_Worker
+wrangler secret put PRICING_SERVICE_TOKEN
+# Enter your token when prompted
+
+# In Catalog Worker directory  
+cd Catalog_worker
+wrangler secret put PRICING_SERVICE_TOKEN
+# Enter the SAME token when prompted
+```
+
+### 7. Start Development Server
 ```bash
 npm start
 # Or

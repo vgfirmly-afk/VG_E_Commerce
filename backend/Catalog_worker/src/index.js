@@ -8,8 +8,9 @@ import withLogger from './middleware/logger.js'; // expects the wrapper version
 // base fetch handler that delegates to your itty-router
 async function baseFetch(request, env, ctx) {
   try {
-    // attach env to request for downstream handlers (services that expect env)
+    // attach env and ctx to request for downstream handlers (services that expect env and ctx)
     request.env = env;
+    request.ctx = ctx;
 
     // delegate to itty-router
     const response = await router.handle(request, env, ctx);

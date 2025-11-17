@@ -143,10 +143,10 @@ export async function encryptAESGCM(plaintext, keyB64) {
 
     // Generate 12-byte IV (96 bits for GCM) - MUST be unique for each encryption
     const iv = randomBytes(12);
-    logInfo('encryptAESGCM: Generated IV', { ivLength: 12, iv: uint8ToBase64(iv) });
+    // logInfo('encryptAESGCM: Generated IV', { ivLength: 12, iv: uint8ToBase64(iv) });
     
     const plaintextBytes = encoder.encode(plaintext);
-    logInfo('encryptAESGCM: Plaintext encoded', { plaintextLength: plaintextBytes.length });
+    // logInfo('encryptAESGCM: Plaintext encoded', { plaintextLength: plaintextBytes.length });
 
     // Encrypt with AES-GCM (returns ciphertext + 16-byte authentication tag)
     const ciphertext = await crypto.subtle.encrypt(
@@ -155,7 +155,7 @@ export async function encryptAESGCM(plaintext, keyB64) {
       plaintextBytes
     );
     
-    logInfo('encryptAESGCM: Ciphertext generated', { ciphertextLength: ciphertext.byteLength });
+    // logInfo('encryptAESGCM: Ciphertext generated', { ciphertextLength: ciphertext.byteLength });
 
     // Combine IV and ciphertext: IV (12 bytes) + ciphertext (includes 16-byte auth tag)
     // Format: [IV (12 bytes)][Ciphertext + Auth Tag (variable + 16 bytes)]
@@ -164,10 +164,10 @@ export async function encryptAESGCM(plaintext, keyB64) {
     combined.set(new Uint8Array(ciphertext), iv.length);  // Set ciphertext + auth tag after IV
 
     const encrypted = uint8ToBase64(combined);
-    logInfo('encryptAESGCM: Encryption complete', { combinedLength: combined.length, hasIV: true });
+    // logInfo('encryptAESGCM: Encryption complete', { combinedLength: combined.length, hasIV: true });
     return encrypted;
   } catch (err) {
-    logError('encryptAESGCM: Encryption failed', err, { function: 'encryptAESGCM' });
+    // logError('encryptAESGCM: Encryption failed', err, { function: 'encryptAESGCM' });
     throw err;
   }
 }
@@ -194,7 +194,7 @@ export async function decryptAESGCM(encryptedB64, keyB64) {
     const combined = base64ToUint8(encryptedB64);
     
     if (combined.length < 12) {
-      logError('decryptAESGCM: Encrypted data too short to contain IV', null, { dataLength: combined.length, minRequired: 12 });
+      // logError('decryptAESGCM: Encrypted data too short to contain IV', null, { dataLength: combined.length, minRequired: 12 });
       return null;
     }
     
@@ -203,7 +203,7 @@ export async function decryptAESGCM(encryptedB64, keyB64) {
     const iv = combined.slice(0, 12);
     const ciphertext = combined.slice(12);
     
-    logInfo('decryptAESGCM: Extracted IV and ciphertext', { ivLength: 12, iv: uint8ToBase64(iv), ciphertextLength: ciphertext.length });
+    // logInfo('decryptAESGCM: Extracted IV and ciphertext', { ivLength: 12, iv: uint8ToBase64(iv), ciphertextLength: ciphertext.length });
 
     if (ciphertext.length < 16) {
       logError('decryptAESGCM: Ciphertext too short (missing auth tag)', null, { ciphertextLength: ciphertext.length, minRequired: 16 });

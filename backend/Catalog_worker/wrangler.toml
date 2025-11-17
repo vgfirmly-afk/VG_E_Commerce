@@ -8,6 +8,12 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
 HONEYCOMB_DATASET = "Week_Two_Main_Project"
+# Pricing Worker URL for inter-worker communication
+PRICING_WORKER_URL = "https://w2-pricing-worker.vg-firmly.workers.dev"
+# Catalog Worker URL (sent as X-Source header for whitelisting)
+CATALOG_WORKER_URL = "https://w2-catalog-worker.vg-firmly.workers.dev"
+# Service token for inter-worker authentication (set as secret: wrangler secret put PRICING_SERVICE_TOKEN)
+# PRICING_SERVICE_TOKEN = "your-service-token-here"
 # Example (commented out)
 # PEPPER = "replace-me-locally"
 
