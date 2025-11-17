@@ -6,12 +6,15 @@
   let email = '';
   let password = '';
   let confirmPassword = '';
+  let phoneNumber = '';
+  let address = '';
+  let fullName = '';
   let error = '';
   let loading = false;
 
   async function handleSignup() {
     if (!name || !email || !password || !confirmPassword) {
-      error = 'Please fill in all fields';
+      error = 'Please fill in all required fields';
       return;
     }
 
@@ -32,6 +35,9 @@
       name,
       email,
       password,
+      phoneNumber: phoneNumber || undefined,
+      address: address || undefined,
+      fullName: fullName || name, // Use name as fallback if fullName not provided
     });
     
     if (result.success) {
@@ -57,7 +63,7 @@
     <form on:submit|preventDefault={handleSignup}>
       <div class="mb-4">
         <label for="name" class="block text-gray-700 text-sm font-bold mb-2">
-          Name
+          Name <span class="text-red-500">*</span>
         </label>
         <input
           id="name"
@@ -71,7 +77,7 @@
 
       <div class="mb-4">
         <label for="email" class="block text-gray-700 text-sm font-bold mb-2">
-          Email
+          Email <span class="text-red-500">*</span>
         </label>
         <input
           id="email"
@@ -84,8 +90,47 @@
       </div>
 
       <div class="mb-4">
+        <label for="phoneNumber" class="block text-gray-700 text-sm font-bold mb-2">
+          Phone Number
+        </label>
+        <input
+          id="phoneNumber"
+          type="tel"
+          bind:value={phoneNumber}
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="+1234567890"
+        />
+      </div>
+
+      <div class="mb-4">
+        <label for="address" class="block text-gray-700 text-sm font-bold mb-2">
+          Address
+        </label>
+        <input
+          id="address"
+          type="text"
+          bind:value={address}
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="123 Main St"
+        />
+      </div>
+
+      <div class="mb-4">
+        <label for="fullName" class="block text-gray-700 text-sm font-bold mb-2">
+          Full Name
+        </label>
+        <input
+          id="fullName"
+          type="text"
+          bind:value={fullName}
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Admin User"
+        />
+      </div>
+
+      <div class="mb-4">
         <label for="password" class="block text-gray-700 text-sm font-bold mb-2">
-          Password
+          Password <span class="text-red-500">*</span>
         </label>
         <input
           id="password"
@@ -99,7 +144,7 @@
 
       <div class="mb-6">
         <label for="confirmPassword" class="block text-gray-700 text-sm font-bold mb-2">
-          Confirm Password
+          Confirm Password <span class="text-red-500">*</span>
         </label>
         <input
           id="confirmPassword"

@@ -1,4 +1,5 @@
 import { API_CONFIG } from '../config.js';
+import { getCookie, setCookie, deleteCookie } from '../utils/cookies.js';
 
 // Track if we're currently refreshing to avoid multiple simultaneous refresh calls
 let isRefreshing = false;
@@ -67,6 +68,7 @@ export async function fetchClient(url, options = {}) {
 
 /**
  * Refresh the access token using the refresh token cookie
+ * Gets refreshToken from cookie and stores new tokens in cookies
  */
 async function refreshToken() {
   // If already refreshing, return the existing promise
@@ -77,25 +79,62 @@ async function refreshToken() {
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
+      // Get refreshToken from cookie
+      const storedRefreshToken = typeof window !== 'undefined' 
+        ? getCookie('refreshToken') 
+        : null;
+      
+      if (!storedRefreshToken) {
+        console.error('No refresh token found in cookie');
+        return false;
+      }
+      
+      const requestBody = JSON.stringify({ refreshToken: storedRefreshToken });
+      
       const response = await fetch(`${API_CONFIG.AUTH_WORKER_URL}/api/v1/auth/token/refresh`, {
         method: 'POST',
-        credentials: 'include', // Include refresh token cookie
+        credentials: 'include', // Include cookies
         headers: {
           'Content-Type': 'application/json',
         },
+        body: requestBody,
       });
 
       if (response.ok) {
-        // Token refreshed successfully, cookies are set by server
+        const data = await response.json().catch(() => ({}));
+        
+        // Store new tokens in cookies
+        if (data.accessToken && typeof window !== 'undefined') {
+          setCookie('accessToken', data.accessToken, 0.25); // 15 minutes
+          if (data.refreshToken) {
+            setCookie('refreshToken', data.refreshToken, 30); // 30 days
+          }
+        }
+        
+        // Token refreshed successfully
         return true;
       } else {
         // Refresh failed
         const data = await response.json().catch(() => ({}));
         console.error('Token refresh failed:', data);
+        
+        // Clear stored tokens on refresh failure
+        if (typeof window !== 'undefined') {
+          deleteCookie('accessToken');
+          deleteCookie('refreshToken');
+        }
+        
         return false;
       }
     } catch (error) {
       console.error('Token refresh error:', error);
+      
+      // Clear stored tokens on error
+      if (typeof window !== 'undefined') {
+        deleteCookie('accessToken');
+        deleteCookie('refreshToken');
+      }
+      
       return false;
     } finally {
       isRefreshing = false;
