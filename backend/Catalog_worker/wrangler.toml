@@ -9,7 +9,8 @@ compatibility_flags = ["nodejs_compat"]
 HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
 HONEYCOMB_DATASET = "Week_Two_Main_Project"
 # Pricing Worker URL for inter-worker communication
-PRICING_WORKER_URL = "https://w2-pricing-worker.vg-firmly.workers.dev"
+PRICING_WORKER_URL = "http://localhost:49861"
+#"https://w2-pricing-worker.vg-firmly.workers.dev"
 # Catalog Worker URL (sent as X-Source header for whitelisting)
 CATALOG_WORKER_URL = "https://w2-catalog-worker.vg-firmly.workers.dev"
 # Service token for inter-worker authentication (set as secret: wrangler secret put PRICING_SERVICE_TOKEN)
@@ -22,16 +23,29 @@ CATALOG_WORKER_URL = "https://w2-catalog-worker.vg-firmly.workers.dev"
 binding = "CATALOG_DB"
 database_name = "catalog_db"
 database_id = "fa358bd9-0c52-49aa-b0ce-302302d9be1c"
+preview_database_id = "1dbd0b02-4193-42a9-a3fc-59d8969d319a"
 
-# KV namespace (uncomment & set id if using)
+# KV namespace (production and preview)
 [[kv_namespaces]]
 binding = "CATALOG_KV"
 id = "ca68f8f4ec1d4eef8065287d94993ee5"
+preview_id = "52e2b42be95141bdb35ad3b4c93338cf"
 
 # R2 bucket for product images
 [[r2_buckets]]
 binding = "CATALOG_IMG_BUCKET"
 bucket_name = "catalog-img-bucket"
+preview_bucket_name = "catalog-img-bucket-preview"
+
+# Service binding to Pricing Worker (for direct Worker-to-Worker communication)
+[[services]]
+binding = "PRICING_WORKER"
+service = "w2-pricing-worker"
+
+# Service binding to Inventory Worker (for direct Worker-to-Worker communication)
+[[services]]
+binding = "INVENTORY_WORKER"
+service = "w2-inventory-worker"
 
 
 

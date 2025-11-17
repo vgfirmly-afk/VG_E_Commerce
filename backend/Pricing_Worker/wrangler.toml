@@ -26,6 +26,7 @@ CATALOG_WORKER_URL = "https://w2-catalog-worker.vg-firmly.workers.dev"
 binding = "PRICING_DB"
 database_name = "pricing_db"
 database_id = "9a88aa6b-0b44-4a67-a710-2340aac6765e"
+#preview_database_id = "8cdf8da1-4036-4dcf-8e3a-c59dc91facd8"
 
 # KV namespace (optional, for caching)
 #[[kv_namespaces]]

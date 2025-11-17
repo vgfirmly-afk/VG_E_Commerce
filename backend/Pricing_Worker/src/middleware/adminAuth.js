@@ -6,18 +6,24 @@ import { logError, logWarn } from '../utils/logger.js';
 import { getWhitelistedUrls } from '../../config.js';
 
 /**
- * Validate if request is from whitelisted Catalog Worker URL
+ * Validate if request is from whitelisted Catalog Worker URL or Service Binding
  */
 function validateCatalogWorkerSource(request, env) {
   try {
+    // Check if request is from Service Binding (internal, secure)
+    const sourceHeader = request.headers.get('X-Source');
+    if (sourceHeader === 'catalog-worker-service-binding') {
+      // Service binding requests are internal and secure - trust them
+      return true;
+    }
+    
     const whitelistedUrls = getWhitelistedUrls(env);
     if (!whitelistedUrls || whitelistedUrls.length === 0) {
       logWarn('validateCatalogWorkerSource: No whitelisted URLs configured');
       return false;
     }
     
-    // Check X-Source header (sent by Catalog Worker)
-    const sourceHeader = request.headers.get('X-Source');
+    // Check X-Source header (sent by Catalog Worker via HTTP)
     if (sourceHeader) {
       const sourceUrl = sourceHeader.replace(/\/$/, ''); // Remove trailing slash
       const isWhitelisted = whitelistedUrls.some(url => {
@@ -94,7 +100,9 @@ function validateServiceToken(token, env) {
 
 /**
  * Require admin or service role authentication
- * For inter-worker communication:
+ * For Service Binding requests:
+ * - Trusted automatically (internal and secure)
+ * For HTTP inter-worker communication:
  * - Validates whitelisted Catalog Worker URL
  * - Validates service token
  * For regular admin requests:
@@ -102,6 +110,20 @@ function validateServiceToken(token, env) {
  */
 export async function requireAdmin(request, env) {
   try {
+    // Check if this is a Service Binding request (internal, secure, no auth needed)
+    const sourceHeader = request.headers.get('X-Source');
+    if (sourceHeader === 'catalog-worker-service-binding') {
+      // Service bindings are internal and secure - trust them automatically
+      return { 
+        ok: true, 
+        user: { 
+          userId: 'catalog_worker_service', 
+          role: 'service',
+          source: 'service_binding'
+        } 
+      };
+    }
+    
     const authHeader = request.headers.get('Authorization');
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -124,18 +146,18 @@ export async function requireAdmin(request, env) {
       };
     }
     
-    // Check if this is an inter-worker request from Catalog Worker
+    // Check if this is an inter-worker HTTP request from Catalog Worker
     const isFromCatalogWorker = validateCatalogWorkerSource(request, env);
     
     if (isFromCatalogWorker) {
-      // Validate service token for inter-worker communication
+      // Validate service token for inter-worker HTTP communication
       if (validateServiceToken(token, env)) {
         return { 
           ok: true, 
           user: { 
             userId: 'catalog_worker_service', 
             role: 'service',
-            source: 'catalog_worker'
+            source: 'catalog_worker_http'
           } 
         };
       } else {

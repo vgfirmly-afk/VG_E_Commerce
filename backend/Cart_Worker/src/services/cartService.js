@@ -1,0 +1,306 @@
+// services/cartService.js
+import { logger, logError, logWarn } from '../utils/logger.js';
+import {
+  getOrCreateCart,
+  getCartById as getCartByIdDb,
+  getCartItems,
+  addItemToCart,
+  updateItemQuantity,
+  removeItemFromCart,
+  clearCart,
+  getCartItem
+} from '../db/db1.js';
+
+/**
+ * Get price from Pricing Worker via service binding
+ */
+async function getPriceFromPricingWorker(skuId, env) {
+  try {
+    const pricingWorker = env.PRICING_WORKER;
+    if (!pricingWorker) {
+      logError('getPriceFromPricingWorker: PRICING_WORKER binding not available', null, { skuId });
+      return null;
+    }
+    
+    const priceRequest = new Request(`https://pricing-worker/api/v1/prices/${encodeURIComponent(skuId)}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'X-Source': 'cart-worker-service-binding'
+      }
+    });
+    
+    const response = await pricingWorker.fetch(priceRequest);
+    if (!response.ok) {
+      logError('getPriceFromPricingWorker: Failed to get price', null, {
+        skuId,
+        status: response.status
+      });
+      return null;
+    }
+    
+    const priceData = await response.json();
+    return priceData.effective_price || priceData.price || 0.00;
+  } catch (err) {
+    logError('getPriceFromPricingWorker: Error', err, { skuId });
+    return null;
+  }
+}
+
+/**
+ * Check stock availability from Inventory Worker via service binding
+ */
+async function checkStockFromInventoryWorker(skuId, quantity, env) {
+  try {
+    const inventoryWorker = env.INVENTORY_WORKER;
+    if (!inventoryWorker) {
+      logError('checkStockFromInventoryWorker: INVENTORY_WORKER binding not available', null, { skuId });
+      return { available: false, reason: 'Inventory Worker not available' };
+    }
+    
+    const stockRequest = new Request(`https://inventory-worker/api/v1/stock/${encodeURIComponent(skuId)}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'X-Source': 'cart-worker-service-binding'
+      }
+    });
+    
+    const response = await inventoryWorker.fetch(stockRequest);
+    if (!response.ok) {
+      logError('checkStockFromInventoryWorker: Failed to check stock', null, {
+        skuId,
+        status: response.status
+      });
+      return { available: false, reason: 'Stock check failed' };
+    }
+    
+    const stockData = await response.json();
+    const availableQuantity = stockData.available_quantity || 0;
+    
+    if (availableQuantity < quantity) {
+      return {
+        available: false,
+        reason: `Insufficient stock. Available: ${availableQuantity}, Requested: ${quantity}`,
+        availableQuantity
+      };
+    }
+    
+    return {
+      available: true,
+      availableQuantity,
+      stock: stockData
+    };
+  } catch (err) {
+    logError('checkStockFromInventoryWorker: Error', err, { skuId });
+    return { available: false, reason: 'Stock check error' };
+  }
+}
+
+/**
+ * Get or create cart
+ */
+export async function getCart(userId, sessionId, env) {
+  try {
+    const cart = await getOrCreateCart(userId, sessionId, env);
+    const items = await getCartItems(cart.cart_id, env);
+    
+    return {
+      cart_id: cart.cart_id,
+      user_id: cart.user_id,
+      session_id: cart.session_id,
+      status: cart.status,
+      currency: cart.currency,
+      items: items.map(item => ({
+        item_id: item.item_id,
+        sku_id: item.sku_id,
+        product_id: item.product_id,
+        sku_code: item.sku_code,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        currency: item.currency
+      })),
+      item_count: items.length,
+      created_at: cart.created_at,
+      updated_at: cart.updated_at
+    };
+  } catch (err) {
+    logError('getCart: Service error', err, { userId, sessionId });
+    throw err;
+  }
+}
+
+/**
+ * Get cart by ID
+ */
+export async function getCartByIdService(cartId, env) {
+  try {
+    const cart = await getCartByIdDb(cartId, env);
+    if (!cart) {
+      return null;
+    }
+    
+    const items = await getCartItems(cartId, env);
+    
+    return {
+      cart_id: cart.cart_id,
+      user_id: cart.user_id,
+      session_id: cart.session_id,
+      status: cart.status,
+      currency: cart.currency,
+      items: items.map(item => ({
+        item_id: item.item_id,
+        sku_id: item.sku_id,
+        product_id: item.product_id,
+        sku_code: item.sku_code,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        currency: item.currency
+      })),
+      item_count: items.length,
+      created_at: cart.created_at,
+      updated_at: cart.updated_at
+    };
+  } catch (err) {
+    logError('getCartById: Service error', err, { cartId });
+    throw err;
+  }
+}
+
+/**
+ * Add item to cart
+ */
+export async function addItem(cartId, skuId, quantity, productId, skuCode, env) {
+  try {
+    // Check stock availability
+    const stockCheck = await checkStockFromInventoryWorker(skuId, quantity, env);
+    if (!stockCheck.available) {
+      throw new Error(stockCheck.reason || 'Insufficient stock');
+    }
+    
+    // Get current price
+    const unitPrice = await getPriceFromPricingWorker(skuId, env);
+    if (unitPrice === null) {
+      logWarn('addItem: Could not get price, using 0.00', { skuId });
+    }
+    
+    const currency = 'USD'; // Default currency
+    
+    const item = await addItemToCart(cartId, skuId, productId, skuCode, quantity, unitPrice || 0.00, currency, env);
+    
+    logger('cart.item.added', { cartId, skuId, quantity, unitPrice });
+    return item;
+  } catch (err) {
+    logError('addItem: Service error', err, { cartId, skuId, quantity });
+    throw err;
+  }
+}
+
+/**
+ * Update item quantity
+ */
+export async function updateQuantity(itemId, quantity, env) {
+  try {
+    // If quantity > 0, check stock availability
+    if (quantity > 0) {
+      const item = await getCartItem(itemId, env);
+      if (!item) {
+        throw new Error('Cart item not found');
+      }
+      
+      const stockCheck = await checkStockFromInventoryWorker(item.sku_id, quantity, env);
+      if (!stockCheck.available) {
+        throw new Error(stockCheck.reason || 'Insufficient stock');
+      }
+    }
+    
+    const item = await updateItemQuantity(itemId, quantity, env);
+    logger('cart.item.updated', { itemId, quantity });
+    return item;
+  } catch (err) {
+    logError('updateQuantity: Service error', err, { itemId, quantity });
+    throw err;
+  }
+}
+
+/**
+ * Remove item from cart
+ */
+export async function removeItem(itemId, env) {
+  try {
+    await removeItemFromCart(itemId, env);
+    logger('cart.item.removed', { itemId });
+    return true;
+  } catch (err) {
+    logError('removeItem: Service error', err, { itemId });
+    throw err;
+  }
+}
+
+/**
+ * Clear cart
+ */
+export async function clear(cartId, env) {
+  try {
+    await clearCart(cartId, env);
+    logger('cart.cleared', { cartId });
+    return true;
+  } catch (err) {
+    logError('clear: Service error', err, { cartId });
+    throw err;
+  }
+}
+
+/**
+ * Calculate cart total (with prices from Pricing Worker)
+ */
+export async function calculateTotal(cartId, env) {
+  try {
+    const cart = await getCartByIdService(cartId, env);
+    if (!cart) {
+      throw new Error('Cart not found');
+    }
+    
+    const items = cart.items || [];
+    const pricingWorker = env.PRICING_WORKER;
+    
+    let subtotal = 0;
+    const itemTotals = [];
+    
+    for (const item of items) {
+      // Get current price from Pricing Worker
+      let currentPrice = item.unit_price; // Use cached price as fallback
+      
+      if (pricingWorker) {
+        const price = await getPriceFromPricingWorker(item.sku_id, env);
+        if (price !== null) {
+          currentPrice = price;
+        }
+      }
+      
+      const itemTotal = currentPrice * item.quantity;
+      subtotal += itemTotal;
+      
+      itemTotals.push({
+        item_id: item.item_id,
+        sku_id: item.sku_id,
+        quantity: item.quantity,
+        unit_price: currentPrice,
+        total: itemTotal
+      });
+    }
+    
+    return {
+      cart_id: cartId,
+      subtotal: Math.round(subtotal * 100) / 100, // Round to 2 decimal places
+      currency: cart.currency || 'USD',
+      item_count: items.length,
+      items: itemTotals
+    };
+  } catch (err) {
+    logError('calculateTotal: Service error', err, { cartId });
+    throw err;
+  }
+}
+
+

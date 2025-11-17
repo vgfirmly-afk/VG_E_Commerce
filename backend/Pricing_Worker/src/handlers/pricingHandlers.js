@@ -209,9 +209,18 @@ export async function initializePrice(request, env) {
     
     const body = await request.json();
     
+    // Log received payload for debugging
+    console.log('[Pricing Handler] Received price initialization payload:', {
+      skuId,
+      body,
+      bodyKeys: Object.keys(body),
+      timestamp: new Date().toISOString()
+    });
+    
     // Validate price data
     const { error, value } = validateSkuPriceUpdate(body);
     if (error) {
+      console.error('[Pricing Handler] Validation error:', error);
       return new Response(
         JSON.stringify({ 
           error: 'validation_error', 
@@ -225,25 +234,48 @@ export async function initializePrice(request, env) {
     // Get user from request (set by adminAuth middleware or service)
     const userId = request.user?.userId || 'Catalog system';
     
+    // Log validated value
+    console.log('[Pricing Handler] Validated price data:', {
+      skuId,
+      value,
+      valueKeys: Object.keys(value),
+      hasPrice: value.price !== undefined,
+      price: value.price
+    });
+    
     // If price already exists, update it; otherwise initialize
     const { initializeSkuPrice, updateSkuPrice, getSkuPrice } = await import('../db/db1.js');
     const existing = await getSkuPrice(skuId, env);
     
     let price;
     if (existing) {
+      console.log('[Pricing Handler] Price exists, updating:', { skuId, existingPrice: existing.price });
       price = await updateSkuPrice(skuId, value, userId, env);
     } else {
       // Initialize with provided data or defaults
+      // Include all fields from body (sku_id, product_id, sku_code) and validated value (price fields)
       const initData = {
         sku_id: skuId,
         product_id: body.product_id || '',
         sku_code: body.sku_code || '',
-        price: value.price || 0.00,
-        currency: value.currency || 'USD',
-        ...value
+        price: value.price !== undefined ? value.price : (body.price !== undefined ? body.price : 0.00),
+        currency: value.currency || body.currency || 'USD',
+        sale_price: value.sale_price !== undefined ? value.sale_price : (body.sale_price !== undefined ? body.sale_price : null),
+        compare_at_price: value.compare_at_price !== undefined ? value.compare_at_price : (body.compare_at_price !== undefined ? body.compare_at_price : null),
+        cost_price: value.cost_price !== undefined ? value.cost_price : (body.cost_price !== undefined ? body.cost_price : null),
+        reason: body.reason || value.reason || 'Price synced from Catalog Worker'
       };
+      
+      console.log('[Pricing Handler] Initializing price with data:', initData);
       price = await initializeSkuPrice(initData, env);
     }
+    
+    console.log('[Pricing Handler] Price operation completed:', {
+      skuId,
+      wasExisting: !!existing,
+      finalPrice: price?.price,
+      status: existing ? 200 : 201
+    });
     
     return new Response(
       JSON.stringify(price),

@@ -5,11 +5,30 @@ import { requireAdmin } from '../middleware/adminAuth.js';
 
 const router = Router();
 
-// Health check
-router.get('/_/health', () => new Response(JSON.stringify({ ok: true }), { 
-  status: 200, 
-  headers: { 'Content-Type': 'application/json' } 
-}));
+// Health check - MUST be first route for itty-router matching
+router.get('/_/health', async (request, env, ctx) => {
+  // Log all incoming health check requests for debugging
+  const url = new URL(request.url);
+  console.log('[Pricing Router] Health check matched', {
+    method: request.method,
+    path: url.pathname,
+    fullUrl: request.url,
+    headers: {
+      'Accept': request.headers.get('Accept'),
+      'Content-Type': request.headers.get('Content-Type'),
+      'User-Agent': request.headers.get('User-Agent'),
+      'CF-Ray': request.headers.get('CF-Ray'),
+      'Origin': request.headers.get('Origin'),
+      'X-Source': request.headers.get('X-Source')
+    },
+    timestamp: new Date().toISOString()
+  });
+  
+  return new Response(JSON.stringify({ ok: true }), { 
+    status: 200, 
+    headers: { 'Content-Type': 'application/json' } 
+  });
+});
 
 // Public endpoints
 // More specific routes first
@@ -38,14 +57,20 @@ router.post('/api/v1/prices/:sku_id',
       }
     });
     
-    // Validate whitelisted Catalog Worker URL and service token
-    // const authResult = await requireAdmin(request, request.env || env);
-    // if (!authResult.ok) {
-    //   return new Response(
-    //     JSON.stringify({ error: authResult.error, message: authResult.message }),
-    //     { status: authResult.status, headers: { 'Content-Type': 'application/json' } }
-    //   );
-    // }
+    // Validate request source (Service Binding or HTTP with auth)
+    // Service bindings are trusted automatically, HTTP requests need auth
+    const sourceHeader = request.headers.get('X-Source');
+    if (sourceHeader !== 'catalog-worker-service-binding') {
+      // For HTTP requests, require authentication
+      const authResult = await requireAdmin(request, request.env || env);
+      if (!authResult.ok) {
+        return new Response(
+          JSON.stringify({ error: authResult.error, message: authResult.message }),
+          { status: authResult.status, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+    
     return pricingHandlers.initializePrice(request, request.env || env);
   }
 );
@@ -97,11 +122,32 @@ router.all('*', async (request) => {
       'X-Source': request.headers.get('X-Source'),
       'Origin': request.headers.get('Origin'),
       'hasAuth': !!request.headers.get('Authorization'),
-      'Content-Type': request.headers.get('Content-Type')
+      'Content-Type': request.headers.get('Content-Type'),
+      'User-Agent': request.headers.get('User-Agent'),
+      'CF-Ray': request.headers.get('CF-Ray')
     },
     timestamp: new Date().toISOString()
   };
   console.error('[Pricing Router] Route not found:', logData);
+  
+  // Special logging for health check failures
+  if (request.method === 'GET' && url.pathname === '/_/health') {
+    console.error('[Pricing Router] CRITICAL: Health check endpoint not matched!', {
+      path: url.pathname,
+      expectedRoute: 'GET /_/health',
+      allRoutes: [
+        'GET /_/health',
+        'GET /api/v1/prices/product/:product_id',
+        'GET /api/v1/prices/:sku_id/history',
+        'POST /api/v1/prices/:sku_id',
+        'GET /api/v1/prices/:sku_id',
+        'POST /api/v1/calculate-total',
+        'PUT /api/v1/prices/:sku_id',
+        'DELETE /api/v1/prices/:sku_id'
+      ],
+      requestDetails: logData
+    });
+  }
   
   // If this is a POST to /api/v1/prices/:something, log special warning
   if (request.method === 'POST' && url.pathname.startsWith('/api/v1/prices/')) {
@@ -127,7 +173,7 @@ router.all('*', async (request) => {
       path: url.pathname,
       method: request.method,
       hint: 'Check that the Pricing Worker is deployed with the latest code',
-      routes: ['POST /api/v1/prices/:sku_id', 'GET /api/v1/prices/:sku_id']
+      routes: ['GET /_/health', 'POST /api/v1/prices/:sku_id', 'GET /api/v1/prices/:sku_id']
     }), 
     { status: 404, headers: { 'Content-Type': 'application/json' } }
   );

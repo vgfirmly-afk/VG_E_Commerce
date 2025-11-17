@@ -30,17 +30,263 @@ async function invalidateProductCache(productId, env) {
 }
 
 /**
- * Check Pricing Worker health endpoint
+ * Check Pricing Worker health endpoint using Service Binding
  */
-async function checkPricingWorkerHealth(pricingWorkerUrl, env) {
+async function checkPricingWorkerHealth(env) {
   try {
-    const healthEndpoint = `${pricingWorkerUrl}/_/health`;
+    // Use service binding if available, otherwise fall back to HTTP
+    const pricingWorker = env.PRICING_WORKER;
     
-    logger('price.health.check', { endpoint: healthEndpoint });
+    if (pricingWorker) {
+      // Use service binding (direct Worker-to-Worker call)
+      logger('price.health.check', { 
+        method: 'service_binding',
+        endpoint: '/_/health',
+        timestamp: new Date().toISOString()
+      });
+      
+      const healthRequest = new Request('https://pricing-worker/_/health', {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      const healthResponse = await pricingWorker.fetch(healthRequest);
+      const text = await healthResponse.text().catch(() => '');
+      let parsedBody = text;
+      try { 
+        parsedBody = JSON.parse(text); 
+      } catch (e) { 
+        parsedBody = text;
+      }
+
+      const isHealthy = healthResponse.ok && parsedBody && parsedBody.ok === true;
+
+      if (!isHealthy) {
+        logError('syncPriceToPricingWorker: Pricing Worker health check failed (service binding)', null, {
+          status: healthResponse.status,
+          statusText: healthResponse.statusText,
+          responseBody: parsedBody,
+          expected: { ok: true }
+        });
+        return { healthy: false, status: healthResponse.status, response: parsedBody };
+      }
+
+      logger('price.health.ok', { 
+        method: 'service_binding',
+        status: healthResponse.status,
+        response: parsedBody
+      });
+      return { healthy: true, status: healthResponse.status, response: parsedBody };
+    } else {
+      // Fallback: Service binding not available, skip health check
+      logger('price.health.check', { 
+        method: 'service_binding_not_available',
+        note: 'PRICING_WORKER binding not found, skipping health check'
+      });
+      return { healthy: true, status: 200, response: { ok: true }, skipCheck: true };
+    }
+  } catch (err) {
+    logError('syncPriceToPricingWorker: Health check error', err, {
+      method: 'service_binding',
+      errorType: err.name,
+      errorMessage: err.message,
+      stack: err.stack
+    });
+    return { healthy: false, error: err.message };
+  }
+}
+
+/**
+ * Call Pricing Worker to initialize or update SKU price using Service Binding (async/non-blocking)
+ */
+async function syncPriceToPricingWorker(skuId, productId, skuCode, priceData, env) {
+  try {
+    // Use service binding if available (preferred method)
+    const pricingWorker = env.PRICING_WORKER;
+    
+    if (pricingWorker) {
+      // Use service binding - direct Worker-to-Worker call (no HTTP overhead)
+      logger('price.sync.attempt', {
+        skuId,
+        method: 'service_binding',
+        endpoint: `/api/v1/prices/${skuId}`,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Build payload from actual inputs (fall back to sensible defaults)
+      const pricePayload = {
+        sku_id: skuId,
+        product_id: productId,
+        sku_code: skuCode,
+        price: priceData.price !== undefined ? priceData.price : 0.00,
+        currency: priceData.currency || 'USD',
+        sale_price: priceData.sale_price !== undefined ? priceData.sale_price : null,
+        compare_at_price: priceData.compare_at_price !== undefined ? priceData.compare_at_price : null,
+        cost_price: priceData.cost_price !== undefined ? priceData.cost_price : null,
+        reason: priceData.reason || 'Price synced from Catalog Worker'
+      };
+
+      // Log the payload being sent
+      logger('price.sync.payload', {
+        skuId,
+        payload: pricePayload,
+        payloadString: JSON.stringify(pricePayload),
+        priceData: priceData
+      });
+
+      // First, check Pricing Worker health using service binding
+      const healthCheck = await checkPricingWorkerHealth(env);
+      
+      if (!healthCheck.healthy && !healthCheck.skipCheck) {
+        logError('syncPriceToPricingWorker: Pricing Worker is not healthy, skipping price sync', null, {
+          skuId,
+          healthCheck,
+          reason: 'Health check failed - Pricing Worker may be down or unreachable'
+        });
+        return Promise.resolve();
+      }
+
+      // Create request for service binding
+      // Note: URL can be any valid URL format - service binding handles routing internally
+      const pricingRequest = new Request(`https://pricing-worker/api/v1/prices/${encodeURIComponent(skuId)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Service bindings are internal and secure - no auth token needed
+          'X-Source': 'catalog-worker-service-binding'
+        },
+        body: JSON.stringify(pricePayload)
+      });
+
+      const pricingPromise = pricingWorker.fetch(pricingRequest).then(async (response) => {
+        const text = await response.text().catch(() => '');
+        let parsedBody = text;
+        try { 
+          parsedBody = JSON.parse(text); 
+        } catch (e) { 
+          parsedBody = text;
+        }
+
+        if (!response.ok) {
+          logError('syncPriceToPricingWorker: Failed to sync price (service binding)', null, {
+            skuId,
+            status: response.status,
+            statusText: response.statusText,
+            endpoint: `/api/v1/prices/${skuId}`,
+            responseBody: parsedBody
+          });
+        } else {
+          logger('price.synced', { 
+            skuId, 
+            method: 'service_binding',
+            status: response.status
+          });
+        }
+
+        return { ok: response.ok, status: response.status, body: parsedBody };
+      }).catch((err) => {
+        logError('syncPriceToPricingWorker: Service binding error', err, { 
+          skuId,
+          errorType: err.name,
+          errorMessage: err.message
+        });
+      });
+
+      return pricingPromise;
+    } else {
+      // Fallback: Service binding not available, use HTTP fetch
+      logger('price.sync.attempt', {
+        skuId,
+        method: 'http_fallback',
+        note: 'PRICING_WORKER binding not found, using HTTP fetch'
+      });
+      
+      const pricingWorkerUrl = (env.PRICING_WORKER_URL || 'https://w2-pricing-worker.vg-firmly.workers.dev').replace(/\/$/, '');
+      const catalogWorkerUrl = (env.CATALOG_WORKER_URL || 'https://w2-catalog-worker.vg-firmly.workers.dev').replace(/\/$/, '');
+      
+      if (!env.PRICING_SERVICE_TOKEN) {
+        logError('syncPriceToPricingWorker: PRICING_SERVICE_TOKEN not configured', null, { skuId });
+        return Promise.resolve();
+      }
+      
+      // Health check using HTTP
+      const healthCheck = await checkPricingWorkerHealthHTTP(pricingWorkerUrl, env);
+      
+      if (!healthCheck.healthy) {
+        logError('syncPriceToPricingWorker: Pricing Worker is not healthy, skipping price sync', null, {
+          skuId,
+          healthCheck,
+          reason: 'Health check failed - Pricing Worker may be down or unreachable'
+        });
+        return Promise.resolve();
+      }
+      
+      const authHeader = `Bearer ${env.PRICING_SERVICE_TOKEN}`;
+
+      const pricePayload = {
+        sku_id: skuId,
+        product_id: productId,
+        sku_code: skuCode,
+        price: priceData.price !== undefined ? priceData.price : 0.00,
+        currency: priceData.currency || 'USD',
+        sale_price: priceData.sale_price !== undefined ? priceData.sale_price : null,
+        compare_at_price: priceData.compare_at_price !== undefined ? priceData.compare_at_price : null,
+        cost_price: priceData.cost_price !== undefined ? priceData.cost_price : null,
+        reason: priceData.reason || 'Price synced from Catalog Worker'
+      };
+
+      const pricingEndpoint = `${pricingWorkerUrl}/api/v1/prices/${encodeURIComponent(skuId)}`;
+
+      return fetch(pricingEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authHeader,
+          'X-Source': catalogWorkerUrl
+        },
+        body: JSON.stringify(pricePayload)
+      }).then(async (response) => {
+        const text = await response.text().catch(() => '');
+        let parsedBody = text;
+        try { parsedBody = JSON.parse(text); } catch (e) { parsedBody = text; }
+
+        if (!response.ok) {
+          logError('syncPriceToPricingWorker: Failed to sync price (HTTP fallback)', null, {
+            skuId,
+            status: response.status,
+            statusText: response.statusText,
+            endpoint: pricingEndpoint,
+            responseBody: parsedBody
+          });
+        } else {
+          logger('price.synced', { skuId, method: 'http_fallback', endpoint: pricingEndpoint });
+        }
+
+        return { ok: response.ok, status: response.status, body: parsedBody };
+      }).catch((err) => {
+        logError('syncPriceToPricingWorker: HTTP fetch error', err, { skuId });
+      });
+    }
+  } catch (err) {
+    logError('syncPriceToPricingWorker: Error setting up price sync', err, { skuId });
+    return Promise.resolve();
+  }
+}
+
+/**
+ * HTTP fallback health check (used when service binding is not available)
+ */
+async function checkPricingWorkerHealthHTTP(pricingWorkerUrl, env) {
+  try {
+    const baseUrl = pricingWorkerUrl.replace(/\/$/, '');
+    const healthEndpoint = `${baseUrl}/_/health`;
     
     const healthResponse = await fetch(healthEndpoint, {
       method: 'GET',
       headers: {
+        'Accept': 'application/json',
         'Content-Type': 'application/json'
       }
     });
@@ -50,138 +296,13 @@ async function checkPricingWorkerHealth(pricingWorkerUrl, env) {
     try { 
       parsedBody = JSON.parse(text); 
     } catch (e) { 
-      // Keep raw text if not JSON
       parsedBody = text;
     }
 
     const isHealthy = healthResponse.ok && parsedBody && parsedBody.ok === true;
-
-    if (!isHealthy) {
-      logError('syncPriceToPricingWorker: Pricing Worker health check failed', null, {
-        status: healthResponse.status,
-        statusText: healthResponse.statusText,
-        endpoint: healthEndpoint,
-        responseBody: parsedBody,
-        expected: { ok: true }
-      });
-      return { healthy: false, status: healthResponse.status, response: parsedBody };
-    }
-
-    logger('price.health.ok', { endpoint: healthEndpoint });
-    return { healthy: true, status: healthResponse.status, response: parsedBody };
+    return { healthy: isHealthy, status: healthResponse.status, response: parsedBody };
   } catch (err) {
-    logError('syncPriceToPricingWorker: Health check error', err, {
-      endpoint: `${pricingWorkerUrl}/_/health`,
-      errorType: err.name,
-      errorMessage: err.message
-    });
     return { healthy: false, error: err.message };
-  }
-}
-
-/**
- * Call Pricing Worker to initialize or update SKU price (async/non-blocking)
- */
-async function syncPriceToPricingWorker(skuId, productId, skuCode, priceData, env) {
-  try {
-    const pricingWorkerUrl = (env.PRICING_WORKER_URL || 'https://w2-pricing-worker.vg-firmly.workers.dev').replace(/\/$/, '');
-    const catalogWorkerUrl = (env.CATALOG_WORKER_URL || 'https://w2-catalog-worker.vg-firmly.workers.dev').replace(/\/$/, '');
-    
-    if (!env.PRICING_SERVICE_TOKEN) {
-      logError('syncPriceToPricingWorker: PRICING_SERVICE_TOKEN not configured', null, { skuId });
-      return Promise.resolve();
-    }
-    
-    // First, check Pricing Worker health
-    const healthCheck = await checkPricingWorkerHealth(pricingWorkerUrl, env);
-    
-    if (!healthCheck.healthy) {
-      logError('syncPriceToPricingWorker: Pricing Worker is not healthy, skipping price sync', null, {
-        skuId,
-        healthCheck,
-        reason: 'Health check failed - Pricing Worker may be down or unreachable'
-      });
-      return Promise.resolve();
-    }
-    
-    const authHeader = `Bearer ${env.PRICING_SERVICE_TOKEN}`;
-
-    // Build payload from actual inputs (fall back to sensible defaults)
-    const pricePayload = {
-      sku_id: skuId,
-      product_id: productId,
-      sku_code: skuCode,
-      price: priceData.price !== undefined ? priceData.price : 0.00,
-      currency: priceData.currency || 'USD',
-      sale_price: priceData.sale_price !== undefined ? priceData.sale_price : null,
-      compare_at_price: priceData.compare_at_price !== undefined ? priceData.compare_at_price : null,
-      cost_price: priceData.cost_price !== undefined ? priceData.cost_price : null,
-      reason: priceData.reason || 'Price synced from Catalog Worker'
-    };
-
-    const pricingEndpointWithId = `${pricingWorkerUrl}/api/v1/prices/${encodeURIComponent(skuId)}`;
-    const pricingEndpointBase = `${pricingWorkerUrl}/api/v1/prices`;
-
-    logger('price.sync.attempt', {
-      skuId,
-      endpoint: pricingEndpointWithId,
-      method: 'POST',
-      payload: pricePayload,
-      headers: { 'Content-Type': 'application/json', 'hasAuth': !!authHeader, 'X-Source': catalogWorkerUrl },
-      healthCheck: 'passed'
-    });
-
-    const doFetch = async (url, method = 'POST') => {
-      const res = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': authHeader,
-          'X-Source': catalogWorkerUrl
-        },
-        body: JSON.stringify(pricePayload)
-      });
-
-      const text = await res.text().catch(() => '');
-      let parsedBody = text;
-      try { parsedBody = JSON.parse(text); } catch (e) { /* keep raw text */ }
-
-      if (!res.ok) {
-        // Log status + body to help debugging (most important addition)
-        logError('syncPriceToPricingWorker: Failed to sync price', null, {
-          skuId,
-          status: res.status,
-          statusText: res.statusText,
-          endpoint: url,
-          responseBody: parsedBody,
-          headersSent: { 'X-Source': catalogWorkerUrl, 'hasAuth': !!authHeader }
-        });
-      } else {
-        logger('price.synced', { skuId, pricing_worker: pricingWorkerUrl, endpoint: url });
-      }
-
-      return { ok: res.ok, status: res.status, body: parsedBody };
-    };
-
-    // Fire first request to /api/v1/prices/:skuId
-    const first = doFetch(pricingEndpointWithId, 'POST');
-
-    // Fire-and-forget, but return the promise so caller can waitUntil if desired
-    const promise = first.then(async (r) => {
-      // If pricing returned 404, try POST to base endpoint as fallback (some APIs use that)
-      if (!r.ok && r.status === 404) {
-        logger('price.sync.fallback', { skuId, try: pricingEndpointBase });
-        return doFetch(pricingEndpointBase, 'POST');
-      }
-      return r;
-    }).catch((err) => {
-      logError('syncPriceToPricingWorker: Fetch error', err, { skuId });
-    });
-
-    return promise;
-  } catch (err) {
-    logError('syncPriceToPricingWorker: Error setting up price sync', err, { skuId });
-    return Promise.resolve();
   }
 }
 
@@ -352,6 +473,89 @@ export async function deleteProductService(productId, env) {
 }
 
 /**
+ * Call Inventory Worker to initialize stock for a new SKU using Service Binding (async/non-blocking)
+ */
+async function syncStockToInventoryWorker(skuId, productId, skuCode, env) {
+  try {
+    const inventoryWorker = env.INVENTORY_WORKER;
+    
+    if (inventoryWorker) {
+      // Use service binding
+      logger('stock.sync.attempt', {
+        skuId,
+        method: 'service_binding',
+        endpoint: `/api/v1/stock/${skuId}`,
+        timestamp: new Date().toISOString()
+      });
+      
+      const stockPayload = {
+        sku_id: skuId,
+        product_id: productId,
+        sku_code: skuCode,
+        quantity: 0, // Default stock is 0
+        reason: 'Stock initialized from Catalog Worker'
+      };
+      
+      const inventoryRequest = new Request(`https://inventory-worker/api/v1/stock/${encodeURIComponent(skuId)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Source': 'catalog-worker-service-binding'
+        },
+        body: JSON.stringify(stockPayload)
+      });
+      
+      const inventoryPromise = inventoryWorker.fetch(inventoryRequest).then(async (response) => {
+        const text = await response.text().catch(() => '');
+        let parsedBody = text;
+        try { 
+          parsedBody = JSON.parse(text); 
+        } catch (e) { 
+          parsedBody = text;
+        }
+        
+        if (!response.ok) {
+          logError('syncStockToInventoryWorker: Failed to sync stock (service binding)', null, {
+            skuId,
+            status: response.status,
+            statusText: response.statusText,
+            endpoint: `/api/v1/stock/${skuId}`,
+            responseBody: parsedBody
+          });
+        } else {
+          logger('stock.synced', { 
+            skuId, 
+            method: 'service_binding',
+            status: response.status
+          });
+        }
+        
+        return { ok: response.ok, status: response.status, body: parsedBody };
+      }).catch((err) => {
+        logError('syncStockToInventoryWorker: Service binding error', err, { 
+          skuId,
+          errorType: err.name,
+          errorMessage: err.message
+        });
+      });
+      
+      return inventoryPromise;
+    } else {
+      // Fallback: Service binding not available
+      logger('stock.sync.attempt', {
+        skuId,
+        method: 'service_binding_not_available',
+        note: 'INVENTORY_WORKER binding not found, skipping stock sync'
+      });
+      return Promise.resolve();
+    }
+  } catch (err) {
+    logError('syncStockToInventoryWorker: Error setting up stock sync', err, { skuId });
+    return Promise.resolve();
+  }
+}
+
+/**
  * Create SKU (admin)
  */
 export async function createSkuService(skuData, userId, env, ctx = null) {
@@ -388,6 +592,13 @@ export async function createSkuService(skuData, userId, env, ctx = null) {
     const priceSyncPromise = syncPriceToPricingWorker(skuId, skuData.product_id, skuCode, priceFields, env);
     if (ctx && ctx.waitUntil) {
       ctx.waitUntil(priceSyncPromise);
+    }
+    
+    // Sync stock to Inventory Worker (async/non-blocking)
+    // Use ctx.waitUntil() to ensure the async fetch completes even after response is sent
+    const stockSyncPromise = syncStockToInventoryWorker(skuId, skuData.product_id, skuCode, env);
+    if (ctx && ctx.waitUntil) {
+      ctx.waitUntil(stockSyncPromise);
     }
     
     // Invalidate product cache

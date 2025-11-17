@@ -23,8 +23,31 @@ export async function getSkuPrice(skuId, env) {
  */
 export async function initializeSkuPrice(skuData, env) {
   try {
-    const { sku_id, product_id, sku_code } = skuData;
+    const { 
+      sku_id, 
+      product_id, 
+      sku_code,
+      price = 0.00,
+      currency = 'USD',
+      sale_price = null,
+      compare_at_price = null,
+      cost_price = null,
+      reason = 'Initial price initialization'
+    } = skuData;
+    
     const now = new Date().toISOString();
+    
+    // Log the data being inserted
+    console.log('[DB] initializeSkuPrice called with:', {
+      sku_id,
+      product_id,
+      sku_code,
+      price,
+      currency,
+      sale_price,
+      compare_at_price,
+      cost_price
+    });
     
     // Check if price already exists
     const existing = await getSkuPrice(sku_id, env);
@@ -33,38 +56,56 @@ export async function initializeSkuPrice(skuData, env) {
       return existing;
     }
     
-    // Initialize with default price
+    // Initialize with provided price data (not hardcoded defaults!)
     const sql = `INSERT INTO sku_prices (
-      sku_id, product_id, sku_code, price, currency, status, 
-      valid_from, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      sku_id, product_id, sku_code, price, currency, 
+      sale_price, compare_at_price, cost_price,
+      status, valid_from, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     
     await env.PRICING_DB.prepare(sql).bind(
       sku_id,
       product_id,
       sku_code,
-      0.00, // Default price
-      'USD', // Default currency
+      price, // Use provided price, not hardcoded 0.00!
+      currency, // Use provided currency, not hardcoded 'USD'!
+      sale_price,
+      compare_at_price,
+      cost_price,
       'active',
       now,
       now,
       now
     ).run();
     
-    // Create initial price history entry
+    // Create initial price history entry with actual price
     await createPriceHistory({
       sku_id,
       product_id,
       sku_code,
-      price: 0.00,
-      currency: 'USD',
+      price: price, // Use actual price, not 0.00!
+      currency: currency, // Use actual currency, not 'USD'!
       change_type: 'create',
-      reason: 'Initial price initialization',
+      reason: reason,
       changed_by: 'system'
     }, env);
     
-    logger('price.initialized', { sku_id, product_id, sku_code });
-    return await getSkuPrice(sku_id, env);
+    logger('price.initialized', { 
+      sku_id, 
+      product_id, 
+      sku_code,
+      price,
+      currency
+    });
+    
+    const inserted = await getSkuPrice(sku_id, env);
+    console.log('[DB] Price inserted successfully:', {
+      sku_id,
+      insertedPrice: inserted?.price,
+      insertedCurrency: inserted?.currency
+    });
+    
+    return inserted;
   } catch (err) {
     logError('initializeSkuPrice: Database error', err, { skuData });
     throw err;

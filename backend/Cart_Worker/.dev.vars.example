@@ -1,0 +1,10 @@
+# Pricing Worker .dev.vars
+# Copy this file to .dev.vars and update with your values
+# DO NOT commit .dev.vars to git (it's in .gitignore)
+
+# Service token for inter-worker communication (MUST match Catalog Worker)
+PRICING_SERVICE_TOKEN="your-service-token-here"
+
+# Catalog Worker URL for whitelisting
+CATALOG_WORKER_URL="https://w2-catalog-worker.vg-firmly.workers.dev"
+
