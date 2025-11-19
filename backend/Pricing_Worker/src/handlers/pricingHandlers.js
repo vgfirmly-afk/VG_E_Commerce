@@ -4,7 +4,10 @@ import {
   validateSkuId,
   validateCalculateTotal,
   validatePriceHistoryQuery,
-  validateSkuPriceUpdate
+  validateSkuPriceUpdate,
+  validatePromotionCodeCreate,
+  validatePromotionCodeUpdate,
+  validatePromotionCodeListQuery
 } from '../utils/validators.js';
 import { logError } from '../utils/logger.js';
 
@@ -375,6 +378,215 @@ export async function deletePrice(request, env) {
     return new Response(
       JSON.stringify({ error: 'internal_error', message: err.message }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+/**
+ * GET /promotion-codes - List promotion codes (admin only)
+ */
+export async function listPromotionCodes(request, env) {
+  try {
+    const url = new URL(request.url);
+    const queryParams = {
+      page: parseInt(url.searchParams.get('page') || '1', 10),
+      limit: parseInt(url.searchParams.get('limit') || '20', 10),
+      status: url.searchParams.get('status') || null,
+    };
+    
+    // Validate query params
+    const { error, value } = validatePromotionCodeListQuery(queryParams);
+    if (error) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'validation_error', 
+          message: 'Invalid query parameters',
+          details: error.details 
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const result = await pricingService.listPromotionCodesService(value, env);
+    
+    return new Response(
+      JSON.stringify(result),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  } catch (err) {
+    logError('listPromotionCodes: Handler error', err);
+    return new Response(
+      JSON.stringify({ error: 'internal_error', message: err.message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+/**
+ * GET /promotion-codes/:promotion_id - Get promotion code by ID (admin only)
+ */
+export async function getPromotionCode(request, env) {
+  try {
+    const promotionId = request.params?.promotion_id;
+    
+    if (!promotionId) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'validation_error', 
+          message: 'Promotion ID is required' 
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const promo = await pricingService.getPromotionCodeService(promotionId, env);
+    
+    if (!promo) {
+      return new Response(
+        JSON.stringify({ error: 'not_found', message: 'Promotion code not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    return new Response(
+      JSON.stringify(promo),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  } catch (err) {
+    logError('getPromotionCode: Handler error', err);
+    return new Response(
+      JSON.stringify({ error: 'internal_error', message: err.message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+/**
+ * POST /promotion-codes - Create promotion code (admin only)
+ */
+export async function createPromotionCode(request, env) {
+  try {
+    const body = await request.json();
+    
+    // Validate promotion code data
+    const { error, value } = validatePromotionCodeCreate(body);
+    if (error) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'validation_error', 
+          message: 'Invalid promotion code data',
+          details: error.details.map(d => ({
+            path: d.path.join('.'),
+            message: d.message,
+            type: d.type
+          }))
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Get user from request (set by adminAuth middleware)
+    const userId = request.user?.userId || 'system';
+    
+    const promo = await pricingService.createPromotionCodeService(value, userId, env);
+    
+    return new Response(
+      JSON.stringify(promo),
+      { status: 201, headers: { 'Content-Type': 'application/json' } }
+    );
+  } catch (err) {
+    logError('createPromotionCode: Handler error', err);
+    const status = err.message.includes('already exists') ? 409 : 500;
+    return new Response(
+      JSON.stringify({ error: 'internal_error', message: err.message }),
+      { status, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+/**
+ * PUT /promotion-codes/:promotion_id - Update promotion code (admin only)
+ */
+export async function updatePromotionCode(request, env) {
+  try {
+    const promotionId = request.params?.promotion_id;
+    
+    if (!promotionId) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'validation_error', 
+          message: 'Promotion ID is required' 
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const body = await request.json();
+    
+    // Validate promotion code data
+    const { error, value } = validatePromotionCodeUpdate(body);
+    if (error) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'validation_error', 
+          message: 'Invalid promotion code data',
+          details: error.details 
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Get user from request (set by adminAuth middleware)
+    const userId = request.user?.userId || 'system';
+    
+    const promo = await pricingService.updatePromotionCodeService(promotionId, value, userId, env);
+    
+    return new Response(
+      JSON.stringify(promo),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  } catch (err) {
+    logError('updatePromotionCode: Handler error', err);
+    const status = err.message.includes('not found') ? 404 : 500;
+    return new Response(
+      JSON.stringify({ error: 'internal_error', message: err.message }),
+      { status, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+/**
+ * DELETE /promotion-codes/:promotion_id - Delete/deactivate promotion code (admin only)
+ */
+export async function deletePromotionCode(request, env) {
+  try {
+    const promotionId = request.params?.promotion_id;
+    
+    if (!promotionId) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'validation_error', 
+          message: 'Promotion ID is required' 
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Get user from request (set by adminAuth middleware)
+    const userId = request.user?.userId || 'system';
+    
+    await pricingService.deletePromotionCodeService(promotionId, userId, env);
+    
+    return new Response(
+      JSON.stringify({ message: 'Promotion code deleted successfully' }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  } catch (err) {
+    logError('deletePromotionCode: Handler error', err);
+    const status = err.message.includes('not found') ? 404 : 500;
+    return new Response(
+      JSON.stringify({ error: 'internal_error', message: err.message }),
+      { status, headers: { 'Content-Type': 'application/json' } }
     );
   }
 }

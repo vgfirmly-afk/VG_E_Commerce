@@ -61,6 +61,49 @@ export const promotionCodeSchema = Joi.string().min(1).max(50).required()
     'any.required': 'Promotion code is required'
   });
 
+// Promotion Code schema
+export const promotionCodeCreateSchema = Joi.object({
+  code: Joi.string().min(1).max(50).required(),
+  name: Joi.string().min(1).max(200).required(),
+  description: Joi.string().max(1000).allow(null, '').optional(),
+  discount_type: Joi.string().valid('percentage', 'fixed_amount').required(),
+  discount_value: Joi.number().min(0).required(),
+  min_purchase_amount: Joi.number().min(0).allow(null).optional(),
+  max_discount_amount: Joi.number().min(0).allow(null).optional(),
+  valid_from: Joi.string().isoDate().required(),
+  valid_to: Joi.string().isoDate().required(),
+  usage_limit: Joi.number().integer().min(1).allow(null).optional(),
+  applicable_skus: Joi.alternatives().try(
+    Joi.array().items(Joi.string()),
+    Joi.string().allow(null)
+  ).optional()
+});
+
+// Promotion Code Update schema (all fields optional)
+export const promotionCodeUpdateSchema = Joi.object({
+  name: Joi.string().min(1).max(200).optional(),
+  description: Joi.string().max(1000).allow(null, '').optional(),
+  discount_type: Joi.string().valid('percentage', 'fixed_amount').optional(),
+  discount_value: Joi.number().min(0).optional(),
+  min_purchase_amount: Joi.number().min(0).allow(null).optional(),
+  max_discount_amount: Joi.number().min(0).allow(null).optional(),
+  valid_from: Joi.string().isoDate().optional(),
+  valid_to: Joi.string().isoDate().optional(),
+  usage_limit: Joi.number().integer().min(1).allow(null).optional(),
+  status: Joi.string().valid('active', 'inactive', 'expired').optional(),
+  applicable_skus: Joi.alternatives().try(
+    Joi.array().items(Joi.string()),
+    Joi.string().allow(null)
+  ).optional()
+});
+
+// Promotion Code List Query schema
+export const promotionCodeListQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).max(10000).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(20),
+  status: Joi.string().valid('active', 'inactive', 'expired').allow(null, '').optional()
+});
+
 // Validation functions
 export function validateSkuPrice(data) {
   return skuPriceSchema.validate(data, { abortEarly: false, stripUnknown: true });
@@ -105,5 +148,38 @@ export function validateSkuId(skuId) {
 
 export function validatePromotionCode(code) {
   return promotionCodeSchema.validate(code);
+}
+
+export function validatePromotionCodeCreate(data) {
+  return promotionCodeCreateSchema.validate(data, { abortEarly: false, stripUnknown: true });
+}
+
+export function validatePromotionCodeUpdate(data) {
+  const result = promotionCodeUpdateSchema.validate(data, { 
+    abortEarly: false, 
+    stripUnknown: true,
+    allowUnknown: false
+  });
+  
+  // Filter out "required" errors since all fields are optional for updates
+  if (result.error) {
+    const filteredErrors = result.error.details.filter(detail => detail.type !== 'any.required');
+    if (filteredErrors.length > 0) {
+      return {
+        error: {
+          ...result.error,
+          details: filteredErrors
+        },
+        value: result.value
+      };
+    }
+    return { error: null, value: result.value };
+  }
+  
+  return result;
+}
+
+export function validatePromotionCodeListQuery(params) {
+  return promotionCodeListQuerySchema.validate(params, { abortEarly: false, stripUnknown: true });
 }
 

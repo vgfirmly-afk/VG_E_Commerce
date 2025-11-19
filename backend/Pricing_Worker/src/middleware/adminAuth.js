@@ -1,136 +1,24 @@
 // middleware/adminAuth.js
-// Middleware for admin/service role authentication
-// Validates whitelisted Catalog Worker URL and service token
+// Middleware for admin authentication
+// Only allows service binding for initial price creation (POST /prices/:sku_id)
+// All other admin endpoints require JWT token verification
 
 import { logError, logWarn } from '../utils/logger.js';
-import { getWhitelistedUrls } from '../../config.js';
+import { verifyJWT } from '../utils/jwt.js';
 
 /**
- * Validate if request is from whitelisted Catalog Worker URL or Service Binding
- */
-function validateCatalogWorkerSource(request, env) {
-  try {
-    // Check if request is from Service Binding (internal, secure)
-    const sourceHeader = request.headers.get('X-Source');
-    if (sourceHeader === 'catalog-worker-service-binding') {
-      // Service binding requests are internal and secure - trust them
-      return true;
-    }
-    
-    const whitelistedUrls = getWhitelistedUrls(env);
-    if (!whitelistedUrls || whitelistedUrls.length === 0) {
-      logWarn('validateCatalogWorkerSource: No whitelisted URLs configured');
-      return false;
-    }
-    
-    // Check X-Source header (sent by Catalog Worker via HTTP)
-    if (sourceHeader) {
-      const sourceUrl = sourceHeader.replace(/\/$/, ''); // Remove trailing slash
-      const isWhitelisted = whitelistedUrls.some(url => {
-        const normalizedUrl = url.replace(/\/$/, '');
-        return sourceUrl === normalizedUrl || sourceUrl.startsWith(normalizedUrl);
-      });
-      
-      if (isWhitelisted) {
-        return true;
-      }
-      
-      logWarn('validateCatalogWorkerSource: X-Source header not whitelisted', {
-        source: sourceHeader,
-        whitelisted: whitelistedUrls
-      });
-    }
-    
-    // Fallback: Check Origin header
-    const origin = request.headers.get('Origin');
-    if (origin) {
-      const originUrl = origin.replace(/\/$/, '');
-      const isWhitelisted = whitelistedUrls.some(url => {
-        const normalizedUrl = url.replace(/\/$/, '');
-        return originUrl === normalizedUrl || originUrl.startsWith(normalizedUrl);
-      });
-      
-      if (isWhitelisted) {
-        return true;
-      }
-      
-      logWarn('validateCatalogWorkerSource: Origin header not whitelisted', {
-        origin,
-        whitelisted: whitelistedUrls
-      });
-    }
-    
-    // Fallback: Check Referer header
-    const referer = request.headers.get('Referer');
-    if (referer) {
-      try {
-        const refererUrl = new URL(referer);
-        const refererOrigin = `${refererUrl.protocol}//${refererUrl.host}`;
-        const isWhitelisted = whitelistedUrls.some(url => {
-          const normalizedUrl = url.replace(/\/$/, '');
-          return refererOrigin === normalizedUrl || refererOrigin.startsWith(normalizedUrl);
-        });
-        
-        if (isWhitelisted) {
-          return true;
-        }
-      } catch (e) {
-        // Invalid Referer URL, ignore
-      }
-    }
-    
-    return false;
-  } catch (err) {
-    logError('validateCatalogWorkerSource: Error validating source', err);
-    return false;
-  }
-}
-
-/**
- * Validate service token for inter-worker communication
- */
-function validateServiceToken(token, env) {
-  if (!env.PRICING_SERVICE_TOKEN) {
-    logWarn('validateServiceToken: PRICING_SERVICE_TOKEN not configured');
-    return false;
-  }
-  
-  return token === env.PRICING_SERVICE_TOKEN;
-}
-
-/**
- * Require admin or service role authentication
- * For Service Binding requests:
- * - Trusted automatically (internal and secure)
- * For HTTP inter-worker communication:
- * - Validates whitelisted Catalog Worker URL
- * - Validates service token
- * For regular admin requests:
- * - Validates JWT token (if configured)
+ * Require admin authentication via JWT token
+ * This is used for all admin endpoints EXCEPT initial price creation
  */
 export async function requireAdmin(request, env) {
   try {
-    // Check if this is a Service Binding request (internal, secure, no auth needed)
-    const sourceHeader = request.headers.get('X-Source');
-    if (sourceHeader === 'catalog-worker-service-binding') {
-      // Service bindings are internal and secure - trust them automatically
-      return { 
-        ok: true, 
-        user: { 
-          userId: 'catalog_worker_service', 
-          role: 'service',
-          source: 'service_binding'
-        } 
-      };
-    }
-    
     const authHeader = request.headers.get('Authorization');
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return {
         ok: false,
         error: 'authentication_error',
-        message: 'Missing or invalid Authorization header',
+        message: 'Missing or invalid Authorization header. Bearer token required.',
         status: 401
       };
     }
@@ -146,36 +34,9 @@ export async function requireAdmin(request, env) {
       };
     }
     
-    // Check if this is an inter-worker HTTP request from Catalog Worker
-    const isFromCatalogWorker = validateCatalogWorkerSource(request, env);
-    
-    if (isFromCatalogWorker) {
-      // Validate service token for inter-worker HTTP communication
-      if (validateServiceToken(token, env)) {
-        return { 
-          ok: true, 
-          user: { 
-            userId: 'catalog_worker_service', 
-            role: 'service',
-            source: 'catalog_worker_http'
-          } 
-        };
-      } else {
-        logWarn('requireAdmin: Invalid service token from Catalog Worker', {
-          source: request.headers.get('X-Source') || request.headers.get('Origin')
-        });
-        return {
-          ok: false,
-          error: 'authentication_error',
-          message: 'Invalid service token',
-          status: 401
-        };
-      }
-    }
-    
-    // For non-whitelisted sources, require JWT validation (regular admin requests)
+    // Verify JWT token
     if (!env.JWT_PUBLIC_KEY) {
-      logError('requireAdmin: JWT_PUBLIC_KEY not configured and request not from whitelisted source');
+      logError('requireAdmin: JWT_PUBLIC_KEY not configured');
       return {
         ok: false,
         error: 'authentication_error',
@@ -184,17 +45,73 @@ export async function requireAdmin(request, env) {
       };
     }
     
-    // TODO: Implement JWT verification for regular admin requests
-    // For now, reject non-whitelisted requests without proper JWT verification
-    logWarn('requireAdmin: Request not from whitelisted Catalog Worker and JWT verification not implemented');
+    const payload = await verifyJWT(token, env);
+    if (!payload) {
+      return {
+        ok: false,
+        error: 'authentication_error',
+        message: 'Invalid or expired token',
+        status: 401
+      };
+    }
+    
+    // Check if user has admin role (adjust based on your role system)
+    const role = payload.role || payload.roles;
+    if (role !== 'admin' && role !== 'ADMIN') {
+      logWarn('requireAdmin: User does not have admin role', { userId: payload.sub, role });
+      return {
+        ok: false,
+        error: 'authorization_error',
+        message: 'Admin role required',
+        status: 403
+      };
+    }
+    
     return {
-      ok: false,
-      error: 'authentication_error',
-      message: 'Request must come from whitelisted Catalog Worker or provide valid JWT',
-      status: 401
+      ok: true,
+      user: {
+        userId: payload.sub || payload.userId || payload.id,
+        role: role,
+        email: payload.email,
+        payload: payload
+      }
     };
   } catch (err) {
     logError('requireAdmin: Error', err);
+    return {
+      ok: false,
+      error: 'authentication_error',
+      message: 'Authentication failed',
+      status: 401
+    };
+  }
+}
+
+/**
+ * Require service binding OR admin JWT for initial price creation
+ * This allows Catalog Worker to create prices via service binding
+ * OR allows admin to manually initialize prices via JWT
+ */
+export async function requireServiceOrAdmin(request, env) {
+  try {
+    // Check if this is a Service Binding request (internal, secure, no auth needed)
+    const sourceHeader = request.headers.get('X-Source');
+    if (sourceHeader === 'catalog-worker-service-binding') {
+      // Service bindings are internal and secure - trust them automatically
+      return { 
+        ok: true, 
+        user: { 
+          userId: 'catalog_worker_service', 
+          role: 'service',
+          source: 'service_binding'
+        } 
+      };
+    }
+    
+    // For non-service-binding requests, require admin JWT
+    return await requireAdmin(request, env);
+  } catch (err) {
+    logError('requireServiceOrAdmin: Error', err);
     return {
       ok: false,
       error: 'authentication_error',

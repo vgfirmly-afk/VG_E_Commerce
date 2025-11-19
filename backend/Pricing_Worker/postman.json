@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Pricing Worker - API",
-    "description": "Postman collection for testing Pricing Worker API endpoints. Handles SKU pricing, price history, and grand total calculation.",
+    "description": "Postman collection for testing Pricing Worker API endpoints. Handles SKU pricing, price history, grand total calculation, and promotion code management.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "version": {
       "major": 1,
@@ -42,6 +42,11 @@
     },
     {
       "key": "promotionCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "promotionId",
       "value": "",
       "type": "string"
     }
@@ -595,6 +600,382 @@
               ]
             },
             "description": "Soft delete (deactivates) the SKU price. Creates a history entry."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Promotion Codes (Admin)",
+      "item": [
+        {
+          "name": "List Promotion Codes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('promotions');",
+                  "    pm.expect(response).to.have.property('page');",
+                  "    pm.expect(response).to.have.property('total');",
+                  "    console.log('Promotion Codes:', response.promotions);",
+                  "    if (response.promotions && response.promotions.length > 0) {",
+                  "        pm.collectionVariables.set(\"promotionId\", response.promotions[0].promotion_id);",
+                  "        pm.collectionVariables.set(\"promotionCode\", response.promotions[0].code);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{pricingBaseUrl}}/api/v1/promotion-codes?page=1&limit=20&status=active",
+              "host": ["{{pricingBaseUrl}}"],
+              "path": ["api", "v1", "promotion-codes"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Items per page"
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "Filter by status (active, inactive, expired)"
+                }
+              ]
+            },
+            "description": "List all promotion codes with pagination. Can filter by status."
+          }
+        },
+        {
+          "name": "Get Promotion Code by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('promotion_id');",
+                  "    pm.expect(response).to.have.property('code');",
+                  "    pm.expect(response).to.have.property('discount_type');",
+                  "    pm.expect(response).to.have.property('discount_value');",
+                  "    console.log('Promotion Code:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{pricingBaseUrl}}/api/v1/promotion-codes/:promotion_id",
+              "host": ["{{pricingBaseUrl}}"],
+              "path": ["api", "v1", "promotion-codes", ":promotion_id"],
+              "variable": [
+                {
+                  "key": "promotion_id",
+                  "value": "{{promotionId}}",
+                  "description": "Promotion ID to get"
+                }
+              ]
+            },
+            "description": "Get a specific promotion code by its ID."
+          }
+        },
+        {
+          "name": "Create Promotion Code - Percentage Discount",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('promotion_id');",
+                  "    pm.expect(response).to.have.property('code');",
+                  "    pm.collectionVariables.set(\"promotionId\", response.promotion_id);",
+                  "    pm.collectionVariables.set(\"promotionCode\", response.code);",
+                  "    console.log('Promotion Code Created:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"SAVE20\",\n  \"name\": \"20% Off Sale\",\n  \"description\": \"Get 20% off on your purchase\",\n  \"discount_type\": \"percentage\",\n  \"discount_value\": 20,\n  \"min_purchase_amount\": 50.00,\n  \"max_discount_amount\": 100.00,\n  \"valid_from\": \"2024-01-01T00:00:00Z\",\n  \"valid_to\": \"2024-12-31T23:59:59Z\",\n  \"usage_limit\": 1000,\n  \"applicable_skus\": null\n}"
+            },
+            "url": {
+              "raw": "{{pricingBaseUrl}}/api/v1/promotion-codes",
+              "host": ["{{pricingBaseUrl}}"],
+              "path": ["api", "v1", "promotion-codes"]
+            },
+            "description": "Create a percentage-based promotion code. applicable_skus can be null (all SKUs) or an array of SKU IDs."
+          }
+        },
+        {
+          "name": "Create Promotion Code - Fixed Amount Discount",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"FLAT10\",\n  \"name\": \"$10 Off\",\n  \"description\": \"Get $10 off on your purchase\",\n  \"discount_type\": \"fixed_amount\",\n  \"discount_value\": 10.00,\n  \"min_purchase_amount\": 25.00,\n  \"max_discount_amount\": null,\n  \"valid_from\": \"2024-01-01T00:00:00Z\",\n  \"valid_to\": \"2024-12-31T23:59:59Z\",\n  \"usage_limit\": null,\n  \"applicable_skus\": [\"{{skuId}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{pricingBaseUrl}}/api/v1/promotion-codes",
+              "host": ["{{pricingBaseUrl}}"],
+              "path": ["api", "v1", "promotion-codes"]
+            },
+            "description": "Create a fixed amount discount promotion code. applicable_skus can be an array of specific SKU IDs."
+          }
+        },
+        {
+          "name": "Update Promotion Code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Promotion Code Updated:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"discount_value\": 25,\n  \"max_discount_amount\": 150.00,\n  \"valid_to\": \"2025-12-31T23:59:59Z\",\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{pricingBaseUrl}}/api/v1/promotion-codes/:promotion_id",
+              "host": ["{{pricingBaseUrl}}"],
+              "path": ["api", "v1", "promotion-codes", ":promotion_id"],
+              "variable": [
+                {
+                  "key": "promotion_id",
+                  "value": "{{promotionId}}",
+                  "description": "Promotion ID to update"
+                }
+              ]
+            },
+            "description": "Update promotion code. All fields are optional. Can update discount value, dates, status, etc."
+          }
+        },
+        {
+          "name": "Delete Promotion Code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('message');",
+                  "    console.log('Promotion Code Deleted:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{pricingBaseUrl}}/api/v1/promotion-codes/:promotion_id",
+              "host": ["{{pricingBaseUrl}}"],
+              "path": ["api", "v1", "promotion-codes", ":promotion_id"],
+              "variable": [
+                {
+                  "key": "promotion_id",
+                  "value": "{{promotionId}}",
+                  "description": "Promotion ID to delete"
+                }
+              ]
+            },
+            "description": "Soft delete (deactivates) the promotion code by setting status to 'inactive'."
+          }
+        },
+        {
+          "name": "Calculate Total with Promotion Code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('items');",
+                  "    pm.expect(response).to.have.property('subtotal');",
+                  "    pm.expect(response).to.have.property('discount');",
+                  "    pm.expect(response).to.have.property('total');",
+                  "    pm.expect(response).to.have.property('promotion');",
+                  "    console.log('=== Grand Total with Promotion ===');",
+                  "    console.log('Subtotal:', response.subtotal);",
+                  "    console.log('Discount:', response.discount);",
+                  "    console.log('Total:', response.total);",
+                  "    console.log('Promotion:', response.promotion);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"sku_id\": \"{{skuId}}\",\n      \"quantity\": 2\n    }\n  ],\n  \"promotion_code\": \"{{promotionCode}}\",\n  \"currency\": \"USD\"\n}"
+            },
+            "url": {
+              "raw": "{{pricingBaseUrl}}/api/v1/calculate-total",
+              "host": ["{{pricingBaseUrl}}"],
+              "path": ["api", "v1", "calculate-total"]
+            },
+            "description": "Calculate grand total with a promotion code applied. The promotion code usage count will be incremented automatically."
           }
         }
       ]

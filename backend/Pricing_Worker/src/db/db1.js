@@ -160,9 +160,17 @@ export async function updateSkuPrice(skuId, priceData, userId, env) {
     const now = new Date().toISOString();
     const updates = { ...priceData };
     
+    // Extract reason for history (not a column in sku_prices table)
+    const reason = updates.reason;
+    delete updates.reason; // Remove reason from updates as it's not a column in sku_prices
+    
     // Build dynamic UPDATE query
+    // Filter out fields that are not columns in sku_prices table
     const fields = Object.keys(updates).filter(key => 
-      key !== 'sku_id' && key !== 'product_id' && key !== 'sku_code'
+      key !== 'sku_id' && 
+      key !== 'product_id' && 
+      key !== 'sku_code' &&
+      key !== 'reason' // reason is only in price_history, not sku_prices
     );
     
     if (fields.length === 0) {
@@ -189,7 +197,7 @@ export async function updateSkuPrice(skuId, priceData, userId, env) {
       compare_at_price: updates.compare_at_price !== undefined ? updates.compare_at_price : currentPrice.compare_at_price,
       cost_price: updates.cost_price !== undefined ? updates.cost_price : currentPrice.cost_price,
       change_type: 'update',
-      reason: updates.reason || 'Price update',
+      reason: reason || 'Price update', // Use extracted reason
       changed_by: userId || 'system'
     }, env);
     
@@ -298,21 +306,273 @@ export async function getPriceHistory(skuId, { page = 1, limit = 20 }, env) {
 }
 
 /**
- * Get active promotion code
+ * Get active promotion code (for calculation)
+ * Note: Code matching is case-insensitive (should be normalized before calling)
  */
 export async function getPromotionCode(code, env) {
   try {
     const now = new Date().toISOString();
     
+    // Use UPPER() for case-insensitive matching
     const res = await env.PRICING_DB.prepare(
       `SELECT * FROM promotion_codes 
-       WHERE code = ? AND status = ? 
+       WHERE UPPER(code) = UPPER(?) AND status = ? 
        AND valid_from <= ? AND valid_to >= ?`
     ).bind(code, 'active', now, now).first();
+    
+    if (res) {
+      console.log('[DB] Promotion code found:', {
+        code: res.code,
+        status: res.status,
+        valid_from: res.valid_from,
+        valid_to: res.valid_to,
+        now: now
+      });
+    } else {
+      console.log('[DB] Promotion code not found or not valid:', {
+        code,
+        now,
+        query: 'code=' + code + ', status=active, valid_from<=' + now + ', valid_to>=' + now
+      });
+    }
     
     return res || null;
   } catch (err) {
     logError('getPromotionCode: Database error', err, { code });
+    throw err;
+  }
+}
+
+/**
+ * Get promotion code by ID (admin)
+ */
+export async function getPromotionCodeById(promotionId, env) {
+  try {
+    const res = await env.PRICING_DB.prepare(
+      'SELECT * FROM promotion_codes WHERE promotion_id = ?'
+    ).bind(promotionId).first();
+    
+    return res || null;
+  } catch (err) {
+    logError('getPromotionCodeById: Database error', err, { promotionId });
+    throw err;
+  }
+}
+
+/**
+ * Get promotion code by code (admin - includes inactive)
+ */
+export async function getPromotionCodeByCode(code, env) {
+  try {
+    const res = await env.PRICING_DB.prepare(
+      'SELECT * FROM promotion_codes WHERE code = ?'
+    ).bind(code).first();
+    
+    return res || null;
+  } catch (err) {
+    logError('getPromotionCodeByCode: Database error', err, { code });
+    throw err;
+  }
+}
+
+/**
+ * List all promotion codes (admin)
+ */
+export async function listPromotionCodes({ page = 1, limit = 20, status = null }, env) {
+  try {
+    const offset = (page - 1) * limit;
+    let sql = 'SELECT * FROM promotion_codes';
+    const params = [];
+    
+    if (status) {
+      sql += ' WHERE status = ?';
+      params.push(status);
+    }
+    
+    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+    
+    const res = await env.PRICING_DB.prepare(sql).bind(...params).all();
+    
+    // Get total count
+    let countSql = 'SELECT COUNT(*) as total FROM promotion_codes';
+    const countParams = [];
+    if (status) {
+      countSql += ' WHERE status = ?';
+      countParams.push(status);
+    }
+    const countRes = await env.PRICING_DB.prepare(countSql).bind(...countParams).first();
+    
+    return {
+      promotions: res?.results || [],
+      page,
+      limit,
+      total: countRes?.total || 0
+    };
+  } catch (err) {
+    logError('listPromotionCodes: Database error', err, { page, limit, status });
+    throw err;
+  }
+}
+
+/**
+ * Create promotion code (admin)
+ */
+export async function createPromotionCode(promoData, userId, env) {
+  try {
+    const {
+      code,
+      name,
+      description = null,
+      discount_type,
+      discount_value,
+      min_purchase_amount = null,
+      max_discount_amount = null,
+      valid_from,
+      valid_to,
+      usage_limit = null,
+      applicable_skus = null
+    } = promoData;
+    
+    const promotionId = promoData.promotion_id || uuidv4();
+    const now = new Date().toISOString();
+    
+    // Check if code already exists
+    const existing = await getPromotionCodeByCode(code, env);
+    if (existing) {
+      throw new Error(`Promotion code '${code}' already exists`);
+    }
+    
+    // Serialize applicable_skus if it's an array
+    let applicableSkusStr = null;
+    if (applicable_skus) {
+      if (Array.isArray(applicable_skus)) {
+        applicableSkusStr = JSON.stringify(applicable_skus);
+      } else if (typeof applicable_skus === 'string') {
+        applicableSkusStr = applicable_skus;
+      }
+    }
+    
+    const sql = `INSERT INTO promotion_codes (
+      promotion_id, code, name, description, discount_type, discount_value,
+      min_purchase_amount, max_discount_amount, valid_from, valid_to,
+      usage_limit, usage_count, status, applicable_skus,
+      created_at, updated_at, created_by
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    
+    await env.PRICING_DB.prepare(sql).bind(
+      promotionId,
+      code,
+      name,
+      description,
+      discount_type,
+      discount_value,
+      min_purchase_amount,
+      max_discount_amount,
+      valid_from,
+      valid_to,
+      usage_limit,
+      0, // usage_count starts at 0
+      'active',
+      applicableSkusStr,
+      now,
+      now,
+      userId || 'system'
+    ).run();
+    
+    logger('promotion_code.created', { promotionId, code, name });
+    return await getPromotionCodeById(promotionId, env);
+  } catch (err) {
+    logError('createPromotionCode: Database error', err, { promoData });
+    throw err;
+  }
+}
+
+/**
+ * Update promotion code (admin)
+ */
+export async function updatePromotionCode(promotionId, updates, userId, env) {
+  try {
+    const existing = await getPromotionCodeById(promotionId, env);
+    if (!existing) {
+      throw new Error('Promotion code not found');
+    }
+    
+    const now = new Date().toISOString();
+    const updateFields = { ...updates };
+    
+    // Handle applicable_skus serialization
+    if (updateFields.applicable_skus !== undefined) {
+      if (Array.isArray(updateFields.applicable_skus)) {
+        updateFields.applicable_skus = JSON.stringify(updateFields.applicable_skus);
+      } else if (updateFields.applicable_skus === null) {
+        updateFields.applicable_skus = null;
+      }
+    }
+    
+    // Build dynamic UPDATE query
+    const fields = Object.keys(updateFields).filter(key => 
+      key !== 'promotion_id' && key !== 'code' // Don't allow changing ID or code
+    );
+    
+    if (fields.length === 0) {
+      return existing;
+    }
+    
+    const setClause = fields.map(field => `${field} = ?`).join(', ');
+    const values = fields.map(field => updateFields[field]);
+    values.push(now, promotionId); // updated_at and WHERE clause
+    
+    const sql = `UPDATE promotion_codes SET ${setClause}, updated_at = ? WHERE promotion_id = ?`;
+    
+    await env.PRICING_DB.prepare(sql).bind(...values).run();
+    
+    logger('promotion_code.updated', { promotionId, updates: fields });
+    return await getPromotionCodeById(promotionId, env);
+  } catch (err) {
+    logError('updatePromotionCode: Database error', err, { promotionId, updates });
+    throw err;
+  }
+}
+
+/**
+ * Delete/deactivate promotion code (admin)
+ */
+export async function deletePromotionCode(promotionId, userId, env) {
+  try {
+    const existing = await getPromotionCodeById(promotionId, env);
+    if (!existing) {
+      throw new Error('Promotion code not found');
+    }
+    
+    const now = new Date().toISOString();
+    
+    // Soft delete by setting status to inactive
+    await env.PRICING_DB.prepare(
+      'UPDATE promotion_codes SET status = ?, updated_at = ? WHERE promotion_id = ?'
+    ).bind('inactive', now, promotionId).run();
+    
+    logger('promotion_code.deleted', { promotionId, code: existing.code });
+    return true;
+  } catch (err) {
+    logError('deletePromotionCode: Database error', err, { promotionId });
+    throw err;
+  }
+}
+
+/**
+ * Increment usage count for a promotion code
+ */
+export async function incrementPromotionUsage(code, env) {
+  try {
+    await env.PRICING_DB.prepare(
+      'UPDATE promotion_codes SET usage_count = usage_count + 1 WHERE code = ?'
+    ).bind(code).run();
+    
+    logger('promotion_code.usage_incremented', { code });
+    return true;
+  } catch (err) {
+    logError('incrementPromotionUsage: Database error', err, { code });
     throw err;
   }
 }

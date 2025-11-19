@@ -1,7 +1,7 @@
 // routers/pricing.js
 import { Router } from 'itty-router';
 import * as pricingHandlers from '../handlers/pricingHandlers.js';
-import { requireAdmin } from '../middleware/adminAuth.js';
+import { requireAdmin, requireServiceOrAdmin } from '../middleware/adminAuth.js';
 
 const router = Router();
 
@@ -32,36 +32,100 @@ router.get('/_/health', async (request, env, ctx) => {
 
 // Public endpoints
 // More specific routes first
-router.get('/api/v1/prices/product/:product_id', async (request, env, ctx) => 
-  pricingHandlers.getProductPrices(request, request.env || env)
-);
+router.get('/api/v1/prices/product/:product_id', async (request, env, ctx) => {
+  try {
+    return await pricingHandlers.getProductPrices(request, request.env || env);
+  } catch (err) {
+    console.error('[Pricing Router] Error in GET /api/v1/prices/product/:product_id:', err);
+    return new Response(
+      JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+});
 
-router.get('/api/v1/prices/:sku_id/history', async (request, env, ctx) => 
-  pricingHandlers.getHistory(request, request.env || env)
-);
+router.get('/api/v1/prices/:sku_id/history', async (request, env, ctx) => {
+  try {
+    return await pricingHandlers.getHistory(request, request.env || env);
+  } catch (err) {
+    console.error('[Pricing Router] Error in GET /api/v1/prices/:sku_id/history:', err);
+    return new Response(
+      JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+});
 
 // POST route MUST be defined BEFORE GET route for same path pattern in itty-router
 // Initialize price (called by Catalog Worker when SKU is created)
 // MUST come after history route to avoid route conflicts
+// This is the ONLY endpoint that allows service binding
 router.post('/api/v1/prices/:sku_id',
   async (request, env, ctx) => {
-    console.log('[Pricing Router] POST /api/v1/prices/:sku_id matched', {
-      method: request.method,
-      url: request.url,
-      pathname: new URL(request.url).pathname,
-      params: request.params,
-      headers: {
-        'X-Source': request.headers.get('X-Source'),
-        'Authorization': request.headers.get('Authorization') ? 'present' : 'missing',
-        'Content-Type': request.headers.get('Content-Type')
+    try {
+      console.log('[Pricing Router] POST /api/v1/prices/:sku_id matched', {
+        method: request.method,
+        url: request.url,
+        pathname: new URL(request.url).pathname,
+        params: request.params,
+        headers: {
+          'X-Source': request.headers.get('X-Source'),
+          'Authorization': request.headers.get('Authorization') ? 'present' : 'missing',
+          'Content-Type': request.headers.get('Content-Type')
+        }
+      });
+      
+      // Allow service binding OR admin JWT for initial price creation
+      const authResult = await requireServiceOrAdmin(request, request.env || env);
+      if (!authResult.ok) {
+        return new Response(
+          JSON.stringify({ error: authResult.error, message: authResult.message }),
+          { status: authResult.status, headers: { 'Content-Type': 'application/json' } }
+        );
       }
-    });
-    
-    // Validate request source (Service Binding or HTTP with auth)
-    // Service bindings are trusted automatically, HTTP requests need auth
-    const sourceHeader = request.headers.get('X-Source');
-    if (sourceHeader !== 'catalog-worker-service-binding') {
-      // For HTTP requests, require authentication
+      
+      // Set user on request for handler
+      request.user = authResult.user;
+      
+      return await pricingHandlers.initializePrice(request, request.env || env);
+    } catch (err) {
+      console.error('[Pricing Router] Error in POST /api/v1/prices/:sku_id:', err);
+      return new Response(
+        JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+);
+
+router.get('/api/v1/prices/:sku_id', async (request, env, ctx) => {
+  try {
+    return await pricingHandlers.getPrice(request, request.env || env);
+  } catch (err) {
+    console.error('[Pricing Router] Error in GET /api/v1/prices/:sku_id:', err);
+    return new Response(
+      JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+});
+
+router.post('/api/v1/calculate-total', async (request, env, ctx) => {
+  try {
+    return await pricingHandlers.calculateTotal(request, request.env || env);
+  } catch (err) {
+    console.error('[Pricing Router] Error in POST /api/v1/calculate-total:', err);
+    return new Response(
+      JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+});
+
+// Update price (admin only - JWT required)
+router.put('/api/v1/prices/:sku_id',
+  async (request, env, ctx) => {
+    try {
       const authResult = await requireAdmin(request, request.env || env);
       if (!authResult.ok) {
         return new Response(
@@ -69,45 +133,156 @@ router.post('/api/v1/prices/:sku_id',
           { status: authResult.status, headers: { 'Content-Type': 'application/json' } }
         );
       }
-    }
-    
-    return pricingHandlers.initializePrice(request, request.env || env);
-  }
-);
-
-router.get('/api/v1/prices/:sku_id', async (request, env, ctx) => 
-  pricingHandlers.getPrice(request, request.env || env)
-);
-
-router.post('/api/v1/calculate-total', async (request, env, ctx) => 
-  pricingHandlers.calculateTotal(request, request.env || env)
-);
-
-// Update price (admin only)
-router.put('/api/v1/prices/:sku_id',
-  async (request, env, ctx) => {
-    const authResult = await requireAdmin(request, request.env || env);
-    if (!authResult.ok) {
+      // Set user on request for handler
+      request.user = authResult.user;
+      return await pricingHandlers.updatePrice(request, request.env || env);
+    } catch (err) {
+      console.error('[Pricing Router] Error in PUT /api/v1/prices/:sku_id:', err);
       return new Response(
-        JSON.stringify({ error: authResult.error, message: authResult.message }),
-        { status: authResult.status, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
-    return pricingHandlers.updatePrice(request, request.env || env);
   }
 );
 
-// Delete price (admin only)
+// Delete price (admin only - JWT required)
 router.delete('/api/v1/prices/:sku_id',
   async (request, env, ctx) => {
-    const authResult = await requireAdmin(request, request.env || env);
-    if (!authResult.ok) {
+    try {
+      const authResult = await requireAdmin(request, request.env || env);
+      if (!authResult.ok) {
+        return new Response(
+          JSON.stringify({ error: authResult.error, message: authResult.message }),
+          { status: authResult.status, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      // Set user on request for handler
+      request.user = authResult.user;
+      return await pricingHandlers.deletePrice(request, request.env || env);
+    } catch (err) {
+      console.error('[Pricing Router] Error in DELETE /api/v1/prices/:sku_id:', err);
       return new Response(
-        JSON.stringify({ error: authResult.error, message: authResult.message }),
-        { status: authResult.status, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
-    return pricingHandlers.deletePrice(request, request.env || env);
+  }
+);
+
+// Promotion Code endpoints (admin only - JWT required)
+// List promotion codes
+router.get('/api/v1/promotion-codes',
+  async (request, env, ctx) => {
+    try {
+      const authResult = await requireAdmin(request, request.env || env);
+      if (!authResult.ok) {
+        return new Response(
+          JSON.stringify({ error: authResult.error, message: authResult.message }),
+          { status: authResult.status, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      request.user = authResult.user;
+      return await pricingHandlers.listPromotionCodes(request, request.env || env);
+    } catch (err) {
+      console.error('[Pricing Router] Error in GET /api/v1/promotion-codes:', err);
+      return new Response(
+        JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+);
+
+// Get promotion code by ID
+router.get('/api/v1/promotion-codes/:promotion_id',
+  async (request, env, ctx) => {
+    try {
+      const authResult = await requireAdmin(request, request.env || env);
+      if (!authResult.ok) {
+        return new Response(
+          JSON.stringify({ error: authResult.error, message: authResult.message }),
+          { status: authResult.status, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      request.user = authResult.user;
+      return await pricingHandlers.getPromotionCode(request, request.env || env);
+    } catch (err) {
+      console.error('[Pricing Router] Error in GET /api/v1/promotion-codes/:promotion_id:', err);
+      return new Response(
+        JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+);
+
+// Create promotion code
+router.post('/api/v1/promotion-codes',
+  async (request, env, ctx) => {
+    try {
+      const authResult = await requireAdmin(request, request.env || env);
+      if (!authResult.ok) {
+        return new Response(
+          JSON.stringify({ error: authResult.error, message: authResult.message }),
+          { status: authResult.status, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      request.user = authResult.user;
+      return await pricingHandlers.createPromotionCode(request, request.env || env);
+    } catch (err) {
+      console.error('[Pricing Router] Error in POST /api/v1/promotion-codes:', err);
+      return new Response(
+        JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+);
+
+// Update promotion code
+router.put('/api/v1/promotion-codes/:promotion_id',
+  async (request, env, ctx) => {
+    try {
+      const authResult = await requireAdmin(request, request.env || env);
+      if (!authResult.ok) {
+        return new Response(
+          JSON.stringify({ error: authResult.error, message: authResult.message }),
+          { status: authResult.status, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      request.user = authResult.user;
+      return await pricingHandlers.updatePromotionCode(request, request.env || env);
+    } catch (err) {
+      console.error('[Pricing Router] Error in PUT /api/v1/promotion-codes/:promotion_id:', err);
+      return new Response(
+        JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+);
+
+// Delete promotion code
+router.delete('/api/v1/promotion-codes/:promotion_id',
+  async (request, env, ctx) => {
+    try {
+      const authResult = await requireAdmin(request, request.env || env);
+      if (!authResult.ok) {
+        return new Response(
+          JSON.stringify({ error: authResult.error, message: authResult.message }),
+          { status: authResult.status, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      request.user = authResult.user;
+      return await pricingHandlers.deletePromotionCode(request, request.env || env);
+    } catch (err) {
+      console.error('[Pricing Router] Error in DELETE /api/v1/promotion-codes/:promotion_id:', err);
+      return new Response(
+        JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
   }
 );
 
