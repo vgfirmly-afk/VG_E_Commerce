@@ -4,6 +4,7 @@ import { resolveConfig } from './utils/tracing.js';
 
 import router from './routers/inventory.js';
 import withLogger from './middleware/logger.js'; // expects the wrapper version
+import { withCORS } from './middleware/cors.js';
 
 // base fetch handler that delegates to your itty-router
 async function baseFetch(request, env, ctx) {
@@ -41,15 +42,18 @@ async function baseFetch(request, env, ctx) {
 // wrap the base handler with the logger wrapper (adds trace-id logging + response header)
 const handlerWithLogger = withLogger(baseFetch);
 
+// wrap with CORS middleware (allows all origins)
+const handlerWithCORS = withCORS(handlerWithLogger);
+
 // export the instrumented handler so otel-cf-workers sets up tracing first
 // Wrap in try-catch to handle instrumentation errors gracefully
 let exportedHandler;
 try {
-  exportedHandler = instrument({ fetch: handlerWithLogger }, resolveConfig);
+  exportedHandler = instrument({ fetch: handlerWithCORS }, resolveConfig);
 } catch (err) {
   console.error('Failed to instrument handler, using fallback:', err);
   // Fallback: export handler without instrumentation if it fails
-  exportedHandler = handlerWithLogger;
+  exportedHandler = handlerWithCORS;
 }
 
 export default exportedHandler;

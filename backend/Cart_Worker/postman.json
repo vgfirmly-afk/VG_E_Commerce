@@ -1,0 +1,637 @@
+{
+  "info": {
+    "name": "Cart Worker - API",
+    "description": "Postman collection for testing Cart Worker API endpoints. Handles shopping cart management, item operations, and cart totals with integration to Pricing and Inventory workers.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  },
+  "variable": [
+    {
+      "key": "cartBaseUrl",
+      "value": "https://w2-cart-worker.vg-firmly.workers.dev",
+      "type": "string"
+    },
+    {
+      "key": "pricingBaseUrl",
+      "value": "https://w2-pricing-worker.vg-firmly.workers.dev",
+      "type": "string"
+    },
+    {
+      "key": "inventoryBaseUrl",
+      "value": "https://w2-inventory-worker.vg-firmly.workers.dev",
+      "type": "string"
+    },
+    {
+      "key": "cartId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "itemId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "skuId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "user-123",
+      "type": "string"
+    },
+    {
+      "key": "sessionId",
+      "value": "session-{{$randomUUID}}",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Cart Worker - Public",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has ok field\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('ok');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{cartBaseUrl}}/_/health",
+              "host": ["{{cartBaseUrl}}"],
+              "path": ["_", "health"]
+            }
+          }
+        },
+        {
+          "name": "Get or Create Cart (Logged In User)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('cart_id');",
+                  "    pm.expect(response).to.have.property('items');",
+                  "    pm.collectionVariables.set('cartId', response.cart_id);",
+                  "    console.log('Cart:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{cartBaseUrl}}/api/v1/cart",
+              "host": ["{{cartBaseUrl}}"],
+              "path": ["api", "v1", "cart"]
+            }
+          }
+        },
+        {
+          "name": "Get or Create Cart (Anonymous User)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('cart_id');",
+                  "    pm.expect(response).to.have.property('session_id');",
+                  "    pm.collectionVariables.set('cartId', response.cart_id);",
+                  "    pm.collectionVariables.set('sessionId', response.session_id);",
+                  "    console.log('Cart:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{sessionId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{cartBaseUrl}}/api/v1/cart",
+              "host": ["{{cartBaseUrl}}"],
+              "path": ["api", "v1", "cart"]
+            }
+          }
+        },
+        {
+          "name": "Get Cart by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('cart_id');",
+                  "    pm.expect(response).to.have.property('items');",
+                  "    console.log('Cart:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{cartBaseUrl}}/api/v1/cart/:cart_id",
+              "host": ["{{cartBaseUrl}}"],
+              "path": ["api", "v1", "cart", ":cart_id"],
+              "variable": [
+                {
+                  "key": "cart_id",
+                  "value": "{{cartId}}",
+                  "description": "Cart ID"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Item to Cart",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('item_id');",
+                  "    pm.expect(response).to.have.property('sku_id');",
+                  "    pm.expect(response).to.have.property('quantity');",
+                  "    pm.collectionVariables.set('itemId', response.item_id);",
+                  "    pm.collectionVariables.set('skuId', response.sku_id);",
+                  "    console.log('Item Added:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku_id\": \"{{skuId}}\",\n  \"quantity\": 2,\n  \"product_id\": \"{{productId}}\",\n  \"sku_code\": \"SKU-TEST-001\"\n}"
+            },
+            "url": {
+              "raw": "{{cartBaseUrl}}/api/v1/cart/:cart_id/items",
+              "host": ["{{cartBaseUrl}}"],
+              "path": ["api", "v1", "cart", ":cart_id", "items"],
+              "variable": [
+                {
+                  "key": "cart_id",
+                  "value": "{{cartId}}",
+                  "description": "Cart ID"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Item Quantity (Increase)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('quantity');",
+                  "    console.log('Item Updated:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 5\n}"
+            },
+            "url": {
+              "raw": "{{cartBaseUrl}}/api/v1/cart/:cart_id/items/:item_id",
+              "host": ["{{cartBaseUrl}}"],
+              "path": ["api", "v1", "cart", ":cart_id", "items", ":item_id"],
+              "variable": [
+                {
+                  "key": "cart_id",
+                  "value": "{{cartId}}",
+                  "description": "Cart ID"
+                },
+                {
+                  "key": "item_id",
+                  "value": "{{itemId}}",
+                  "description": "Item ID"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Item Quantity (Decrease)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Item Updated:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 1\n}"
+            },
+            "url": {
+              "raw": "{{cartBaseUrl}}/api/v1/cart/:cart_id/items/:item_id",
+              "host": ["{{cartBaseUrl}}"],
+              "path": ["api", "v1", "cart", ":cart_id", "items", ":item_id"],
+              "variable": [
+                {
+                  "key": "cart_id",
+                  "value": "{{cartId}}",
+                  "description": "Cart ID"
+                },
+                {
+                  "key": "item_id",
+                  "value": "{{itemId}}",
+                  "description": "Item ID"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Remove Item from Cart",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('message');",
+                  "    console.log('Item Removed:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{cartBaseUrl}}/api/v1/cart/:cart_id/items/:item_id",
+              "host": ["{{cartBaseUrl}}"],
+              "path": ["api", "v1", "cart", ":cart_id", "items", ":item_id"],
+              "variable": [
+                {
+                  "key": "cart_id",
+                  "value": "{{cartId}}",
+                  "description": "Cart ID"
+                },
+                {
+                  "key": "item_id",
+                  "value": "{{itemId}}",
+                  "description": "Item ID"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Clear Cart",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('message');",
+                  "    console.log('Cart Cleared:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{cartBaseUrl}}/api/v1/cart/:cart_id",
+              "host": ["{{cartBaseUrl}}"],
+              "path": ["api", "v1", "cart", ":cart_id"],
+              "variable": [
+                {
+                  "key": "cart_id",
+                  "value": "{{cartId}}",
+                  "description": "Cart ID"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Cart Total",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('cart_id');",
+                  "    pm.expect(response).to.have.property('subtotal');",
+                  "    pm.expect(response).to.have.property('currency');",
+                  "    pm.expect(response).to.have.property('items');",
+                  "    console.log('Cart Total:', response);",
+                  "    console.log('Subtotal:', response.subtotal, response.currency);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{cartBaseUrl}}/api/v1/cart/:cart_id/total",
+              "host": ["{{cartBaseUrl}}"],
+              "path": ["api", "v1", "cart", ":cart_id", "total"],
+              "variable": [
+                {
+                  "key": "cart_id",
+                  "value": "{{cartId}}",
+                  "description": "Cart ID"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Integration Tests",
+      "item": [
+        {
+          "name": "Full Cart Flow",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate test IDs",
+                  "pm.collectionVariables.set('skuId', pm.variables.replaceIn('{{$randomUUID}}'));",
+                  "pm.collectionVariables.set('productId', pm.variables.replaceIn('{{$randomUUID}}'));",
+                  "pm.collectionVariables.set('sessionId', pm.variables.replaceIn('session-{{$randomUUID}}'));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('cartId', response.cart_id);",
+                  "    console.log('Cart Created:', response.cart_id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{sessionId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{cartBaseUrl}}/api/v1/cart",
+              "host": ["{{cartBaseUrl}}"],
+              "path": ["api", "v1", "cart"]
+            }
+          }
+        },
+        {
+          "name": "Add Multiple Items",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Item Added:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku_id\": \"{{skuId}}\",\n  \"quantity\": 3,\n  \"product_id\": \"{{productId}}\",\n  \"sku_code\": \"SKU-TEST-{{$randomInt}}\"\n}"
+            },
+            "url": {
+              "raw": "{{cartBaseUrl}}/api/v1/cart/:cart_id/items",
+              "host": ["{{cartBaseUrl}}"],
+              "path": ["api", "v1", "cart", ":cart_id", "items"],
+              "variable": [
+                {
+                  "key": "cart_id",
+                  "value": "{{cartId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+

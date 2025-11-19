@@ -1,0 +1,615 @@
+{
+  "info": {
+    "name": "Inventory Worker - API",
+    "description": "Postman collection for testing Inventory Worker API endpoints. Handles SKU stock management, stock reservations, and stock history.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  },
+  "variable": [
+    {
+      "key": "inventoryBaseUrl",
+      "value": "https://w2-inventory-worker.vg-firmly.workers.dev",
+      "type": "string"
+    },
+    {
+      "key": "catalogBaseUrl",
+      "value": "https://w2-catalog-worker.vg-firmly.workers.dev",
+      "type": "string"
+    },
+    {
+      "key": "skuId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "reservationId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Inventory Worker - Public",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has ok field\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('ok');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBaseUrl}}/_/health",
+              "host": ["{{inventoryBaseUrl}}"],
+              "path": ["_", "health"]
+            }
+          }
+        },
+        {
+          "name": "Get SKU Stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('sku_id');",
+                  "    pm.expect(response).to.have.property('quantity');",
+                  "    pm.expect(response).to.have.property('available_quantity');",
+                  "    pm.collectionVariables.set('skuId', response.sku_id);",
+                  "    console.log('SKU Stock:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBaseUrl}}/api/v1/stock/:sku_id",
+              "host": ["{{inventoryBaseUrl}}"],
+              "path": ["api", "v1", "stock", ":sku_id"],
+              "variable": [
+                {
+                  "key": "sku_id",
+                  "value": "{{skuId}}",
+                  "description": "SKU ID to get stock for"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Stock History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('history');",
+                  "    pm.expect(response.history).to.be.an('array');",
+                  "    console.log('Stock History:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBaseUrl}}/api/v1/stock/:sku_id/history?page=1&limit=20",
+              "host": ["{{inventoryBaseUrl}}"],
+              "path": ["api", "v1", "stock", ":sku_id", "history"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ],
+              "variable": [
+                {
+                  "key": "sku_id",
+                  "value": "{{skuId}}",
+                  "description": "SKU ID to get history for"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Check Stock Availability",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('availability');",
+                  "    console.log('Stock Availability:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku_ids\": [\"{{skuId}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{inventoryBaseUrl}}/api/v1/stock/check",
+              "host": ["{{inventoryBaseUrl}}"],
+              "path": ["api", "v1", "stock", "check"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory Worker - Admin/Service",
+      "item": [
+        {
+          "name": "Initialize Stock (Service)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('sku_id');",
+                  "    pm.expect(response).to.have.property('quantity');",
+                  "    pm.collectionVariables.set('skuId', response.sku_id);",
+                  "    console.log('Stock Initialized:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Source",
+                "value": "catalog-worker-service-binding"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku_id\": \"{{skuId}}\",\n  \"product_id\": \"{{productId}}\",\n  \"sku_code\": \"SKU-TEST-001\",\n  \"quantity\": 100,\n  \"low_stock_threshold\": 10,\n  \"reason\": \"Initial stock setup\"\n}"
+            },
+            "url": {
+              "raw": "{{inventoryBaseUrl}}/api/v1/stock/:sku_id",
+              "host": ["{{inventoryBaseUrl}}"],
+              "path": ["api", "v1", "stock", ":sku_id"],
+              "variable": [
+                {
+                  "key": "sku_id",
+                  "value": "{{skuId}}",
+                  "description": "SKU ID to initialize stock for"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('sku_id');",
+                  "    pm.expect(response).to.have.property('quantity');",
+                  "    console.log('Stock Updated:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer YOUR_SERVICE_TOKEN_HERE"
+              },
+              {
+                "key": "X-Source",
+                "value": "{{catalogBaseUrl}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 150,\n  \"low_stock_threshold\": 15,\n  \"status\": \"active\",\n  \"reason\": \"Stock updated by admin\"\n}"
+            },
+            "url": {
+              "raw": "{{inventoryBaseUrl}}/api/v1/stock/:sku_id",
+              "host": ["{{inventoryBaseUrl}}"],
+              "path": ["api", "v1", "stock", ":sku_id"],
+              "variable": [
+                {
+                  "key": "sku_id",
+                  "value": "{{skuId}}",
+                  "description": "SKU ID to update stock for"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Adjust Stock (Increase)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('quantity');",
+                  "    console.log('Stock Adjusted:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer YOUR_SERVICE_TOKEN_HERE"
+              },
+              {
+                "key": "X-Source",
+                "value": "{{catalogBaseUrl}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 50,\n  \"reason\": \"Stock replenished\"\n}"
+            },
+            "url": {
+              "raw": "{{inventoryBaseUrl}}/api/v1/stock/:sku_id/adjust",
+              "host": ["{{inventoryBaseUrl}}"],
+              "path": ["api", "v1", "stock", ":sku_id", "adjust"],
+              "variable": [
+                {
+                  "key": "sku_id",
+                  "value": "{{skuId}}",
+                  "description": "SKU ID to adjust stock for"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Adjust Stock (Decrease)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('quantity');",
+                  "    console.log('Stock Adjusted:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer YOUR_SERVICE_TOKEN_HERE"
+              },
+              {
+                "key": "X-Source",
+                "value": "{{catalogBaseUrl}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": -10,\n  \"reason\": \"Stock sold\"\n}"
+            },
+            "url": {
+              "raw": "{{inventoryBaseUrl}}/api/v1/stock/:sku_id/adjust",
+              "host": ["{{inventoryBaseUrl}}"],
+              "path": ["api", "v1", "stock", ":sku_id", "adjust"],
+              "variable": [
+                {
+                  "key": "sku_id",
+                  "value": "{{skuId}}",
+                  "description": "SKU ID to adjust stock for"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reserve Stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('reserved_quantity');",
+                  "    pm.expect(response).to.have.property('available_quantity');",
+                  "    console.log('Stock Reserved:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "user-123"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 5,\n  \"reservation_id\": \"res-{{$randomUUID}}\",\n  \"expires_at\": \"2025-12-31T23:59:59Z\"\n}"
+            },
+            "url": {
+              "raw": "{{inventoryBaseUrl}}/api/v1/stock/:sku_id/reserve",
+              "host": ["{{inventoryBaseUrl}}"],
+              "path": ["api", "v1", "stock", ":sku_id", "reserve"],
+              "variable": [
+                {
+                  "key": "sku_id",
+                  "value": "{{skuId}}",
+                  "description": "SKU ID to reserve stock for"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Release Stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('reserved_quantity');",
+                  "    pm.expect(response).to.have.property('available_quantity');",
+                  "    console.log('Stock Released:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "user-123"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reservation_id\": \"{{reservationId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{inventoryBaseUrl}}/api/v1/stock/:sku_id/release",
+              "host": ["{{inventoryBaseUrl}}"],
+              "path": ["api", "v1", "stock", ":sku_id", "release"],
+              "variable": [
+                {
+                  "key": "sku_id",
+                  "value": "{{skuId}}",
+                  "description": "SKU ID to release stock for"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Integration Tests",
+      "item": [
+        {
+          "name": "Full Stock Flow",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate test IDs",
+                  "pm.collectionVariables.set('skuId', pm.variables.replaceIn('{{$randomUUID}}'));",
+                  "pm.collectionVariables.set('productId', pm.variables.replaceIn('{{$randomUUID}}'));",
+                  "pm.collectionVariables.set('reservationId', pm.variables.replaceIn('res-{{$randomUUID}}'));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Source",
+                "value": "catalog-worker-service-binding"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku_id\": \"{{skuId}}\",\n  \"product_id\": \"{{productId}}\",\n  \"sku_code\": \"SKU-TEST-{{$randomInt}}\",\n  \"quantity\": 100,\n  \"low_stock_threshold\": 10,\n  \"reason\": \"Integration test stock initialization\"\n}"
+            },
+            "url": {
+              "raw": "{{inventoryBaseUrl}}/api/v1/stock/:sku_id",
+              "host": ["{{inventoryBaseUrl}}"],
+              "path": ["api", "v1", "stock", ":sku_id"],
+              "variable": [
+                {
+                  "key": "sku_id",
+                  "value": "{{skuId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+

@@ -5,6 +5,7 @@ import { resolveConfig } from './utils/tracing.js';
 import router from './routers/auth.js';
 import withLogger from './middleware/logger.js'; // expects the wrapper version
 import { checkRateLimit, addRateLimitHeaders } from './middleware/rateLimit.js';
+import { withCORS } from './middleware/cors.js';
 
 // base fetch handler that delegates to your itty-router
 async function baseFetch(request, env, ctx) {
@@ -38,5 +39,8 @@ async function baseFetch(request, env, ctx) {
 // wrap the base handler with the logger wrapper (adds trace-id logging + response header)
 const handlerWithLogger = withLogger(baseFetch);
 
+// wrap with CORS middleware (allows all origins)
+const handlerWithCORS = withCORS(handlerWithLogger);
+
 // export the instrumented handler so otel-cf-workers sets up tracing first
-export default instrument({ fetch: handlerWithLogger }, resolveConfig);
+export default instrument({ fetch: handlerWithCORS }, resolveConfig);

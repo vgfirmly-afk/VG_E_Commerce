@@ -23,13 +23,13 @@ CATALOG_WORKER_URL = "https://w2-catalog-worker.vg-firmly.workers.dev"
 [[d1_databases]]
 binding = "INVENTORY_DB"
 database_name = "inventory_db"
-database_id = "9a88aa6b-0b44-4a67-a710-2340aac6765e"
-preview_database_id = "8cdf8da1-4036-4dcf-8e3a-c59dc91facd8"
+database_id = "99260f3e-7a26-427e-982f-0570417bb1bd"
+#preview_database_id = "8cdf8da1-4036-4dcf-8e3a-c59dc91facd8"
 
 # KV namespace (optional, for caching)
 [[kv_namespaces]]
 binding = "INVENTORY_KV"
-id = "ca68f8f4ec1d4eef8065287d94993ee5"
+id = "986f8fd52d704246abcf38a8c98ee76e"
 
 # Catalog Worker URL for reference (if needed for validation)
 # CATALOG_WORKER_URL = "http://localhost:8787"
