@@ -1,0 +1,720 @@
+{
+  "info": {
+    "name": "Checkout Worker - API",
+    "description": "Postman collection for testing Checkout Worker API endpoints. Handles checkout sessions, addresses, shipping methods, and checkout summary with stock reservation logic.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  },
+  "variable": [
+    {
+      "key": "checkoutBaseUrl",
+      "value": "https://w2-checkout-worker.vg-firmly.workers.dev",
+      "type": "string"
+    },
+    {
+      "key": "cartBaseUrl",
+      "value": "https://w2-cart-worker.vg-firmly.workers.dev",
+      "type": "string"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cartId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "user-123",
+      "type": "string"
+    },
+    {
+      "key": "guestSessionId",
+      "value": "session-{{$randomUUID}}",
+      "type": "string"
+    },
+    {
+      "key": "deliveryAddressId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "billingAddressId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "shippingMethodId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Checkout Worker - Public",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has ok field\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('ok');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{checkoutBaseUrl}}/_/health",
+              "host": ["{{checkoutBaseUrl}}"],
+              "path": ["_", "health"]
+            }
+          }
+        },
+        {
+          "name": "Create Checkout Session",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Ensure cartId is set",
+                  "if (!pm.collectionVariables.get('cartId')) {",
+                  "    console.log('Warning: cartId variable not set. Please create a cart first.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('session_id');",
+                  "    pm.expect(response).to.have.property('cart_id');",
+                  "    pm.expect(response).to.have.property('status');",
+                  "    ",
+                  "    // Save session_id for subsequent requests",
+                  "    pm.collectionVariables.set('sessionId', response.session_id);",
+                  "    console.log('Checkout session created:', response.session_id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}",
+                "description": "Optional: For logged-in users"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{guestSessionId}}",
+                "description": "Optional: For guest checkout"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cart_id\": \"{{cartId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{checkoutBaseUrl}}/api/v1/checkout/sessions",
+              "host": ["{{checkoutBaseUrl}}"],
+              "path": ["api", "v1", "checkout", "sessions"]
+            },
+            "description": "Create a new checkout session from a cart. Requires cart_id. Either X-User-Id (for logged-in users) or X-Session-Id (for guests) header is required."
+          }
+        },
+        {
+          "name": "Get Checkout Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('session_id');",
+                  "    pm.expect(response).to.have.property('cart_id');",
+                  "    pm.expect(response).to.have.property('status');",
+                  "    pm.expect(response).to.have.property('items');",
+                  "    console.log('Checkout session:', response);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{checkoutBaseUrl}}/api/v1/checkout/sessions/:session_id",
+              "host": ["{{checkoutBaseUrl}}"],
+              "path": ["api", "v1", "checkout", "sessions", ":session_id"],
+              "variable": [
+                {
+                  "key": "session_id",
+                  "value": "{{sessionId}}",
+                  "description": "Checkout session ID"
+                }
+              ]
+            },
+            "description": "Get checkout session details including items, addresses, and shipping method if set."
+          }
+        },
+        {
+          "name": "Set Delivery Address",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('delivery_address');",
+                  "    ",
+                  "    if (response.delivery_address) {",
+                  "        pm.collectionVariables.set('deliveryAddressId', response.delivery_address.address_id);",
+                  "        console.log('Delivery address set:', response.delivery_address.address_id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{guestSessionId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"John Doe\",\n  \"phone\": \"9876543210\",\n  \"email\": \"john.doe@example.com\",\n  \"address_line1\": \"123 Main Street\",\n  \"address_line2\": \"Apartment 4B\",\n  \"city\": \"Mumbai\",\n  \"state\": \"Maharashtra\",\n  \"postal_code\": \"400001\",\n  \"country\": \"IN\",\n  \"is_default\": true,\n  \"use_for_billing\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{checkoutBaseUrl}}/api/v1/checkout/sessions/:session_id/delivery-address",
+              "host": ["{{checkoutBaseUrl}}"],
+              "path": ["api", "v1", "checkout", "sessions", ":session_id", "delivery-address"],
+              "variable": [
+                {
+                  "key": "session_id",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            },
+            "description": "Set delivery address for checkout session. If use_for_billing is true, the same address will be used for billing."
+          }
+        },
+        {
+          "name": "Set Billing Address",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('billing_address');",
+                  "    ",
+                  "    if (response.billing_address) {",
+                  "        pm.collectionVariables.set('billingAddressId', response.billing_address.address_id);",
+                  "        console.log('Billing address set:', response.billing_address.address_id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{guestSessionId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"John Doe\",\n  \"phone\": \"9876543210\",\n  \"email\": \"john.doe@example.com\",\n  \"address_line1\": \"456 Business Avenue\",\n  \"address_line2\": \"Suite 200\",\n  \"city\": \"Mumbai\",\n  \"state\": \"Maharashtra\",\n  \"postal_code\": \"400002\",\n  \"country\": \"IN\",\n  \"is_default\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{checkoutBaseUrl}}/api/v1/checkout/sessions/:session_id/billing-address",
+              "host": ["{{checkoutBaseUrl}}"],
+              "path": ["api", "v1", "checkout", "sessions", ":session_id", "billing-address"],
+              "variable": [
+                {
+                  "key": "session_id",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            },
+            "description": "Set billing address for checkout session. Only required if use_for_billing was false when setting delivery address."
+          }
+        },
+        {
+          "name": "Get Available Shipping Methods",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('shipping_methods');",
+                  "    pm.expect(response.shipping_methods).to.be.an('array');",
+                  "    ",
+                  "    if (response.shipping_methods && response.shipping_methods.length > 0) {",
+                  "        pm.collectionVariables.set('shippingMethodId', response.shipping_methods[0].method_id);",
+                  "        console.log('Available shipping methods:', response.shipping_methods);",
+                  "        console.log('Selected first method:', response.shipping_methods[0].method_id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{checkoutBaseUrl}}/api/v1/checkout/sessions/:session_id/shipping-methods",
+              "host": ["{{checkoutBaseUrl}}"],
+              "path": ["api", "v1", "checkout", "sessions", ":session_id", "shipping-methods"],
+              "variable": [
+                {
+                  "key": "session_id",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            },
+            "description": "Get available shipping methods based on delivery address pincode. Requires delivery address to be set first."
+          }
+        },
+        {
+          "name": "Select Shipping Method",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('shipping_method');",
+                  "    pm.expect(response).to.have.property('estimated_delivery_date');",
+                  "    console.log('Shipping method selected:', response.shipping_method);",
+                  "    console.log('Estimated delivery date:', response.estimated_delivery_date);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipping_method_id\": \"{{shippingMethodId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{checkoutBaseUrl}}/api/v1/checkout/sessions/:session_id/shipping-method",
+              "host": ["{{checkoutBaseUrl}}"],
+              "path": ["api", "v1", "checkout", "sessions", ":session_id", "shipping-method"],
+              "variable": [
+                {
+                  "key": "session_id",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            },
+            "description": "Select shipping method for checkout. Requires delivery address to be set first. Make sure shippingMethodId variable is set (from Get Available Shipping Methods response)."
+          }
+        },
+        {
+          "name": "Get Checkout Summary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('session_id');",
+                  "    pm.expect(response).to.have.property('delivery_address');",
+                  "    pm.expect(response).to.have.property('shipping_method');",
+                  "    pm.expect(response).to.have.property('pricing');",
+                  "    pm.expect(response).to.have.property('items');",
+                  "    pm.expect(response).to.have.property('stock_status');",
+                  "    ",
+                  "    console.log('Checkout Summary:');",
+                  "    console.log('Total:', response.pricing.total);",
+                  "    console.log('Stock Status:', response.stock_status.all_available ? 'All items available' : 'Some items out of stock');",
+                  "    ",
+                  "    if (!response.stock_status.all_available) {",
+                  "        console.warn('Unavailable items:', response.stock_status.unavailable_items);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{checkoutBaseUrl}}/api/v1/checkout/sessions/:session_id/summary",
+              "host": ["{{checkoutBaseUrl}}"],
+              "path": ["api", "v1", "checkout", "sessions", ":session_id", "summary"],
+              "variable": [
+                {
+                  "key": "session_id",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            },
+            "description": "Get checkout summary with pricing, delivery details, and stock availability. This endpoint checks stock availability and reserves items in KV. Requires delivery address and shipping method to be set first."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Checkout Flow - Complete Example",
+      "item": [
+        {
+          "name": "1. Create Checkout Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('sessionId', response.session_id);",
+                  "    console.log('Step 1: Checkout session created');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{guestSessionId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cart_id\": \"{{cartId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{checkoutBaseUrl}}/api/v1/checkout/sessions"
+            }
+          }
+        },
+        {
+          "name": "2. Set Delivery Address",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.delivery_address) {",
+                  "        pm.collectionVariables.set('deliveryAddressId', response.delivery_address.address_id);",
+                  "    }",
+                  "    console.log('Step 2: Delivery address set');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{guestSessionId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"John Doe\",\n  \"phone\": \"9876543210\",\n  \"email\": \"john.doe@example.com\",\n  \"address_line1\": \"123 Main Street\",\n  \"city\": \"Mumbai\",\n  \"state\": \"Maharashtra\",\n  \"postal_code\": \"400001\",\n  \"country\": \"IN\",\n  \"use_for_billing\": true\n}"
+            },
+            "url": {
+              "raw": "{{checkoutBaseUrl}}/api/v1/checkout/sessions/:session_id/delivery-address",
+              "variable": [
+                {
+                  "key": "session_id",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Get Shipping Methods",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.shipping_methods && response.shipping_methods.length > 0) {",
+                  "        pm.collectionVariables.set('shippingMethodId', response.shipping_methods[0].method_id);",
+                  "    }",
+                  "    console.log('Step 3: Shipping methods retrieved');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{checkoutBaseUrl}}/api/v1/checkout/sessions/:session_id/shipping-methods",
+              "variable": [
+                {
+                  "key": "session_id",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Select Shipping Method",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    console.log('Step 4: Shipping method selected');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipping_method_id\": \"{{shippingMethodId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{checkoutBaseUrl}}/api/v1/checkout/sessions/:session_id/shipping-method",
+              "variable": [
+                {
+                  "key": "session_id",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "5. Get Checkout Summary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Step 5: Checkout summary retrieved');",
+                  "    console.log('Total Amount:', response.pricing.total);",
+                  "    console.log('Stock Available:', response.stock_status.all_available);",
+                  "    ",
+                  "    if (!response.stock_status.all_available) {",
+                  "        console.error('Cannot proceed to payment - items out of stock');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{checkoutBaseUrl}}/api/v1/checkout/sessions/:session_id/summary",
+              "variable": [
+                {
+                  "key": "session_id",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+

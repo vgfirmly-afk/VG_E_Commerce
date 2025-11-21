@@ -2,7 +2,7 @@
 import { instrument } from '@microlabs/otel-cf-workers';
 import { resolveConfig } from './utils/tracing.js';
 
-import router from './routers/cart.js';
+import router from './routers/checkout.js';
 import withLogger from './middleware/logger.js'; // expects the wrapper version
 import { withCORS } from './middleware/cors.js';
 

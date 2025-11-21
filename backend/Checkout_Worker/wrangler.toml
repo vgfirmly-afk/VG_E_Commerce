@@ -1,4 +1,4 @@
-name = "w2-cart-worker"
+name = "w2-checkout-worker"
 main = "src/index.js"
 compatibility_date = "2025-11-15"
 compatibility_flags = ["nodejs_compat"]
@@ -22,12 +22,12 @@ INVENTORY_WORKER_URL = "https://w2-inventory-worker.vg-firmly.workers.dev"
 
 # D1 database binding (top-level)
 [[d1_databases]]
-binding = "CART_DB"
-database_name = "cart_db"
-database_id = "408fcdc8-3cf3-41dd-a768-a5ddcb5be113"
+binding = "CHECKOUT_DB"
+database_name = "checkout_db"
+database_id = "59778a80-01e5-4c6b-8de0-38264e51efdd"
 #preview_database_id = "8cdf8da1-4036-4dcf-8e3a-c59dc91facd8"
 
-# Service bindings to Pricing and Inventory Workers
+# Service bindings to other Workers
 [[services]]
 binding = "PRICING_WORKER"
 service = "w2-pricing-worker"
@@ -36,9 +36,13 @@ service = "w2-pricing-worker"
 binding = "INVENTORY_WORKER"
 service = "w2-inventory-worker"
 
-# KV namespace (optional, for caching)
+[[services]]
+binding = "CART_WORKER"
+service = "w2-cart-worker"
+
+# KV namespace for stock reservations (critical for preventing overselling)
 [[kv_namespaces]]
-binding = "CART_KV"
+binding = "CHECKOUT_KV"
 id = "b52b3398ed5e40f7bd92bd665e817752"
 
 # Catalog Worker URL for reference (if needed for validation)
