@@ -41,11 +41,6 @@
       "type": "string"
     },
     {
-      "key": "productId",
-      "value": "",
-      "type": "string"
-    },
-    {
       "key": "userId",
       "value": "user-123",
       "type": "string"
@@ -228,6 +223,24 @@
           "name": "Add Item to Cart",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Validate required variables",
+                  "if (!pm.collectionVariables.get('skuId') || pm.collectionVariables.get('skuId') === '{{skuId}}') {",
+                  "    console.warn('Warning: skuId variable is not set. Using placeholder.');",
+                  "    pm.collectionVariables.set('skuId', 'test-sku-' + pm.variables.replaceIn('{{$randomUUID}}'));",
+                  "}",
+                  "",
+                  "if (!pm.collectionVariables.get('cartId') || pm.collectionVariables.get('cartId') === '{{cartId}}') {",
+                  "    console.error('Error: cartId variable is required. Please create a cart first.');",
+                  "    throw new Error('cartId variable is required');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "exec": [
@@ -263,8 +276,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sku_id\": \"{{skuId}}\",\n  \"quantity\": 2,\n  \"product_id\": \"{{productId}}\",\n  \"sku_code\": \"SKU-TEST-001\"\n}"
+              "raw": "{\n  \"sku_id\": \"{{skuId}}\",\n  \"quantity\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
+            "description": "Add item to cart. Requires sku_id and quantity. Make sure skuId and cartId variables are set in Postman collection variables.",
             "url": {
               "raw": "{{cartBaseUrl}}/api/v1/cart/:cart_id/items",
               "host": ["{{cartBaseUrl}}"],
@@ -314,7 +333,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"quantity\": 5\n}"
+              "raw": "{\n  \"delta\": 1\n}"
             },
             "url": {
               "raw": "{{cartBaseUrl}}/api/v1/cart/:cart_id/items/:item_id",
@@ -369,7 +388,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"quantity\": 1\n}"
+              "raw": "{\n  \"delta\": -1\n}"
             },
             "url": {
               "raw": "{{cartBaseUrl}}/api/v1/cart/:cart_id/items/:item_id",
@@ -542,7 +561,6 @@
                 "exec": [
                   "// Generate test IDs",
                   "pm.collectionVariables.set('skuId', pm.variables.replaceIn('{{$randomUUID}}'));",
-                  "pm.collectionVariables.set('productId', pm.variables.replaceIn('{{$randomUUID}}'));",
                   "pm.collectionVariables.set('sessionId', pm.variables.replaceIn('session-{{$randomUUID}}'));"
                 ],
                 "type": "text/javascript"
@@ -615,7 +633,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sku_id\": \"{{skuId}}\",\n  \"quantity\": 3,\n  \"product_id\": \"{{productId}}\",\n  \"sku_code\": \"SKU-TEST-{{$randomInt}}\"\n}"
+              "raw": "{\n  \"sku_id\": \"{{skuId}}\",\n  \"quantity\": 3\n}"
             },
             "url": {
               "raw": "{{cartBaseUrl}}/api/v1/cart/:cart_id/items",

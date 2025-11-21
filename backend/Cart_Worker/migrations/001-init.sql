@@ -14,14 +14,13 @@ CREATE TABLE IF NOT EXISTS carts (
 );
 
 -- Cart Items table - Items in each cart
+-- Note: Only sku_id is stored. sku_code and product_id can be retrieved from sku_id via catalog service when needed.
+-- unit_price should be fetched from pricing service when needed (not cached).
 CREATE TABLE IF NOT EXISTS cart_items (
   item_id TEXT PRIMARY KEY,
   cart_id TEXT NOT NULL,
   sku_id TEXT NOT NULL,
-  product_id TEXT NOT NULL,
-  sku_code TEXT NOT NULL,
   quantity INTEGER NOT NULL DEFAULT 1,
-  unit_price REAL, -- Cached price at time of adding (for historical reference)
   currency TEXT DEFAULT 'USD',
   added_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,

@@ -103,6 +103,9 @@ async function checkStockFromInventoryWorker(skuId, quantity, env) {
 export async function getCart(userId, sessionId, env) {
   try {
     const cart = await getOrCreateCart(userId, sessionId, env);
+    if (!cart) {
+      throw new Error('Failed to create cart');
+    }
     const items = await getCartItems(cart.cart_id, env);
     
     return {
@@ -114,10 +117,7 @@ export async function getCart(userId, sessionId, env) {
       items: items.map(item => ({
         item_id: item.item_id,
         sku_id: item.sku_id,
-        product_id: item.product_id,
-        sku_code: item.sku_code,
         quantity: item.quantity,
-        unit_price: item.unit_price,
         currency: item.currency
       })),
       item_count: items.length,
@@ -151,10 +151,7 @@ export async function getCartByIdService(cartId, env) {
       items: items.map(item => ({
         item_id: item.item_id,
         sku_id: item.sku_id,
-        product_id: item.product_id,
-        sku_code: item.sku_code,
         quantity: item.quantity,
-        unit_price: item.unit_price,
         currency: item.currency
       })),
       item_count: items.length,
@@ -170,7 +167,7 @@ export async function getCartByIdService(cartId, env) {
 /**
  * Add item to cart
  */
-export async function addItem(cartId, skuId, quantity, productId, skuCode, env) {
+export async function addItem(cartId, skuId, quantity, env) {
   try {
     // Check stock availability
     const stockCheck = await checkStockFromInventoryWorker(skuId, quantity, env);
@@ -178,17 +175,11 @@ export async function addItem(cartId, skuId, quantity, productId, skuCode, env) 
       throw new Error(stockCheck.reason || 'Insufficient stock');
     }
     
-    // Get current price
-    const unitPrice = await getPriceFromPricingWorker(skuId, env);
-    if (unitPrice === null) {
-      logWarn('addItem: Could not get price, using 0.00', { skuId });
-    }
-    
     const currency = 'USD'; // Default currency
     
-    const item = await addItemToCart(cartId, skuId, productId, skuCode, quantity, unitPrice || 0.00, currency, env);
+    const item = await addItemToCart(cartId, skuId, quantity, currency, env);
     
-    logger('cart.item.added', { cartId, skuId, quantity, unitPrice });
+    logger('cart.item.added', { cartId, skuId, quantity });
     return item;
   } catch (err) {
     logError('addItem: Service error', err, { cartId, skuId, quantity });
@@ -198,27 +189,50 @@ export async function addItem(cartId, skuId, quantity, productId, skuCode, env) 
 
 /**
  * Update item quantity
+ * Supports both absolute quantity and relative delta (increment/decrement)
+ * @param {string} itemId - Cart item ID
+ * @param {number|null} quantity - Absolute quantity (if provided, sets quantity to this value)
+ * @param {number|null} delta - Relative change (if provided, adds/subtracts from current quantity)
+ * @param {Object} env - Environment
  */
-export async function updateQuantity(itemId, quantity, env) {
+export async function updateQuantity(itemId, quantity, delta, env) {
   try {
-    // If quantity > 0, check stock availability
-    if (quantity > 0) {
-      const item = await getCartItem(itemId, env);
-      if (!item) {
-        throw new Error('Cart item not found');
+    // Get current item to check if it exists and get current quantity
+    const currentItem = await getCartItem(itemId, env);
+    if (!currentItem) {
+      throw new Error('Cart item not found');
+    }
+    
+    let newQuantity;
+    
+    // If delta is provided, calculate relative change
+    if (delta !== undefined && delta !== null) {
+      newQuantity = currentItem.quantity + delta;
+      // Ensure quantity doesn't go below 0
+      if (newQuantity < 0) {
+        newQuantity = 0;
       }
-      
-      const stockCheck = await checkStockFromInventoryWorker(item.sku_id, quantity, env);
+    } else if (quantity !== undefined && quantity !== null) {
+      // Use absolute quantity
+      newQuantity = quantity;
+    } else {
+      throw new Error('Either quantity or delta is required');
+    }
+    
+    // If increasing quantity, check stock availability
+    if (newQuantity > currentItem.quantity) {
+      const quantityIncrease = newQuantity - currentItem.quantity;
+      const stockCheck = await checkStockFromInventoryWorker(currentItem.sku_id, newQuantity, env);
       if (!stockCheck.available) {
         throw new Error(stockCheck.reason || 'Insufficient stock');
       }
     }
     
-    const item = await updateItemQuantity(itemId, quantity, env);
-    logger('cart.item.updated', { itemId, quantity });
+    const item = await updateItemQuantity(itemId, newQuantity, env);
+    logger('cart.item.updated', { itemId, oldQuantity: currentItem.quantity, newQuantity, delta });
     return item;
   } catch (err) {
-    logError('updateQuantity: Service error', err, { itemId, quantity });
+    logError('updateQuantity: Service error', err, { itemId, quantity, delta });
     throw err;
   }
 }
@@ -269,7 +283,7 @@ export async function calculateTotal(cartId, env) {
     
     for (const item of items) {
       // Get current price from Pricing Worker
-      let currentPrice = item.unit_price; // Use cached price as fallback
+      let currentPrice = 0.00;
       
       if (pricingWorker) {
         const price = await getPriceFromPricingWorker(item.sku_id, env);

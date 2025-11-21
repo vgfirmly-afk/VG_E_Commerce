@@ -103,7 +103,7 @@ export async function getCartItem(itemId, env) {
 /**
  * Add item to cart
  */
-export async function addItemToCart(cartId, skuId, productId, skuCode, quantity, unitPrice, currency, env) {
+export async function addItemToCart(cartId, skuId, quantity, currency, env) {
   try {
     const now = new Date().toISOString();
     
@@ -117,9 +117,9 @@ export async function addItemToCart(cartId, skuId, productId, skuCode, quantity,
       const newQuantity = existing.quantity + quantity;
       await env.CART_DB.prepare(`
         UPDATE cart_items 
-        SET quantity = ?, unit_price = ?, updated_at = ?
+        SET quantity = ?, updated_at = ?
         WHERE item_id = ?
-      `).bind(newQuantity, unitPrice, now, existing.item_id).run();
+      `).bind(newQuantity, now, existing.item_id).run();
       
       // Update cart updated_at
       await env.CART_DB.prepare(
@@ -134,16 +134,13 @@ export async function addItemToCart(cartId, skuId, productId, skuCode, quantity,
       // Add new item
       const itemId = uuidv4();
       await env.CART_DB.prepare(`
-        INSERT INTO cart_items (item_id, cart_id, sku_id, product_id, sku_code, quantity, unit_price, currency, added_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO cart_items (item_id, cart_id, sku_id, quantity, currency, added_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `).bind(
         itemId,
         cartId,
         skuId,
-        productId,
-        skuCode,
         quantity,
-        unitPrice,
         currency,
         now,
         now

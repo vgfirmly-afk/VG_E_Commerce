@@ -8,8 +8,12 @@ export const addItemSchema = Joi.object({
 });
 
 // Update Item Quantity schema
+// Supports both absolute quantity and relative delta (increment/decrement)
 export const updateQuantitySchema = Joi.object({
-  quantity: Joi.number().integer().min(0).max(999).required(), // 0 means remove item
+  quantity: Joi.number().integer().min(0).max(999), // Absolute quantity (0 means remove item)
+  delta: Joi.number().integer().min(-999).max(999), // Relative change (positive = increase, negative = decrease)
+}).or('quantity', 'delta').messages({
+  'object.missing': 'Either quantity or delta is required'
 });
 
 // Cart ID schema

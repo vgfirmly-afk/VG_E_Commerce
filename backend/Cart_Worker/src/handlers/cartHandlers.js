@@ -86,7 +86,9 @@ export async function getCartById(request, env) {
 export async function addItem(request, env) {
   try {
     const cartId = request.params?.cart_id;
-    const body = await request.json();
+    
+    // Use validated body from middleware (already parsed and validated)
+    const body = request.validatedBody || {};
     
     const { error: idError } = validateCartId(cartId);
     if (idError) {
@@ -99,7 +101,7 @@ export async function addItem(request, env) {
       );
     }
     
-    const { sku_id, quantity, product_id, sku_code } = body;
+    const { sku_id, quantity } = body;
     
     if (!sku_id || !quantity) {
       return new Response(
@@ -111,7 +113,7 @@ export async function addItem(request, env) {
       );
     }
     
-    const item = await cartService.addItem(cartId, sku_id, quantity, product_id, sku_code, env);
+    const item = await cartService.addItem(cartId, sku_id, quantity, env);
     
     return new Response(
       JSON.stringify(item),
@@ -134,7 +136,9 @@ export async function updateQuantity(request, env) {
   try {
     const cartId = request.params?.cart_id;
     const itemId = request.params?.item_id;
-    const body = await request.json();
+    
+    // Use validated body from middleware (already parsed and validated)
+    const body = request.validatedBody || {};
     
     const { error: idError } = validateCartId(cartId);
     if (idError) {
@@ -158,18 +162,10 @@ export async function updateQuantity(request, env) {
       );
     }
     
-    const { quantity } = body;
-    if (quantity === undefined || quantity === null) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'validation_error', 
-          message: 'quantity is required' 
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    const { quantity, delta } = body;
     
-    const item = await cartService.updateQuantity(itemId, quantity, env);
+    // Pass both quantity and delta to service - service will handle the logic
+    const item = await cartService.updateQuantity(itemId, quantity, delta, env);
     
     if (item === null) {
       // Item was removed (quantity = 0)
