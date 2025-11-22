@@ -823,6 +823,64 @@
           }
         }
       ]
+    },
+    {
+      "name": "Webhooks",
+      "item": [
+        {
+          "name": "Payment Status Webhook (Simulate)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Payment status updated\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('success');",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response).to.have.property('checkout_session_id');",
+                  "    pm.expect(response).to.have.property('payment_id');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Source",
+                "value": "payment-worker-webhook",
+                "description": "Indicates this is a webhook call from Payment Worker"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"checkout_session_id\": \"{{sessionId}}\",\n  \"payment_id\": \"payment-uuid-123\",\n  \"payment_status\": \"captured\",\n  \"payment_data\": {\n    \"paypal_order_id\": \"5O190127TN364715T\",\n    \"paypal_transaction_id\": \"1AB23456CD789012E\",\n    \"amount\": 150.00,\n    \"currency\": \"USD\",\n    \"captured_at\": \"2024-01-15T10:00:00.000Z\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{checkoutBaseUrl}}/api/v1/webhooks/payment-status",
+              "host": ["{{checkoutBaseUrl}}"],
+              "path": ["api", "v1", "webhooks", "payment-status"]
+            },
+            "description": "Webhook endpoint called by Payment Worker when payment status changes. Updates checkout session payment status. Replace {{sessionId}} with actual checkout session ID."
+          }
+        }
+      ]
     }
   ]
 }

@@ -331,6 +331,67 @@
               ]
             }
           }
+        },
+        {
+          "name": "PayPal Webhook (Simulate)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Webhook processed\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('success');",
+                  "    pm.expect(response).to.have.property('processed');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "PAYPAL-TRANSMISSION-ID",
+                "value": "test-transmission-id",
+                "description": "PayPal webhook transmission ID"
+              },
+              {
+                "key": "PAYPAL-TRANSMISSION-SIG",
+                "value": "test-signature",
+                "description": "PayPal webhook signature"
+              },
+              {
+                "key": "PAYPAL-TRANSMISSION-TIME",
+                "value": "2024-01-15T10:00:00Z",
+                "description": "PayPal webhook transmission time"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"WH-2W42635YX2960934L-67976317FL053254B\",\n  \"event_type\": \"PAYMENT.CAPTURE.COMPLETED\",\n  \"create_time\": \"2024-01-15T10:00:00.000Z\",\n  \"resource_type\": \"capture\",\n  \"resource\": {\n    \"id\": \"1AB23456CD789012E\",\n    \"status\": \"COMPLETED\",\n    \"amount\": {\n      \"value\": \"100.00\",\n      \"currency_code\": \"USD\"\n    },\n    \"supplementary_data\": {\n      \"related_ids\": {\n        \"order_id\": \"{{paypalOrderId}}\"\n      }\n    },\n    \"purchase_units\": [{\n      \"payments\": {\n        \"captures\": [{\n          \"id\": \"1AB23456CD789012E\",\n          \"status\": \"COMPLETED\",\n          \"amount\": {\n            \"value\": \"100.00\",\n            \"currency_code\": \"USD\"\n          },\n          \"final_capture\": true\n        }]\n      }\n    }],\n    \"payer\": {\n      \"email_address\": \"buyer@example.com\",\n      \"name\": {\n        \"given_name\": \"John\",\n        \"surname\": \"Doe\"\n      },\n      \"payer_id\": \"87YEEB58CLNAS\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{paymentBaseUrl}}/api/v1/webhooks/paypal",
+              "host": ["{{paymentBaseUrl}}"],
+              "path": ["api", "v1", "webhooks", "paypal"]
+            },
+            "description": "Simulates PayPal webhook for PAYMENT.CAPTURE.COMPLETED event. Replace {{paypalOrderId}} with actual PayPal order ID from a created payment."
+          }
         }
       ]
     },
