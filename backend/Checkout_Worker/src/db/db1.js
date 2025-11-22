@@ -3,6 +3,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { logger, logError } from '../utils/logger.js';
 import { RESERVATION_TTL_SECONDS, CHECKOUT_SESSION_TTL_SECONDS } from '../../config.js';
+// Removed serviceBinding import - using direct template literals like Cart Worker
 
 /**
  * Get checkout session by ID
@@ -237,11 +238,159 @@ export async function getShippingMethods(pincode, env) {
 export async function getShippingMethod(methodId, env) {
   try {
     const method = await env.CHECKOUT_DB.prepare(
-      'SELECT * FROM shipping_methods WHERE method_id = ? AND is_active = 1'
+      'SELECT * FROM shipping_methods WHERE method_id = ?'
     ).bind(methodId).first();
     return method || null;
   } catch (err) {
     logError('getShippingMethod: Database error', err, { methodId });
+    throw err;
+  }
+}
+
+/**
+ * Create shipping method (admin)
+ */
+export async function createShippingMethod(methodData, env) {
+  try {
+    const methodId = uuidv4();
+    const now = new Date().toISOString();
+    
+    await env.CHECKOUT_DB.prepare(`
+      INSERT INTO shipping_methods (
+        method_id, name, description, carrier, base_cost, cost_per_kg,
+        min_delivery_days, max_delivery_days, is_active, applicable_pincodes,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      methodId,
+      methodData.name,
+      methodData.description || null,
+      methodData.carrier,
+      methodData.base_cost || 0.00,
+      methodData.cost_per_kg || 0.00,
+      methodData.min_delivery_days || 3,
+      methodData.max_delivery_days || 7,
+      methodData.is_active !== undefined ? (methodData.is_active ? 1 : 0) : 1,
+      methodData.applicable_pincodes ? JSON.stringify(methodData.applicable_pincodes) : null,
+      now,
+      now
+    ).run();
+    
+    return await getShippingMethod(methodId, env);
+  } catch (err) {
+    logError('createShippingMethod: Database error', err, { methodData });
+    throw err;
+  }
+}
+
+/**
+ * Update shipping method (admin)
+ */
+export async function updateShippingMethod(methodId, updates, env) {
+  try {
+    const now = new Date().toISOString();
+    const existing = await getShippingMethod(methodId, env);
+    if (!existing) {
+      throw new Error('Shipping method not found');
+    }
+    
+    const updateFields = [];
+    const bindValues = [];
+    
+    if (updates.name !== undefined) {
+      updateFields.push('name = ?');
+      bindValues.push(updates.name);
+    }
+    if (updates.description !== undefined) {
+      updateFields.push('description = ?');
+      bindValues.push(updates.description || null);
+    }
+    if (updates.carrier !== undefined) {
+      updateFields.push('carrier = ?');
+      bindValues.push(updates.carrier);
+    }
+    if (updates.base_cost !== undefined) {
+      updateFields.push('base_cost = ?');
+      bindValues.push(updates.base_cost);
+    }
+    if (updates.cost_per_kg !== undefined) {
+      updateFields.push('cost_per_kg = ?');
+      bindValues.push(updates.cost_per_kg);
+    }
+    if (updates.min_delivery_days !== undefined) {
+      updateFields.push('min_delivery_days = ?');
+      bindValues.push(updates.min_delivery_days);
+    }
+    if (updates.max_delivery_days !== undefined) {
+      updateFields.push('max_delivery_days = ?');
+      bindValues.push(updates.max_delivery_days);
+    }
+    if (updates.is_active !== undefined) {
+      updateFields.push('is_active = ?');
+      bindValues.push(updates.is_active ? 1 : 0);
+    }
+    if (updates.applicable_pincodes !== undefined) {
+      updateFields.push('applicable_pincodes = ?');
+      bindValues.push(updates.applicable_pincodes ? JSON.stringify(updates.applicable_pincodes) : null);
+    }
+    
+    if (updateFields.length === 0) {
+      return existing; // No updates
+    }
+    
+    updateFields.push('updated_at = ?');
+    bindValues.push(now);
+    bindValues.push(methodId);
+    
+    await env.CHECKOUT_DB.prepare(`
+      UPDATE shipping_methods 
+      SET ${updateFields.join(', ')}
+      WHERE method_id = ?
+    `).bind(...bindValues).run();
+    
+    return await getShippingMethod(methodId, env);
+  } catch (err) {
+    logError('updateShippingMethod: Database error', err, { methodId, updates });
+    throw err;
+  }
+}
+
+/**
+ * Delete shipping method (admin) - Soft delete by setting is_active = 0
+ */
+export async function deleteShippingMethod(methodId, env) {
+  try {
+    const existing = await getShippingMethod(methodId, env);
+    if (!existing) {
+      throw new Error('Shipping method not found');
+    }
+    
+    const now = new Date().toISOString();
+    await env.CHECKOUT_DB.prepare(`
+      UPDATE shipping_methods 
+      SET is_active = 0, updated_at = ?
+      WHERE method_id = ?
+    `).bind(now, methodId).run();
+    
+    return { success: true, method_id: methodId };
+  } catch (err) {
+    logError('deleteShippingMethod: Database error', err, { methodId });
+    throw err;
+  }
+}
+
+/**
+ * Get all shipping methods (admin - includes inactive)
+ */
+export async function getAllShippingMethods(env) {
+  try {
+    const methods = await env.CHECKOUT_DB.prepare(
+      'SELECT * FROM shipping_methods ORDER BY created_at DESC'
+    ).all();
+    
+    return methods?.results || [];
+  } catch (err) {
+    logError('getAllShippingMethods: Database error', err);
     throw err;
   }
 }
@@ -363,7 +512,12 @@ export async function reserveStockInKV(sessionId, skuId, quantity, env) {
     }
     
     // Use service binding - URL is just for routing, not an external HTTP call
-    const stockRequest = new Request(`https://inventory-worker/api/v1/stock/${encodeURIComponent(skuId)}`, {
+    // Construct URL parts separately to avoid TLD validation during bundling
+    const protocol = 'https';
+    const hostname = 'inventory-worker';
+    const path = '/api/v1/stock/' + encodeURIComponent(skuId);
+    const urlString = protocol + '://' + hostname + path;
+    const stockRequest = new Request(urlString, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -488,7 +642,12 @@ export async function checkStockAvailability(skuId, quantity, env) {
     }
     
     // Use service binding - URL is just for routing, not an external HTTP call
-    const stockRequest = new Request(`https://inventory-worker/api/v1/stock/${encodeURIComponent(skuId)}`, {
+    // Construct URL parts separately to avoid TLD validation during bundling
+    const protocol = 'https';
+    const hostname = 'inventory-worker';
+    const path = '/api/v1/stock/' + encodeURIComponent(skuId);
+    const urlString = protocol + '://' + hostname + path;
+    const stockRequest = new Request(urlString, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',

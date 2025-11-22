@@ -54,13 +54,20 @@ router.post('/api/v1/payments/:payment_id/capture',
   }
 );
 
-// PayPal callback endpoints
+// PayPal callback endpoints (FRONTEND-ONLY - for displaying status to users)
+// Actual payment processing happens via webhooks
 router.get('/api/v1/payments/callback/success', async (request, env, ctx) => {
   return paymentHandlers.handlePayPalSuccess(request, request.env || env);
 });
 
 router.get('/api/v1/payments/callback/failure', async (request, env, ctx) => {
   return paymentHandlers.handlePayPalFailure(request, request.env || env);
+});
+
+// PayPal webhook endpoint (SERVER-TO-SERVER - handles actual payment processing)
+router.post('/api/v1/webhooks/paypal', async (request, env, ctx) => {
+  const webhookHandlers = await import('../handlers/webhookHandlers.js');
+  return webhookHandlers.handlePayPalWebhook(request, request.env || env);
 });
 
 // Fallback route

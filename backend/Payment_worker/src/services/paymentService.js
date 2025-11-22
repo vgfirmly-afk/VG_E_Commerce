@@ -1,5 +1,5 @@
 // services/paymentService.js
-import { logger, logError, logWarn } from '../utils/logger.js';
+import { logger, logError } from '../utils/logger.js';
 import {
   createPayment,
   getPayment,
@@ -219,7 +219,10 @@ export async function getPaymentStatus(paymentId, env) {
 
 /**
  * Handle PayPal callback (success or failure)
- * Extracts token (order ID) and PayerID from query parameters
+ * NOTE: These are FRONTEND-ONLY endpoints for displaying status to users
+ * Actual payment processing happens via webhooks (server-to-server)
+ * 
+ * This function just retrieves and returns payment status for display
  */
 export async function handlePayPalCallback(token, payerId, isSuccess, env) {
   try {
@@ -228,224 +231,42 @@ export async function handlePayPalCallback(token, payerId, isSuccess, env) {
     }
     
     // Find payment by PayPal order ID (token)
-    let payment = await getPaymentByOrderId(token, env);
+    const payment = await getPaymentByOrderId(token, env);
     if (!payment) {
       throw new Error(`Payment not found for PayPal order ID: ${token}`);
     }
     
+    // Just return the current payment status for frontend display
+    // Webhooks handle the actual status updates (server-to-server)
     if (isSuccess) {
-      // User approved the payment
-      if (!payerId) {
-        throw new Error('PayerID is required for successful payment');
-      }
-      
-      // Update payment to approved status
-      if (payment.status !== 'approved' && payment.status !== 'captured') {
-        payment = await updatePaymentStatus(payment.payment_id, 'approved', {
-          payer_email: null, // Will be updated when we capture
-          metadata: {
-            ...(payment.metadata || {}),
-            payer_id: payerId,
-            callback_received_at: new Date().toISOString()
-          }
-        }, env);
-        
-        // Log approval event
-        await logPaymentEvent(payment.payment_id, 'approved', {
-          paypal_order_id: token,
-          payer_id: payerId
-        }, env);
-      }
-      
-      // Verify order status before capturing
-      try {
-        const paypalOrder = await getPayPalOrder(token, env);
-        
-        // Check if order is in APPROVED state
-        if (paypalOrder.status !== 'APPROVED') {
-          logWarn('handlePayPalCallback: Order not in APPROVED state', {
-            order_id: token,
-            current_status: paypalOrder.status,
-            payer_id: payerId
-          });
-          
-          // Update payment with current PayPal status
-          payment = await updatePaymentStatus(payment.payment_id, 'approved', {
-            metadata: {
-              ...(payment.metadata || {}),
-              payer_id: payerId,
-              paypal_order_status: paypalOrder.status,
-              callback_received_at: new Date().toISOString()
-            }
-          }, env);
-          
-          return {
-            success: false,
-            message: `Payment approved but order is in ${paypalOrder.status} state. Cannot capture yet.`,
-            error: `Order status: ${paypalOrder.status}. Expected: APPROVED`,
-            payment: {
-              payment_id: payment.payment_id,
-              checkout_session_id: payment.checkout_session_id,
-              status: payment.status,
-              amount: payment.amount,
-              currency: payment.currency,
-              paypal_order_id: payment.order_id,
-              paypal_order_status: paypalOrder.status
-            }
-          };
-        }
-      } catch (orderCheckErr) {
-        logError('handlePayPalCallback: Failed to verify order status', orderCheckErr, { token, payerId });
-        // Continue with capture attempt anyway
-      }
-      
-      // Automatically capture the payment
-      try {
-        const capture = await capturePayPalOrder(token, env);
-        const purchaseUnit = capture.purchase_units?.[0];
-        const captureData = purchaseUnit?.payments?.captures?.[0];
-        const payer = capture.payer;
-        
-        // Update payment to captured
-        payment = await updatePaymentStatus(payment.payment_id, 'captured', {
-          paypal_transaction_id: captureData?.id || null,
-          payer_email: payer?.email_address || null,
-          payer_name: payer?.name ? `${payer.name.given_name} ${payer.name.surname}`.trim() : null,
-          captured_at: new Date().toISOString(),
-          metadata: {
-            ...(payment.metadata || {}),
-            payer_id: payerId,
-            paypal_capture: {
-              id: capture.id,
-              status: capture.status,
-              capture_id: captureData?.id,
-              amount: captureData?.amount,
-              final_capture: captureData?.final_capture
-            }
-          }
-        }, env);
-        
-        // Log capture event
-        await logPaymentEvent(payment.payment_id, 'captured', {
-          paypal_order_id: token,
-          paypal_transaction_id: captureData?.id,
-          payer_id: payerId,
-          amount: captureData?.amount?.value
-        }, env);
-        
-        logger('payment.callback.success', {
-          payment_id: payment.payment_id,
-          paypal_order_id: token,
-          payer_id: payerId,
-          transaction_id: captureData?.id
-        });
-        
-        return {
-          success: true,
-          message: 'Payment captured successfully',
-          payment: {
-            payment_id: payment.payment_id,
-            checkout_session_id: payment.checkout_session_id,
-            status: payment.status,
-            amount: payment.amount,
-            currency: payment.currency,
-            paypal_order_id: payment.order_id,
-            paypal_transaction_id: payment.paypal_transaction_id,
-            payer_email: payment.payer_email,
-            payer_name: payment.payer_name,
-            captured_at: payment.captured_at
-          }
-        };
-      } catch (captureErr) {
-        logError('handlePayPalCallback: Capture failed', captureErr, { token, payerId });
-        
-        // Parse PayPal error details
-        let errorDetails = {};
-        try {
-          const errorMatch = captureErr.message.match(/\{.*\}/);
-          if (errorMatch) {
-            errorDetails = JSON.parse(errorMatch[0]);
-          }
-        } catch (parseErr) {
-          // Ignore parse errors
-        }
-        
-        // Update payment with failure reason
-        const failureReason = errorDetails.details?.[0]?.description || 
-                             errorDetails.message || 
-                             captureErr.message;
-        
-        payment = await updatePaymentStatus(payment.payment_id, 'approved', {
-          failure_reason: `Capture failed: ${failureReason}`,
-          metadata: {
-            ...(payment.metadata || {}),
-            payer_id: payerId,
-            capture_error: {
-              name: errorDetails.name,
-              issue: errorDetails.details?.[0]?.issue,
-              description: errorDetails.details?.[0]?.description,
-              debug_id: errorDetails.debug_id,
-              message: errorDetails.message
-            },
-            capture_failed_at: new Date().toISOString()
-          }
-        }, env);
-        
-        // Log capture failure event
-        await logPaymentEvent(payment.payment_id, 'capture_failed', {
-          paypal_order_id: token,
-          payer_id: payerId,
-          error: errorDetails
-        }, env);
-        
-        // Payment was approved but capture failed
-        return {
-          success: false,
-          message: 'Payment approved but capture failed',
-          error: failureReason,
-          error_details: {
-            issue: errorDetails.details?.[0]?.issue,
-            description: errorDetails.details?.[0]?.description,
-            debug_id: errorDetails.debug_id,
-            help_link: errorDetails.links?.[0]?.href
-          },
-          payment: {
-            payment_id: payment.payment_id,
-            checkout_session_id: payment.checkout_session_id,
-            status: payment.status,
-            amount: payment.amount,
-            currency: payment.currency,
-            paypal_order_id: payment.order_id,
-            failure_reason: payment.failure_reason
-          },
-          retry_info: {
-            message: 'Payment is in approved state. You can retry capture using POST /api/v1/payments/:payment_id/capture',
-            payment_id: payment.payment_id
-          }
-        };
-      }
-    } else {
-      // User cancelled or payment failed
-      payment = await updatePaymentStatus(payment.payment_id, 'cancelled', {
-        failure_reason: 'User cancelled payment or payment failed',
-        metadata: {
-          ...(payment.metadata || {}),
-          callback_received_at: new Date().toISOString(),
-          payer_id: payerId || null
-        }
-      }, env);
-      
-      // Log cancellation event
-      await logPaymentEvent(payment.payment_id, 'cancelled', {
-        paypal_order_id: token,
-        payer_id: payerId || null,
-        reason: 'User cancelled or payment failed'
-      }, env);
-      
-      logger('payment.callback.failure', {
+      logger('payment.callback.success.display', {
         payment_id: payment.payment_id,
         paypal_order_id: token,
-        payer_id: payerId || null
+        current_status: payment.status
+      });
+      
+      return {
+        success: true,
+        message: 'Payment status retrieved',
+        payment: {
+          payment_id: payment.payment_id,
+          checkout_session_id: payment.checkout_session_id,
+          status: payment.status,
+          amount: payment.amount,
+          currency: payment.currency,
+          paypal_order_id: payment.order_id,
+          paypal_transaction_id: payment.paypal_transaction_id,
+          payer_email: payment.payer_email,
+          payer_name: payment.payer_name,
+          captured_at: payment.captured_at
+        },
+        note: 'Payment status is updated via webhooks. If status is not updated yet, please wait a moment and refresh.'
+      };
+    } else {
+      logger('payment.callback.failure.display', {
+        payment_id: payment.payment_id,
+        paypal_order_id: token,
+        current_status: payment.status
       });
       
       return {

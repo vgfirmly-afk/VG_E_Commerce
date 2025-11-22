@@ -12,8 +12,13 @@ import {
   getCheckoutItems,
   reserveStockInKV,
   releaseAllStockForSession,
-  checkStockAvailability
+  checkStockAvailability,
+  createShippingMethod as createShippingMethodDb,
+  updateShippingMethod as updateShippingMethodDb,
+  deleteShippingMethod as deleteShippingMethodDb,
+  getAllShippingMethods as getAllShippingMethodsDb
 } from '../db/db1.js';
+// Removed serviceBinding import - using direct template literals like Cart Worker
 
 /**
  * Get cart from Cart Worker via service binding
@@ -26,7 +31,12 @@ async function getCartFromCartWorker(cartId, env) {
     }
     
     // Use service binding - URL is just for routing, not an external HTTP call
-    const cartRequest = new Request(`https://cart-worker/api/v1/cart/${encodeURIComponent(cartId)}`, {
+    // Construct URL parts separately to avoid TLD validation during bundling
+    const protocol = 'https';
+    const hostname = 'cart-worker';
+    const path = '/api/v1/cart/' + encodeURIComponent(cartId);
+    const urlString = protocol + '://' + hostname + path;
+    const cartRequest = new Request(urlString, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -59,7 +69,12 @@ async function getPriceFromPricingWorker(skuId, env) {
     }
     
     // Use service binding - URL is just for routing, not an external HTTP call
-    const priceRequest = new Request(`https://pricing-worker/api/v1/prices/${encodeURIComponent(skuId)}`, {
+    // Construct URL parts separately to avoid TLD validation during bundling
+    const protocol = 'https';
+    const hostname = 'pricing-worker';
+    const path = '/api/v1/prices/' + encodeURIComponent(skuId);
+    const urlString = protocol + '://' + hostname + path;
+    const priceRequest = new Request(urlString, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -337,9 +352,12 @@ export async function getSummary(sessionId, env) {
     if (!session) {
       throw new Error('Checkout session not found');
     }
-    
-    if (!session.delivery_address_id || !session.shipping_method_id) {
-      throw new Error('Delivery address and shipping method must be set');
+    // console.log('session', session);
+    if (!session.delivery_address_id) {
+      throw new Error('Delivery address must be set');
+    }
+    if (!session.shipping_method_id) {
+      throw new Error('Shipping method not set');
     }
     
     const items = await getCheckoutItems(sessionId, env);
@@ -443,6 +461,79 @@ export async function getSummary(sessionId, env) {
     };
   } catch (err) {
     logError('getSummary: Service error', err, { sessionId });
+    throw err;
+  }
+}
+
+// ==================== Admin Shipping Method Management ====================
+
+/**
+ * Create shipping method (admin)
+ */
+export async function createShippingMethodService(methodData, env) {
+  try {
+    const method = await createShippingMethodDb(methodData, env);
+    logger('shipping_method.created', { method_id: method.method_id });
+    return method;
+  } catch (err) {
+    logError('createShippingMethodService: Service error', err, { methodData });
+    throw err;
+  }
+}
+
+/**
+ * Update shipping method (admin)
+ */
+export async function updateShippingMethodService(methodId, updates, env) {
+  try {
+    const method = await updateShippingMethodDb(methodId, updates, env);
+    logger('shipping_method.updated', { method_id: methodId });
+    return method;
+  } catch (err) {
+    logError('updateShippingMethodService: Service error', err, { methodId, updates });
+    throw err;
+  }
+}
+
+/**
+ * Delete shipping method (admin)
+ */
+export async function deleteShippingMethodService(methodId, env) {
+  try {
+    const result = await deleteShippingMethodDb(methodId, env);
+    logger('shipping_method.deleted', { method_id: methodId });
+    return result;
+  } catch (err) {
+    logError('deleteShippingMethodService: Service error', err, { methodId });
+    throw err;
+  }
+}
+
+/**
+ * Get all shipping methods (admin)
+ */
+export async function getAllShippingMethodsService(env) {
+  try {
+    const methods = await getAllShippingMethodsDb(env);
+    return methods;
+  } catch (err) {
+    logError('getAllShippingMethodsService: Service error', err);
+    throw err;
+  }
+}
+
+/**
+ * Get shipping method by ID (admin)
+ */
+export async function getShippingMethodByIdService(methodId, env) {
+  try {
+    const method = await getShippingMethod(methodId, env);
+    if (!method) {
+      throw new Error('Shipping method not found');
+    }
+    return method;
+  } catch (err) {
+    logError('getShippingMethodByIdService: Service error', err, { methodId });
     throw err;
   }
 }

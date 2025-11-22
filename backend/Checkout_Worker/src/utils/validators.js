@@ -5,7 +5,7 @@ import Joi from 'joi';
 export const addressSchema = Joi.object({
   full_name: Joi.string().min(1).max(200).required(),
   phone: Joi.string().min(10).max(20).required(),
-  email: Joi.string().email().optional(),
+  email: Joi.string().email({ tlds: { allow: false } }).optional(), // Disable TLD validation to avoid nodejs_compat issues
   address_line1: Joi.string().min(1).max(500).required(),
   address_line2: Joi.string().max(500).optional(),
   city: Joi.string().min(1).max(100).required(),
@@ -60,5 +60,45 @@ export function validateSessionId(sessionId) {
 
 export function validateCartId(cartId) {
   return Joi.string().min(1).max(100).required().validate(cartId);
+}
+
+// Shipping method schemas (admin)
+export const shippingMethodSchema = Joi.object({
+  name: Joi.string().min(1).max(200).required(),
+  description: Joi.string().max(500).optional(),
+  carrier: Joi.string().min(1).max(100).required(),
+  base_cost: Joi.number().min(0).default(0.00),
+  cost_per_kg: Joi.number().min(0).default(0.00),
+  min_delivery_days: Joi.number().integer().min(1).max(30).default(3),
+  max_delivery_days: Joi.number().integer().min(1).max(30).default(7),
+  is_active: Joi.boolean().default(true),
+  applicable_pincodes: Joi.array().items(Joi.string()).optional(), // Array of pincodes or ['*'] for all
+});
+
+export const shippingMethodUpdateSchema = Joi.object({
+  name: Joi.string().min(1).max(200).optional(),
+  description: Joi.string().max(500).allow(null).optional(),
+  carrier: Joi.string().min(1).max(100).optional(),
+  base_cost: Joi.number().min(0).optional(),
+  cost_per_kg: Joi.number().min(0).optional(),
+  min_delivery_days: Joi.number().integer().min(1).max(30).optional(),
+  max_delivery_days: Joi.number().integer().min(1).max(30).optional(),
+  is_active: Joi.boolean().optional(),
+  applicable_pincodes: Joi.array().items(Joi.string()).allow(null).optional(),
+});
+
+export const shippingMethodIdSchema = Joi.string().min(1).max(100).required();
+
+// Validation functions for shipping methods
+export function validateShippingMethod(data) {
+  return shippingMethodSchema.validate(data, { abortEarly: false, stripUnknown: true });
+}
+
+export function validateShippingMethodUpdate(data) {
+  return shippingMethodUpdateSchema.validate(data, { abortEarly: false, stripUnknown: true });
+}
+
+export function validateShippingMethodId(methodId) {
+  return shippingMethodIdSchema.validate(methodId);
 }
 

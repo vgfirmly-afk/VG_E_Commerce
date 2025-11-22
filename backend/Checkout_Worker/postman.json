@@ -714,6 +714,115 @@
           }
         }
       ]
+    },
+    {
+      "name": "Admin - Shipping Methods",
+      "item": [
+        {
+          "name": "Create Shipping Method",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('shippingMethodId', response.method_id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Standard Shipping\",\n  \"description\": \"Standard delivery within 5-7 business days\",\n  \"carrier\": \"standard\",\n  \"base_cost\": 5.00,\n  \"cost_per_kg\": 1.50,\n  \"min_delivery_days\": 5,\n  \"max_delivery_days\": 7,\n  \"is_active\": true,\n  \"applicable_pincodes\": [\"*\"]\n}"
+            },
+            "url": {
+              "raw": "{{checkoutBaseUrl}}/api/v1/admin/shipping-methods",
+              "host": ["{{checkoutBaseUrl}}"],
+              "path": ["api", "v1", "admin", "shipping-methods"]
+            }
+          }
+        },
+        {
+          "name": "Get All Shipping Methods",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{checkoutBaseUrl}}/api/v1/admin/shipping-methods",
+              "host": ["{{checkoutBaseUrl}}"],
+              "path": ["api", "v1", "admin", "shipping-methods"]
+            }
+          }
+        },
+        {
+          "name": "Get Shipping Method by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{checkoutBaseUrl}}/api/v1/admin/shipping-methods/:method_id",
+              "variable": [
+                {
+                  "key": "method_id",
+                  "value": "{{shippingMethodId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Shipping Method",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Standard Shipping (Updated)\",\n  \"base_cost\": 6.00,\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{checkoutBaseUrl}}/api/v1/admin/shipping-methods/:method_id",
+              "variable": [
+                {
+                  "key": "method_id",
+                  "value": "{{shippingMethodId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Shipping Method (Soft Delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{checkoutBaseUrl}}/api/v1/admin/shipping-methods/:method_id",
+              "variable": [
+                {
+                  "key": "method_id",
+                  "value": "{{shippingMethodId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   ]
 }

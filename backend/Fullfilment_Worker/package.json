@@ -1,0 +1,64 @@
+{
+  "name": "w2_checkout_worker",
+  "version": "1.0.0",
+  "description": "Checkout Worker",
+  "license": "ISC",
+  "author": "VG",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "wrangler dev",
+    "start:local": "wrangler dev --local",
+    "start:remote": "wrangler dev --remote",
+    "debug": "wrangler dev --local --log-level=debug",
+    "debug:remote": "wrangler dev --remote --log-level=debug",
+    "debug:verbose": "wrangler dev --local --log-level=debug --compatibility-date=2025-11-21",
+    "tail": "wrangler tail",
+    "tail:json": "wrangler tail --format=json",
+    "tail:pretty": "wrangler tail --format=pretty",
+    "deploy": "wrangler publish",
+    "deploy:staging": "wrangler publish --env staging",
+    "deploy:production": "wrangler publish --env production",
+    "test": "NODE_OPTIONS=--experimental-vm-modules mocha 'test/**/*.test.js' --timeout 10000",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules mocha 'test/**/*.test.js' --watch --timeout 10000",
+    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules c8 --reporter=text --reporter=html --reporter=lcov mocha 'test/**/*.test.js' --timeout 10000",
+    "coverage": "c8 report --reporter=text --reporter=html"
+  },
+  "dependencies": {
+    "@microlabs/otel-cf-workers": "^1.0.0-rc.52",
+    "@opentelemetry/api": "^1.9.0",
+    "itty-router": "^2.6.0",
+    "joi": "^17.0.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "c8": "^8.0.1",
+    "chai": "^4.3.10",
+    "mocha": "^10.2.0",
+    "sinon": "^17.0.1",
+    "sinon-chai": "^3.7.0"
+  },
+  "c8": {
+    "check-coverage": true,
+    "lines": 80,
+    "functions": 80,
+    "branches": 75,
+    "statements": 80,
+    "exclude": [
+      "test/**",
+      "**/*.test.js",
+      "**/node_modules/**",
+      "**/migrations/**",
+      "generate_keys.js"
+    ],
+    "reporter": [
+      "text",
+      "html",
+      "lcov"
+    ],
+    "include": [
+      "src/**/*.js"
+    ]
+  }
+}
+

@@ -1,0 +1,41 @@
+Display App Name
+VG-Ecommerce
+
+Client ID
+ATs9BSAXJChAJBAA4bYF2rAwVrAuxrIuGkSTGxFZ6-NsJDn11hOK2crEXSYxYIlOzyKoFgsKJIg9w9z8
+
+Secret key 1
+EPGEA5-oYft0UO1FJnmpY8vgjFoxvNVUj69iXlyOmZoS1r6ue4diEmAnlUBM0OUvktgZhX0kKuRag5dQ
+
+
+
+Frontend                    Payment Worker              PayPal API              Database
+   │                              │                         │                       │
+   │── POST /payments ───────────>│                         │                       │
+   │                              │                         │                       │
+   │                              │── OAuth Token ─────────>│                       │
+   │                              │<── Access Token ────────│                       │
+   │                              │                         │                       │
+   │                              │── Create Order ────────>│                       │
+   │                              │<── Order Created ───────│                       │
+   │                              │                         │                       │
+   │                              │─────────────────────────┼──- INSERT payment ───>│
+   │                              │                         │                       │
+   │<── approval_url ─────────────│                         │                       │
+   │                              │                         │                       │
+   │── Redirect User ──────────-──┼────────────────────────>│                       │
+   │                              │                    (PayPal Checkout)            │
+   │                              │                         │                       │
+   │                              │<── User Approves ───────│                       │
+   │                              │                         │                       │
+   │<── Redirect ─────────────────┼── Callback ────────-────│                       │
+   │                              │                         │                       │
+   │                              │── OAuth Token ─────────>│                       │
+   │                              │<── Access Token ────────│                       │
+   │                              │                         │                       │
+   │                              │── Capture Order ───────>│                       │
+   │                              │<── Capture Response ────│                       │
+   │                              │                         │                       │
+   │                              │─────────────────────────┼── UPDATE payment ────>│
+   │                              │                         │                       │
+   │<── Success Response ──────────│                         │                       │
