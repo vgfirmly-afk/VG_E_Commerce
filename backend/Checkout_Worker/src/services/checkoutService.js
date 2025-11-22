@@ -117,6 +117,54 @@ function calculateDeliveryDate(shippingMethod, pincode) {
 }
 
 /**
+ * Update checkout session with payment status (called via webhook)
+ */
+export async function updateCheckoutSessionPaymentStatus(sessionId, paymentId, paymentStatus, paymentData, env) {
+  try {
+    const session = await getCheckoutSession(sessionId, env);
+    if (!session) {
+      throw new Error('Checkout session not found');
+    }
+    
+    // Map payment status to checkout session status
+    let sessionStatus = session.status;
+    if (paymentStatus === 'captured') {
+      sessionStatus = 'payment_completed';
+    } else if (paymentStatus === 'cancelled' || paymentStatus === 'failed') {
+      sessionStatus = 'payment_failed';
+      // Release stock reservations if payment failed
+      try {
+        await releaseAllStockForSession(sessionId, null, env);
+        logger('checkout.stock.released', { sessionId, reason: 'payment_failed' });
+      } catch (err) {
+        logError('updateCheckoutSessionPaymentStatus: Failed to release stock', err, { sessionId });
+      }
+    }
+    
+    // Update session with payment information
+    const updates = {
+      status: sessionStatus,
+      payment_id: paymentId,
+      payment_status: paymentStatus
+    };
+    
+    await updateCheckoutSession(sessionId, updates, env);
+    
+    logger('checkout.payment_status.updated', { 
+      sessionId, 
+      paymentId, 
+      paymentStatus,
+      sessionStatus 
+    });
+    
+    return await getCheckoutSession(sessionId, env);
+  } catch (err) {
+    logError('updateCheckoutSessionPaymentStatus: Service error', err, { sessionId, paymentStatus });
+    throw err;
+  }
+}
+
+/**
  * Create checkout session
  */
 export async function createSession(cartId, userId, guestSessionId, env) {
@@ -537,4 +585,3 @@ export async function getShippingMethodByIdService(methodId, env) {
     throw err;
   }
 }
-

@@ -13,6 +13,7 @@ import {
   capturePayPalOrder,
   getPayPalOrder
 } from './paypalService.js';
+import { getFrontendUrls } from '../../config.js';
 
 /**
  * Create payment intent and initialize PayPal order
@@ -32,14 +33,25 @@ export async function createPaymentIntent(paymentData, env) {
       }
     }
     
+    // Get frontend URLs from config
+    const frontendUrls = getFrontendUrls(env);
+    
+    // Build success and failure URLs with checkout_session_id
+    // PayPal will add token (order ID) to the return URL automatically
+    const checkoutSessionId = paymentData.checkout_session_id;
+    const successUrl = paymentData.return_url || 
+      `${frontendUrls.successUrl}?checkout_session_id=${encodeURIComponent(checkoutSessionId)}`;
+    const failureUrl = paymentData.cancel_url || 
+      `${frontendUrls.failureUrl}?checkout_session_id=${encodeURIComponent(checkoutSessionId)}`;
+    
     // Create PayPal order
     const paypalOrder = await createPayPalOrder({
-      checkout_session_id: paymentData.checkout_session_id,
+      checkout_session_id: checkoutSessionId,
       amount: paymentData.amount,
       currency: paymentData.currency || 'USD',
       intent: paymentData.intent || 'CAPTURE',
-      return_url: paymentData.return_url,
-      cancel_url: paymentData.cancel_url,
+      return_url: successUrl,
+      cancel_url: failureUrl,
       description: paymentData.description,
       brand_name: 'VG-Ecommerce'
     }, env);

@@ -31,6 +31,23 @@ database_id = "7d7799f2-2bd4-4f52-a7ce-ffe72ddc262b"
 binding = "CHECKOUT_WORKER"
 service = "w2-checkout-worker"
 
+[[services]]
+binding = "INVENTORY_WORKER"
+service = "w2-inventory-worker"
+
+[[services]]
+binding = "FULFILLMENT_WORKER"
+service = "w2-fullfillment-worker"
+
+[[services]]
+binding = "CATALOG_WORKER"
+service = "w2-catalog-worker"
+
+# Frontend URLs for payment redirects
+# Set these in wrangler.toml or as environment variables
+# FRONTEND_SUCCESS_URL = "https://your-frontend.com/payment/success"
+# FRONTEND_FAILURE_URL = "https://your-frontend.com/payment/failure"
+
 # Catalog Worker URL for reference (if needed for validation)
 # CATALOG_WORKER_URL = "http://localhost:8787"
 

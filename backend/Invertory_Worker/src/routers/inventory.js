@@ -285,6 +285,22 @@ router.post('/api/v1/stock/:sku_id/release',
   }
 );
 
+// Webhook endpoint for payment status updates (called by Payment Worker)
+router.post('/api/v1/webhooks/payment-status',
+  async (request, env, ctx) => {
+    try {
+      const webhookHandlers = await import('../handlers/webhookHandlers.js');
+      return webhookHandlers.handlePaymentStatusWebhook(request, request.env || env);
+    } catch (err) {
+      console.error('[Inventory Router] Error in POST /api/v1/webhooks/payment-status:', err);
+      return new Response(
+        JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+);
+
 // Fallback route
 router.all('*', async (request) => {
   console.log('[Inventory Router] 404 - Route not found', {

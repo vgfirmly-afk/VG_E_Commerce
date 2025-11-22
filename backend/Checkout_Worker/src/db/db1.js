@@ -99,6 +99,14 @@ export async function updateCheckoutSession(sessionId, updates, env) {
       fields.push('total = ?');
       values.push(updates.total);
     }
+    if (updates.payment_id !== undefined) {
+      fields.push('payment_id = ?');
+      values.push(updates.payment_id);
+    }
+    if (updates.payment_status !== undefined) {
+      fields.push('payment_status = ?');
+      values.push(updates.payment_status);
+    }
     
     fields.push('updated_at = ?');
     values.push(now);

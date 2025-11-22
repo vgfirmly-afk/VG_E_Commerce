@@ -207,3 +207,45 @@ export async function checkAvailability(skuIds, env) {
   }
 }
 
+/**
+ * Deduct stock for order (called via webhook when payment is captured)
+ */
+export async function deductStockForOrder(skuId, quantity, orderId, env) {
+  try {
+    // Get current stock
+    const stock = await getSkuStock(skuId, env);
+    if (!stock) {
+      throw new Error(`Stock not found for SKU: ${skuId}`);
+    }
+    
+    // Check if enough stock is available
+    if (stock.available_quantity < quantity) {
+      throw new Error(`Insufficient stock for SKU ${skuId}. Available: ${stock.available_quantity}, Required: ${quantity}`);
+    }
+    
+    // Deduct stock (negative adjustment)
+    const reason = orderId ? `Order ${orderId} - Payment captured` : 'Payment captured';
+    const adjustedStock = await adjustStockQuantity(
+      skuId,
+      -quantity, // Negative to deduct
+      'system',
+      env,
+      reason,
+      null
+    );
+    
+    logger('stock.deducted_for_order', {
+      skuId,
+      quantity,
+      orderId,
+      remaining_quantity: adjustedStock.quantity,
+      remaining_available: adjustedStock.available_quantity
+    });
+    
+    return adjustedStock;
+  } catch (err) {
+    logError('deductStockForOrder: Service error', err, { skuId, quantity, orderId });
+    throw err;
+  }
+}
+
