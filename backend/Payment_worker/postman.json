@@ -1,0 +1,478 @@
+{
+  "info": {
+    "name": "Payment Worker - API",
+    "description": "Postman collection for testing Payment Worker API endpoints. Handles PayPal Sandbox payment processing.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  },
+  "variable": [
+    {
+      "key": "paymentBaseUrl",
+      "value": "https://w2-payment-worker.vg-firmly.workers.dev",
+      "type": "string"
+    },
+    {
+      "key": "checkoutBaseUrl",
+      "value": "https://w2-checkout-worker.vg-firmly.workers.dev",
+      "type": "string"
+    },
+    {
+      "key": "paymentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "checkoutSessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "paypalOrderId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Payment Worker - Public",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has ok field\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('ok');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{paymentBaseUrl}}/_/health",
+              "host": ["{{paymentBaseUrl}}"],
+              "path": ["_", "health"]
+            }
+          }
+        },
+        {
+          "name": "Create Payment Intent",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has payment_id\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('payment_id');",
+                  "    pm.collectionVariables.set('paymentId', response.payment_id);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has approval_url\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('approval_url');",
+                  "    pm.expect(response.approval_url).to.be.a('string');",
+                  "});",
+                  "",
+                  "pm.test(\"Response has paypal_order_id\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('paypal_order_id');",
+                  "    pm.collectionVariables.set('paypalOrderId', response.paypal_order_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"checkout_session_id\": \"{{checkoutSessionId}}\",\n  \"amount\": 100.00,\n  \"currency\": \"USD\",\n  \"intent\": \"CAPTURE\",\n  \"return_url\": \"https://your-frontend.com/payment/success\",\n  \"cancel_url\": \"https://your-frontend.com/payment/cancel\",\n  \"description\": \"Order payment\",\n  \"metadata\": {\n    \"order_reference\": \"ORDER-12345\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{paymentBaseUrl}}/api/v1/payments",
+              "host": ["{{paymentBaseUrl}}"],
+              "path": ["api", "v1", "payments"]
+            }
+          }
+        },
+        {
+          "name": "Get Payment Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has payment_id\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('payment_id');",
+                  "});",
+                  "",
+                  "pm.test(\"Response has status\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('status');",
+                  "    pm.expect(response.status).to.be.oneOf(['pending', 'created', 'approved', 'captured', 'failed', 'cancelled']);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{paymentBaseUrl}}/api/v1/payments/:payment_id",
+              "variable": [
+                {
+                  "key": "payment_id",
+                  "value": "{{paymentId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Capture Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has status captured\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('status');",
+                  "    pm.expect(response.status).to.equal('captured');",
+                  "});",
+                  "",
+                  "pm.test(\"Response has paypal_transaction_id\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('paypal_transaction_id');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{paypalOrderId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{paymentBaseUrl}}/api/v1/payments/:payment_id/capture",
+              "variable": [
+                {
+                  "key": "payment_id",
+                  "value": "{{paymentId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "PayPal Success Callback",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has success field\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('success');",
+                  "    pm.expect(response.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has payment data\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('payment');",
+                  "    pm.expect(response.payment).to.have.property('payment_id');",
+                  "    pm.expect(response.payment.status).to.equal('captured');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{paymentBaseUrl}}/api/v1/payments/callback/success?token={{paypalOrderId}}&PayerID=87YEEB58CLNAS",
+              "host": ["{{paymentBaseUrl}}"],
+              "path": ["api", "v1", "payments", "callback", "success"],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{paypalOrderId}}",
+                  "description": "PayPal Order ID"
+                },
+                {
+                  "key": "PayerID",
+                  "value": "87YEEB58CLNAS",
+                  "description": "PayPal Payer ID"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "PayPal Failure Callback",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has success field (false)\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('success');",
+                  "    pm.expect(response.success).to.be.false;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has payment data\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('payment');",
+                  "    pm.expect(response.payment).to.have.property('payment_id');",
+                  "    pm.expect(response.payment.status).to.equal('cancelled');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{paymentBaseUrl}}/api/v1/payments/callback/failure?token={{paypalOrderId}}",
+              "host": ["{{paymentBaseUrl}}"],
+              "path": ["api", "v1", "payments", "callback", "failure"],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{paypalOrderId}}",
+                  "description": "PayPal Order ID"
+                },
+                {
+                  "key": "PayerID",
+                  "value": "",
+                  "description": "PayPal Payer ID (optional for failure)",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Complete Payment Flow",
+      "item": [
+        {
+          "name": "1. Create Payment Intent",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('paymentId', response.payment_id);",
+                  "    pm.collectionVariables.set('paypalOrderId', response.paypal_order_id);",
+                  "    ",
+                  "    console.log('Payment created:', response.payment_id);",
+                  "    console.log('PayPal Order ID:', response.paypal_order_id);",
+                  "    console.log('Approval URL:', response.approval_url);",
+                  "    ",
+                  "    pm.test('Payment intent created successfully', function () {",
+                  "        pm.expect(response.payment_id).to.exist;",
+                  "        pm.expect(response.approval_url).to.exist;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"checkout_session_id\": \"{{checkoutSessionId}}\",\n  \"amount\": 150.00,\n  \"currency\": \"USD\",\n  \"intent\": \"CAPTURE\",\n  \"return_url\": \"https://your-frontend.com/payment/success?payment_id={{paymentId}}\",\n  \"cancel_url\": \"https://your-frontend.com/payment/cancel?payment_id={{paymentId}}\",\n  \"description\": \"Complete order payment\",\n  \"metadata\": {\n    \"order_reference\": \"ORDER-{{$randomInt}}\",\n    \"customer_id\": \"user-123\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{paymentBaseUrl}}/api/v1/payments",
+              "host": ["{{paymentBaseUrl}}"],
+              "path": ["api", "v1", "payments"]
+            }
+          }
+        },
+        {
+          "name": "2. Get Payment Status (Before Capture)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{paymentBaseUrl}}/api/v1/payments/:payment_id",
+              "variable": [
+                {
+                  "key": "payment_id",
+                  "value": "{{paymentId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Capture Payment (After User Approval)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    ",
+                  "    pm.test('Payment captured successfully', function () {",
+                  "        pm.expect(response.status).to.equal('captured');",
+                  "        pm.expect(response.paypal_transaction_id).to.exist;",
+                  "        pm.expect(response.captured_at).to.exist;",
+                  "    });",
+                  "    ",
+                  "    console.log('Payment captured:', response.payment_id);",
+                  "    console.log('Transaction ID:', response.paypal_transaction_id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{paypalOrderId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{paymentBaseUrl}}/api/v1/payments/:payment_id/capture",
+              "variable": [
+                {
+                  "key": "payment_id",
+                  "value": "{{paymentId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Get Payment Status (After Capture)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{paymentBaseUrl}}/api/v1/payments/:payment_id",
+              "variable": [
+                {
+                  "key": "payment_id",
+                  "value": "{{paymentId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+

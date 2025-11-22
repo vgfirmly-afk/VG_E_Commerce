@@ -1,0 +1,45 @@
+name = "w2-payment-worker"
+main = "src/index.js"
+compatibility_date = "2025-11-09"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+#preview_urls = true
+
+
+# Do not store private keys in vars for production. Use `wrangler secret put`.
+[vars]
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+SERVICE_NAME = "Payment_Worker_Service"
+
+# PayPal credentials - DO NOT store in vars for production!
+# Use: wrangler secret put PAYPAL_CLIENT_ID
+# Use: wrangler secret put PAYPAL_CLIENT_SECRET
+# For local dev only, you can uncomment and set:
+# PAYPAL_CLIENT_ID = "ATs9BSAXJChAJBAA4bYF2rAwVrAuxrIuGkSTGxFZ6-NsJDn11hOK2crEXSYxYIlOzyKoFgsKJIg9w9z8"
+# PAYPAL_CLIENT_SECRET = "EPGEA5-oYft0UO1FJnmpY8vgjFoxvNVUj69iXlyOmZoS1r6ue4diEmAnlUBM0OUvktgZhX0kKuRag5dQ"
+
+# D1 database binding (top-level)
+[[d1_databases]]
+binding = "PAYMENT_DB"
+database_name = "payment_db"
+database_id = "7d7799f2-2bd4-4f52-a7ce-ffe72ddc262b"
+#preview_database_id = "8cdf8da1-4036-4dcf-8e3a-c59dc91facd8"
+
+# Service bindings to other Workers
+[[services]]
+binding = "CHECKOUT_WORKER"
+service = "w2-checkout-worker"
+
+# Catalog Worker URL for reference (if needed for validation)
+# CATALOG_WORKER_URL = "http://localhost:8787"
+
+# R2 bucket for product images
+#[[r2_buckets]]
+#binding = "CA_IMG_BUCKET"
+#bucket_name = "catalog-img-bucket"
+
+
+
+
+
