@@ -1,0 +1,926 @@
+{
+  "info": {
+    "name": "Fulfillment Worker - API",
+    "description": "Postman collection for testing Fulfillment Worker API endpoints. Handles order fulfillment, status tracking, shipping tracking, and webhook integration with Payment/Checkout workers.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  },
+  "variable": [
+    {
+      "key": "fulfillmentBaseUrl",
+      "value": "https://w2-fullfillment-worker.vg-firmly.workers.dev",
+      "type": "string"
+    },
+    {
+      "key": "checkoutBaseUrl",
+      "value": "https://w2-checkout-worker.vg-firmly.workers.dev",
+      "type": "string"
+    },
+    {
+      "key": "orderId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "orderNumber",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "trackingId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "user-123",
+      "type": "string"
+    },
+    {
+      "key": "guestSessionId",
+      "value": "session-{{$randomUUID}}",
+      "type": "string"
+    },
+    {
+      "key": "checkoutSessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "paymentId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Fulfillment Worker - Public",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has ok field\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('ok');",
+                  "    pm.expect(response.ok).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{fulfillmentBaseUrl}}/_/health",
+              "host": ["{{fulfillmentBaseUrl}}"],
+              "path": ["_", "health"]
+            },
+            "description": "Health check endpoint to verify the Fulfillment Worker is running."
+          }
+        },
+        {
+          "name": "Get All Orders (Logged In User)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('orders');",
+                  "    pm.expect(response).to.have.property('count');",
+                  "    pm.expect(response.orders).to.be.an('array');",
+                  "    ",
+                  "    if (response.orders && response.orders.length > 0) {",
+                  "        const firstOrder = response.orders[0];",
+                  "        pm.collectionVariables.set('orderId', firstOrder.order_id);",
+                  "        pm.collectionVariables.set('orderNumber', firstOrder.order_number);",
+                  "        console.log('Found', response.count, 'orders');",
+                  "        console.log('First order:', firstOrder.order_number);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}",
+                "description": "Required for logged-in users"
+              }
+            ],
+            "url": {
+              "raw": "{{fulfillmentBaseUrl}}/api/v1/orders?limit=50&offset=0",
+              "host": ["{{fulfillmentBaseUrl}}"],
+              "path": ["api", "v1", "orders"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Number of orders to return"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Offset for pagination"
+                }
+              ]
+            },
+            "description": "Get all orders for a logged-in user. Requires X-User-Id header. Supports pagination with limit and offset query parameters."
+          }
+        },
+        {
+          "name": "Get All Orders (Guest User)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('orders');",
+                  "    pm.expect(response).to.have.property('count');",
+                  "    ",
+                  "    if (response.orders && response.orders.length > 0) {",
+                  "        const firstOrder = response.orders[0];",
+                  "        pm.collectionVariables.set('orderId', firstOrder.order_id);",
+                  "        pm.collectionVariables.set('orderNumber', firstOrder.order_number);",
+                  "        console.log('Found', response.count, 'guest orders');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{guestSessionId}}",
+                "description": "Required for guest users"
+              }
+            ],
+            "url": {
+              "raw": "{{fulfillmentBaseUrl}}/api/v1/orders?limit=50&offset=0",
+              "host": ["{{fulfillmentBaseUrl}}"],
+              "path": ["api", "v1", "orders"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Get all orders for a guest user. Requires X-Session-Id header."
+          }
+        },
+        {
+          "name": "Get Order by ID",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Validate orderId is set",
+                  "if (!pm.collectionVariables.get('orderId') || pm.collectionVariables.get('orderId') === '{{orderId}}') {",
+                  "    console.warn('Warning: orderId variable is not set. Please create an order first or set it manually.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('order_id');",
+                  "    pm.expect(response).to.have.property('order_number');",
+                  "    pm.expect(response).to.have.property('status');",
+                  "    pm.expect(response).to.have.property('items');",
+                  "    pm.expect(response).to.have.property('status_history');",
+                  "    ",
+                  "    console.log('Order Details:');",
+                  "    console.log('Order Number:', response.order_number);",
+                  "    console.log('Status:', response.status);",
+                  "    console.log('Total:', response.total, response.currency);",
+                  "    console.log('Items:', response.items.length);",
+                  "    console.log('Status History:', response.status_history.length, 'entries');",
+                  "    ",
+                  "    if (response.shipping_tracking) {",
+                  "        pm.collectionVariables.set('trackingId', response.shipping_tracking.tracking_id);",
+                  "        console.log('Tracking:', response.shipping_tracking.tracking_number);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{fulfillmentBaseUrl}}/api/v1/orders/:order_id",
+              "host": ["{{fulfillmentBaseUrl}}"],
+              "path": ["api", "v1", "orders", ":order_id"],
+              "variable": [
+                {
+                  "key": "order_id",
+                  "value": "{{orderId}}",
+                  "description": "Order ID"
+                }
+              ]
+            },
+            "description": "Get detailed order information including items, status history, and shipping tracking. Requires orderId variable to be set."
+          }
+        },
+        {
+          "name": "Update Fulfillment Status",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('orderId')) {",
+                  "    console.error('Error: orderId variable is required.');",
+                  "    throw new Error('orderId variable is required');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('status');",
+                  "    pm.expect(response).to.have.property('status_history');",
+                  "    ",
+                  "    console.log('Status updated to:', response.status);",
+                  "    console.log('Status history entries:', response.status_history.length);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}",
+                "description": "User ID for tracking who made the update"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"processing\",\n  \"notes\": \"Order is being prepared for shipment\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{fulfillmentBaseUrl}}/api/v1/orders/:order_id/status",
+              "host": ["{{fulfillmentBaseUrl}}"],
+              "path": ["api", "v1", "orders", ":order_id", "status"],
+              "variable": [
+                {
+                  "key": "order_id",
+                  "value": "{{orderId}}"
+                }
+              ]
+            },
+            "description": "Update fulfillment status. Valid statuses: pending, confirmed, processing, shipped, delivered, cancelled, refunded. Requires orderId variable."
+          }
+        },
+        {
+          "name": "Add Shipping Tracking",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('orderId')) {",
+                  "    console.error('Error: orderId variable is required.');",
+                  "    throw new Error('orderId variable is required');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('tracking_id');",
+                  "    pm.expect(response).to.have.property('tracking_number');",
+                  "    pm.expect(response).to.have.property('carrier');",
+                  "    ",
+                  "    pm.collectionVariables.set('trackingId', response.tracking_id);",
+                  "    console.log('Shipping tracking added:');",
+                  "    console.log('Tracking Number:', response.tracking_number);",
+                  "    console.log('Carrier:', response.carrier);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"carrier\": \"FedEx\",\n  \"tracking_number\": \"FX1234567890\",\n  \"estimated_delivery_date\": \"2024-12-25\",\n  \"notes\": \"Package shipped via FedEx Express\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{fulfillmentBaseUrl}}/api/v1/orders/:order_id/tracking",
+              "host": ["{{fulfillmentBaseUrl}}"],
+              "path": ["api", "v1", "orders", ":order_id", "tracking"],
+              "variable": [
+                {
+                  "key": "order_id",
+                  "value": "{{orderId}}"
+                }
+              ]
+            },
+            "description": "Add shipping tracking information to an order. This will also update the order status to 'shipped'. Requires orderId variable."
+          }
+        },
+        {
+          "name": "Update Shipping Tracking",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('trackingId')) {",
+                  "    console.error('Error: trackingId variable is required. Please add shipping tracking first.');",
+                  "    throw new Error('trackingId variable is required');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('status');",
+                  "    pm.expect(response).to.have.property('tracking_number');",
+                  "    ",
+                  "    console.log('Tracking updated:');",
+                  "    console.log('Status:', response.status);",
+                  "    if (response.actual_delivery_date) {",
+                  "        console.log('Delivered on:', response.actual_delivery_date);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_transit\",\n  \"notes\": \"Package is in transit to destination\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{fulfillmentBaseUrl}}/api/v1/tracking/:tracking_id",
+              "host": ["{{fulfillmentBaseUrl}}"],
+              "path": ["api", "v1", "tracking", ":tracking_id"],
+              "variable": [
+                {
+                  "key": "tracking_id",
+                  "value": "{{trackingId}}"
+                }
+              ]
+            },
+            "description": "Update shipping tracking status. Valid statuses: pending, in_transit, out_for_delivery, delivered, exception. If status is 'delivered', include actual_delivery_date. Requires trackingId variable."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "item": [
+        {
+          "name": "Create Fulfillment (Webhook)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate test IDs if not set",
+                  "if (!pm.collectionVariables.get('checkoutSessionId')) {",
+                  "    pm.collectionVariables.set('checkoutSessionId', 'session-' + pm.variables.replaceIn('{{$randomUUID}}'));",
+                  "}",
+                  "if (!pm.collectionVariables.get('paymentId')) {",
+                  "    pm.collectionVariables.set('paymentId', 'payment-' + pm.variables.replaceIn('{{$randomUUID}}'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('order_id');",
+                  "    pm.expect(response).to.have.property('order_number');",
+                  "    pm.expect(response).to.have.property('status');",
+                  "    ",
+                  "    pm.collectionVariables.set('orderId', response.order_id);",
+                  "    pm.collectionVariables.set('orderNumber', response.order_number);",
+                  "    ",
+                  "    console.log('Fulfillment created successfully:');",
+                  "    console.log('Order ID:', response.order_id);",
+                  "    console.log('Order Number:', response.order_number);",
+                  "    console.log('Status:', response.status);",
+                  "    console.log('Items:', response.items.length);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Source",
+                "value": "payment-worker",
+                "description": "Indicates this is a webhook call from Payment Worker"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"checkout_session_id\": \"{{checkoutSessionId}}\",\n  \"payment_id\": \"{{paymentId}}\",\n  \"user_id\": \"{{userId}}\",\n  \"guest_session_id\": null,\n  \"order_data\": {\n    \"delivery_address\": {\n      \"address_id\": \"addr-123\",\n      \"full_name\": \"John Doe\",\n      \"phone\": \"9876543210\",\n      \"email\": \"john.doe@example.com\",\n      \"address_line1\": \"123 Main Street\",\n      \"address_line2\": \"Apartment 4B\",\n      \"city\": \"Mumbai\",\n      \"state\": \"Maharashtra\",\n      \"postal_code\": \"400001\",\n      \"country\": \"IN\"\n    },\n    \"billing_address\": {\n      \"address_id\": \"addr-124\",\n      \"full_name\": \"John Doe\",\n      \"phone\": \"9876543210\",\n      \"email\": \"john.doe@example.com\",\n      \"address_line1\": \"123 Main Street\",\n      \"city\": \"Mumbai\",\n      \"state\": \"Maharashtra\",\n      \"postal_code\": \"400001\",\n      \"country\": \"IN\"\n    },\n    \"shipping_method\": {\n      \"method_id\": \"shipping-standard\",\n      \"name\": \"Standard Shipping\",\n      \"carrier\": \"standard\"\n    },\n    \"items\": [\n      {\n        \"sku_id\": \"sku-123\",\n        \"product_id\": \"prod-123\",\n        \"quantity\": 2,\n        \"unit_price\": 29.99,\n        \"subtotal\": 59.98\n      },\n      {\n        \"sku_id\": \"sku-456\",\n        \"product_id\": \"prod-456\",\n        \"quantity\": 1,\n        \"unit_price\": 49.99,\n        \"subtotal\": 49.99\n      }\n    ],\n    \"subtotal\": 109.97,\n    \"shipping_cost\": 5.00,\n    \"tax\": 19.79,\n    \"total\": 134.76,\n    \"currency\": \"USD\",\n    \"estimated_delivery_date\": \"2024-12-25\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{fulfillmentBaseUrl}}/api/v1/webhooks/fulfillment",
+              "host": ["{{fulfillmentBaseUrl}}"],
+              "path": ["api", "v1", "webhooks", "fulfillment"]
+            },
+            "description": "Webhook endpoint called by Payment/Checkout Worker when payment is confirmed. Creates a new order/fulfillment record. This simulates what the Payment Worker would send after successful payment."
+          }
+        },
+        {
+          "name": "Create Fulfillment (Guest User - Webhook)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('orderId', response.order_id);",
+                  "    pm.collectionVariables.set('orderNumber', response.order_number);",
+                  "    console.log('Guest order created:', response.order_number);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Source",
+                "value": "payment-worker"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"checkout_session_id\": \"session-{{$randomUUID}}\",\n  \"payment_id\": \"payment-{{$randomUUID}}\",\n  \"user_id\": null,\n  \"guest_session_id\": \"{{guestSessionId}}\",\n  \"order_data\": {\n    \"delivery_address\": {\n      \"address_id\": \"addr-guest-123\",\n      \"full_name\": \"Jane Guest\",\n      \"phone\": \"9876543211\",\n      \"email\": \"jane.guest@example.com\",\n      \"address_line1\": \"456 Guest Street\",\n      \"city\": \"Delhi\",\n      \"state\": \"Delhi\",\n      \"postal_code\": \"110001\",\n      \"country\": \"IN\"\n    },\n    \"billing_address\": {\n      \"address_id\": \"addr-guest-124\",\n      \"full_name\": \"Jane Guest\",\n      \"phone\": \"9876543211\",\n      \"email\": \"jane.guest@example.com\",\n      \"address_line1\": \"456 Guest Street\",\n      \"city\": \"Delhi\",\n      \"state\": \"Delhi\",\n      \"postal_code\": \"110001\",\n      \"country\": \"IN\"\n    },\n    \"shipping_method\": {\n      \"method_id\": \"shipping-express\",\n      \"name\": \"Express Shipping\",\n      \"carrier\": \"express\"\n    },\n    \"items\": [\n      {\n        \"sku_id\": \"sku-789\",\n        \"product_id\": \"prod-789\",\n        \"quantity\": 1,\n        \"unit_price\": 99.99,\n        \"subtotal\": 99.99\n      }\n    ],\n    \"subtotal\": 99.99,\n    \"shipping_cost\": 10.00,\n    \"tax\": 18.00,\n    \"total\": 127.99,\n    \"currency\": \"USD\",\n    \"estimated_delivery_date\": \"2024-12-20\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{fulfillmentBaseUrl}}/api/v1/webhooks/fulfillment"
+            },
+            "description": "Webhook for creating fulfillment for guest user order."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fulfillment Flow - Complete Example",
+      "item": [
+        {
+          "name": "1. Create Fulfillment via Webhook",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('orderId', response.order_id);",
+                  "    pm.collectionVariables.set('orderNumber', response.order_number);",
+                  "    console.log('Step 1: Fulfillment created -', response.order_number);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Source",
+                "value": "payment-worker"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"checkout_session_id\": \"session-{{$randomUUID}}\",\n  \"payment_id\": \"payment-{{$randomUUID}}\",\n  \"user_id\": \"{{userId}}\",\n  \"order_data\": {\n    \"delivery_address\": {\n      \"address_id\": \"addr-123\"\n    },\n    \"items\": [\n      {\n        \"sku_id\": \"sku-123\",\n        \"product_id\": \"prod-123\",\n        \"quantity\": 2,\n        \"unit_price\": 29.99,\n        \"subtotal\": 59.98\n      }\n    ],\n    \"subtotal\": 59.98,\n    \"shipping_cost\": 5.00,\n    \"tax\": 11.70,\n    \"total\": 76.68,\n    \"currency\": \"USD\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{fulfillmentBaseUrl}}/api/v1/webhooks/fulfillment"
+            }
+          }
+        },
+        {
+          "name": "2. Get Order Details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Step 2: Order details retrieved');",
+                  "    console.log('Status:', response.status);",
+                  "    console.log('Total:', response.total);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{fulfillmentBaseUrl}}/api/v1/orders/:order_id",
+              "variable": [
+                {
+                  "key": "order_id",
+                  "value": "{{orderId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Update Status to Processing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    console.log('Step 3: Status updated to processing');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"processing\",\n  \"notes\": \"Order is being prepared\"\n}"
+            },
+            "url": {
+              "raw": "{{fulfillmentBaseUrl}}/api/v1/orders/:order_id/status",
+              "variable": [
+                {
+                  "key": "order_id",
+                  "value": "{{orderId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Add Shipping Tracking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('trackingId', response.tracking_id);",
+                  "    console.log('Step 4: Shipping tracking added -', response.tracking_number);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"carrier\": \"FedEx\",\n  \"tracking_number\": \"FX{{$randomInt}}\",\n  \"estimated_delivery_date\": \"2024-12-25\"\n}"
+            },
+            "url": {
+              "raw": "{{fulfillmentBaseUrl}}/api/v1/orders/:order_id/tracking",
+              "variable": [
+                {
+                  "key": "order_id",
+                  "value": "{{orderId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "5. Update Tracking Status to In Transit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    console.log('Step 5: Tracking status updated to in_transit');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_transit\"\n}"
+            },
+            "url": {
+              "raw": "{{fulfillmentBaseUrl}}/api/v1/tracking/:tracking_id",
+              "variable": [
+                {
+                  "key": "tracking_id",
+                  "value": "{{trackingId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6. Mark as Delivered",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Step 6: Order marked as delivered');",
+                  "    console.log('Delivered on:', response.actual_delivery_date);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"delivered\",\n  \"actual_delivery_date\": \"2024-12-24\"\n}"
+            },
+            "url": {
+              "raw": "{{fulfillmentBaseUrl}}/api/v1/tracking/:tracking_id",
+              "variable": [
+                {
+                  "key": "tracking_id",
+                  "value": "{{trackingId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "7. Verify Final Order Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Step 7: Final order status -', response.status);",
+                  "    console.log('Status history entries:', response.status_history.length);",
+                  "    ",
+                  "    pm.test('Order should be delivered', function() {",
+                  "        pm.expect(response.status).to.equal('delivered');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{fulfillmentBaseUrl}}/api/v1/orders/:order_id",
+              "variable": [
+                {
+                  "key": "order_id",
+                  "value": "{{orderId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+

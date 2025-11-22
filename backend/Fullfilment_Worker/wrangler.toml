@@ -1,4 +1,4 @@
-name = "w2-checkout-worker"
+name = "w2-fullfillment-worker"
 main = "src/index.js"
 compatibility_date = "2025-11-09"
 compatibility_flags = ["nodejs_compat"]
@@ -22,9 +22,9 @@ INVENTORY_WORKER_URL = "https://w2-inventory-worker.vg-firmly.workers.dev"
 
 # D1 database binding (top-level)
 [[d1_databases]]
-binding = "CHECKOUT_DB"
-database_name = "checkout_db"
-database_id = "59778a80-01e5-4c6b-8de0-38264e51efdd"
+binding = "FULLFILLMENT_DB"
+database_name = "fullfillment_db"
+database_id = "2dc91180-71fd-4fe6-99ee-d4dc4a502e3c"
 #preview_database_id = "8cdf8da1-4036-4dcf-8e3a-c59dc91facd8"
 
 # Service bindings to other Workers
@@ -39,6 +39,14 @@ service = "w2-inventory-worker"
 [[services]]
 binding = "CART_WORKER"
 service = "w2-cart-worker"
+
+[[services]]
+binding = "CHECKOUT_WORKER"
+service = "w2-checkout-worker"
+
+[[services]]
+binding = "CATALOG_WORKER"
+service = "w2-catalog-worker"
 
 # KV namespace for stock reservations (critical for preventing overselling)
 [[kv_namespaces]]

@@ -1,7 +1,7 @@
 {
-  "name": "w2_checkout_worker",
+  "name": "w2_fullfillment_worker",
   "version": "1.0.0",
-  "description": "Checkout Worker",
+  "description": "Fullfillment Worker",
   "license": "ISC",
   "author": "VG",
   "type": "module",
