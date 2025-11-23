@@ -9,10 +9,21 @@
 	let payment = null;
 	let loading = true;
 	let error = null;
+	let successMessage = null;
 
 	$: checkoutIdFromUrl = $page.url.searchParams.get('checkout_id') || $page.url.searchParams.get('session_id');
+	$: showSuccess = $page.url.searchParams.get('success') === 'true';
 
 	onMount(async () => {
+		// Check for success message in URL
+		if (showSuccess) {
+			successMessage = 'Payment successful! Your order has been processed.';
+			// Remove success param from URL
+			const newUrl = new URL($page.url);
+			newUrl.searchParams.delete('success');
+			window.history.replaceState({}, '', newUrl);
+		}
+
 		checkoutId = checkoutIdFromUrl;
 		if (!checkoutId) {
 			error = 'No checkout session ID provided';
@@ -52,6 +63,38 @@
 
 <div class="container mx-auto px-4 py-8 max-w-4xl">
 	<h1 class="text-3xl font-bold mb-8">Order Status</h1>
+
+	<!-- Success Message -->
+	{#if successMessage}
+		<div class="mb-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-md">
+			<div class="flex items-center">
+				<svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20">
+					<path
+						fill-rule="evenodd"
+						d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+				<div>
+					<p class="font-semibold">Success!</p>
+					<p>{successMessage}</p>
+				</div>
+				<button
+					on:click={() => (successMessage = null)}
+					class="ml-auto text-green-700 hover:text-green-900"
+					aria-label="Close"
+				>
+					<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+						<path
+							fill-rule="evenodd"
+							d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</button>
+			</div>
+		</div>
+	{/if}
 
 	{#if loading}
 		<div class="text-center py-12">

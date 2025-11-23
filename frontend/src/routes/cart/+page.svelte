@@ -1,5 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
 	import { cart } from '$lib/stores/cart.js';
 	import { auth, guestSession } from '$lib/stores/auth.js';
 	import {
@@ -18,6 +19,7 @@
 	let error = null;
 	let currentCartId = null;
 	let loadingCart = false; // Flag to prevent concurrent loads
+	let paymentError = null; // For payment cancellation/failure messages
 
 	async function loadCart() {
 		// Wait for auth to finish loading before trying to get cart
@@ -210,6 +212,19 @@
 	}
 
 	onMount(() => {
+		// Check for payment cancellation/failure in URL
+		const urlParams = $page.url.searchParams;
+		if (urlParams.get('cancelled') || urlParams.get('failure')) {
+			paymentError = urlParams.get('cancelled') 
+				? 'Payment was cancelled. You can proceed to checkout again when ready.'
+				: 'Payment failed. Please try again or use a different payment method.';
+			// Remove query params from URL
+			const newUrl = new URL($page.url);
+			newUrl.searchParams.delete('cancelled');
+			newUrl.searchParams.delete('failure');
+			window.history.replaceState({}, '', newUrl);
+		}
+
 		// Wait for auth to finish loading, then load cart
 		if ($auth.loading) {
 			// Subscribe to auth store and load cart when auth is ready
@@ -232,6 +247,38 @@
 
 <div class="container mx-auto px-4 py-12">
 	<h1 class="text-4xl font-bold mb-8 text-gray-800">Shopping Cart</h1>
+
+	<!-- Payment Error/Cancellation Message -->
+	{#if paymentError}
+		<div class="mb-6 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-md">
+			<div class="flex items-center">
+				<svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20">
+					<path
+						fill-rule="evenodd"
+						d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+				<div>
+					<p class="font-semibold">Payment Issue</p>
+					<p>{paymentError}</p>
+				</div>
+				<button
+					on:click={() => (paymentError = null)}
+					class="ml-auto text-red-700 hover:text-red-900"
+					aria-label="Close"
+				>
+					<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+						<path
+							fill-rule="evenodd"
+							d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</button>
+			</div>
+		</div>
+	{/if}
 
 	{#if loading}
 		<div class="text-center py-20">

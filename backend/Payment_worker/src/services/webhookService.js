@@ -350,27 +350,35 @@ export async function handleWebhookEvent(event, env) {
     // Handle different webhook event types
     switch (eventType) {
       case 'PAYMENT.CAPTURE.COMPLETED':
+        console.log('PAYMENT.CAPTURE.COMPLETED', resource);
         return await handlePaymentCaptureCompleted(resource, env);
       
       case 'PAYMENT.CAPTURE.DENIED':
+        console.log('PAYMENT.CAPTURE.DENIED', resource);
         return await handlePaymentCaptureDenied(resource, env);
       
       case 'PAYMENT.CAPTURE.DECLINED':
+        console.log('PAYMENT.CAPTURE.DECLINED', resource);
         return await handlePaymentCaptureDenied(resource, env); // Same handler as DENIED
       
       case 'PAYMENT.ORDER.CANCELLED':
+        console.log('PAYMENT.ORDER.CANCELLED', resource);
         return await handleOrderCancelled(resource, env);
       
       case 'PAYMENT.ORDER.CREATED':
+        console.log('PAYMENT.ORDER.CREATED', resource);
         return await handleOrderCreated(resource, env);
       
       case 'CHECKOUT.ORDER.APPROVED':
+        console.log('CHECKOUT.ORDER.APPROVED', resource);
         return await handleOrderApproved(resource, env);
       
       case 'CHECKOUT.ORDER.COMPLETED':
+        console.log('CHECKOUT.ORDER.COMPLETED', resource);
         return await handleOrderCompleted(resource, env);
       
       case 'CHECKOUT.ORDER.DECLINED':
+        console.log('CHECKOUT.ORDER.DECLINED', resource);
         return await handleOrderCancelled(resource, env); // Treat DECLINED as cancelled
       
       case 'CHECKOUT.ORDER.SAVED':
