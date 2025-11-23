@@ -28,6 +28,19 @@ router.get('/_/health', async (request, env, ctx) => {
 });
 
 // Public endpoints
+// More specific route first (product stock) before single SKU route
+router.get('/api/v1/stock/product/:product_id', async (request, env, ctx) => {
+  try {
+    return await inventoryHandlers.getProductStock(request, request.env || env);
+  } catch (err) {
+    console.error('[Inventory Router] Error in GET /api/v1/stock/product/:product_id:', err);
+    return new Response(
+      JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+});
+
 router.get('/api/v1/stock/:sku_id', async (request, env, ctx) => {
   try {
     return await inventoryHandlers.getStock(request, request.env || env);

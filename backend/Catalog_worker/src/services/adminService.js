@@ -381,14 +381,26 @@ export async function createProductService(productData, userId, env, ctx = null)
     // Create product (db1.js will handle JSON consolidation)
     await createProduct(product, env);
     
+    // Extract product-level stock quantity from inventory object
+    const productStockQuantity = productData.inventory?.stock_quantity || 
+                                 productData.inventory?.quantity ||
+                                 productData.stock_quantity ||
+                                 null;
+    
     // Create SKUs if provided
     if (productData.skus && Array.isArray(productData.skus)) {
       for (const skuData of productData.skus) {
+        // Extract SKU-level stock quantity (if provided), otherwise use product-level quantity
+        const skuStockQuantity = skuData.stock_quantity !== undefined ? skuData.stock_quantity :
+                                skuData.quantity !== undefined ? skuData.quantity :
+                                productStockQuantity;
+        
         await createSkuService({
           ...skuData,
-          product_id: productId
+          product_id: productId,
+          stock_quantity: skuStockQuantity // Pass stock quantity to SKU creation
         }, userId, env, ctx);
-        // Note: createSkuService will automatically initialize price in Pricing Worker
+        // Note: createSkuService will automatically initialize price in Pricing Worker and stock in Inventory Worker
       }
     }
     
@@ -427,6 +439,12 @@ export async function updateProductService(productId, updates, userId, env) {
     // Update product (db1.js will handle JSON consolidation)
     await updateProduct(productId, preparedUpdates, env);
     
+    // Extract product-level stock quantity from inventory object (if provided in updates)
+    const productStockQuantity = updates.inventory?.stock_quantity || 
+                                 updates.inventory?.quantity ||
+                                 updates.stock_quantity ||
+                                 null;
+    
     // Update SKUs if provided
     if (updates.skus && Array.isArray(updates.skus)) {
       // Delete existing SKUs and create new ones
@@ -436,9 +454,15 @@ export async function updateProductService(productId, updates, userId, env) {
       }
       
       for (const skuData of updates.skus) {
+        // Extract SKU-level stock quantity (if provided), otherwise use product-level quantity
+        const skuStockQuantity = skuData.stock_quantity !== undefined ? skuData.stock_quantity :
+                                skuData.quantity !== undefined ? skuData.quantity :
+                                productStockQuantity;
+        
         await createSkuService({
           ...skuData,
-          product_id: productId
+          product_id: productId,
+          stock_quantity: skuStockQuantity // Pass stock quantity to SKU creation
         }, userId, env);
       }
     }
@@ -475,7 +499,7 @@ export async function deleteProductService(productId, env) {
 /**
  * Call Inventory Worker to initialize stock for a new SKU using Service Binding (async/non-blocking)
  */
-async function syncStockToInventoryWorker(skuId, productId, skuCode, env) {
+async function syncStockToInventoryWorker(skuId, productId, skuCode, quantity = 0, env) {
   try {
     const inventoryWorker = env.INVENTORY_WORKER;
     
@@ -483,6 +507,7 @@ async function syncStockToInventoryWorker(skuId, productId, skuCode, env) {
       // Use service binding
       logger('stock.sync.attempt', {
         skuId,
+        quantity,
         method: 'service_binding',
         endpoint: `/api/v1/stock/${skuId}`,
         timestamp: new Date().toISOString()
@@ -492,7 +517,7 @@ async function syncStockToInventoryWorker(skuId, productId, skuCode, env) {
         sku_id: skuId,
         product_id: productId,
         sku_code: skuCode,
-        quantity: 0, // Default stock is 0
+        quantity: quantity !== undefined && quantity !== null ? quantity : 0, // Use provided quantity or default to 0
         reason: 'Stock initialized from Catalog Worker'
       };
       
@@ -525,6 +550,7 @@ async function syncStockToInventoryWorker(skuId, productId, skuCode, env) {
         } else {
           logger('stock.synced', { 
             skuId, 
+            quantity: stockPayload.quantity,
             method: 'service_binding',
             status: response.status
           });
@@ -587,6 +613,11 @@ export async function createSkuService(skuData, userId, env, ctx = null) {
     
     await createSku(sku, env);
     
+    // Extract stock quantity from skuData (can come from product-level or SKU-level)
+    const stockQuantity = skuData.stock_quantity !== undefined && skuData.stock_quantity !== null 
+                         ? skuData.stock_quantity 
+                         : 0; // Default to 0 if not provided
+    
     // Sync price to Pricing Worker (async/non-blocking)
     // Use ctx.waitUntil() to ensure the async fetch completes even after response is sent
     const priceSyncPromise = syncPriceToPricingWorker(skuId, skuData.product_id, skuCode, priceFields, env);
@@ -594,9 +625,9 @@ export async function createSkuService(skuData, userId, env, ctx = null) {
       ctx.waitUntil(priceSyncPromise);
     }
     
-    // Sync stock to Inventory Worker (async/non-blocking)
+    // Sync stock to Inventory Worker (async/non-blocking) with the provided quantity
     // Use ctx.waitUntil() to ensure the async fetch completes even after response is sent
-    const stockSyncPromise = syncStockToInventoryWorker(skuId, skuData.product_id, skuCode, env);
+    const stockSyncPromise = syncStockToInventoryWorker(skuId, skuData.product_id, skuCode, stockQuantity, env);
     if (ctx && ctx.waitUntil) {
       ctx.waitUntil(stockSyncPromise);
     }

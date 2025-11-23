@@ -17,42 +17,198 @@ import { logger, logError } from '../utils/logger.js';
 import { CACHE_TTL_SECONDS } from '../../config.js';
 
 /**
- * Get product by ID with caching
+ * Fetch all prices for a product from Pricing Worker using service binding
+ */
+async function fetchProductPrices(productId, env) {
+  try {
+    const pricingWorker = env.PRICING_WORKER;
+    
+    if (pricingWorker) {
+      // Use service binding (direct Worker-to-Worker call)
+      const pricingRequest = new Request(`https://pricing-worker/api/v1/prices/product/${encodeURIComponent(productId)}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      const pricingResponse = await pricingWorker.fetch(pricingRequest);
+      
+      if (!pricingResponse.ok) {
+        const errorText = await pricingResponse.text().catch(() => '');
+        logError('fetchProductPrices: Pricing Worker request failed', null, {
+          productId,
+          status: pricingResponse.status,
+          statusText: pricingResponse.statusText,
+          errorBody: errorText
+        });
+        return [];
+      }
+      
+      const pricingData = await pricingResponse.json();
+      const prices = pricingData.prices || [];
+      logger('price.fetch.success', { productId, priceCount: prices.length });
+      return prices;
+    } else {
+      // Fallback: Service binding not available
+      logger('price.fetch.attempt', {
+        productId,
+        method: 'service_binding_not_available',
+        note: 'PRICING_WORKER binding not found, skipping price fetch'
+      });
+      return [];
+    }
+  } catch (err) {
+    logError('fetchProductPrices: Error', err, { productId, errorMessage: err.message, errorStack: err.stack });
+    return [];
+  }
+}
+
+/**
+ * Fetch all stock for a product from Inventory Worker using service binding
+ */
+async function fetchProductStock(productId, env) {
+  try {
+    const inventoryWorker = env.INVENTORY_WORKER;
+    
+    if (inventoryWorker) {
+      // Use service binding (direct Worker-to-Worker call)
+      const inventoryRequest = new Request(`https://inventory-worker/api/v1/stock/product/${encodeURIComponent(productId)}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      const inventoryResponse = await inventoryWorker.fetch(inventoryRequest);
+      
+      if (!inventoryResponse.ok) {
+        const errorText = await inventoryResponse.text().catch(() => '');
+        logError('fetchProductStock: Inventory Worker request failed', null, {
+          productId,
+          status: inventoryResponse.status,
+          statusText: inventoryResponse.statusText,
+          errorBody: errorText
+        });
+        return [];
+      }
+      
+      const stockData = await inventoryResponse.json();
+      const stocks = stockData.stocks || [];
+      logger('stock.fetch.success', { productId, stockCount: stocks.length });
+      return stocks;
+    } else {
+      // Fallback: Service binding not available
+      logger('stock.fetch.attempt', {
+        productId,
+        method: 'service_binding_not_available',
+        note: 'INVENTORY_WORKER binding not found, skipping stock fetch'
+      });
+      return [];
+    }
+  } catch (err) {
+    logError('fetchProductStock: Error', err, { productId, errorMessage: err.message, errorStack: err.stack });
+    return [];
+  }
+}
+
+/**
+ * Get product by ID with caching and enriched SKU data (prices and stock)
  */
 export async function getProduct(productId, env) {
   try {
     // Check cache first
     const cacheKey = `product:${productId}`;
-    const cached = await env.CATALOG_KV?.get(cacheKey, 'json');
+    let cached = await env.CATALOG_KV?.get(cacheKey, 'json');
+    
+    let parsedProduct;
+    let skus;
+    
     if (cached) {
       logger('product.cache.hit', { productId });
-      return cached;
+      parsedProduct = cached;
+      // Get SKUs from cached product or fetch fresh
+      skus = cached.skus || await getProductSkus(productId, env);
+    } else {
+      // Get from database
+      const product = await getProductById(productId, env);
+      if (!product) {
+        return null;
+      }
+      
+      // Get SKUs
+      skus = await getProductSkus(productId, env);
+      
+      // Parse JSON fields
+      parsedProduct = parseProductJsonFields(product);
+      parsedProduct.skus = skus.map(sku => ({
+        ...sku,
+        attributes: typeof sku.attributes === 'string' ? JSON.parse(sku.attributes || '{}') : sku.attributes
+      }));
     }
     
-    // Get from database
-    const product = await getProductById(productId, env);
-    if (!product) {
-      return null;
-    }
+    // Always fetch prices and stock in parallel using service bindings (bulk calls)
+    // This ensures we always have the latest price and stock data, even for cached products
+    const [prices, stocks] = await Promise.all([
+      fetchProductPrices(productId, env),
+      fetchProductStock(productId, env)
+    ]);
     
-    // Get SKUs
-    const skus = await getProductSkus(productId, env);
+    // Create maps for quick lookup by sku_id
+    const priceMap = new Map();
+    prices.forEach(price => {
+      priceMap.set(price.sku_id, price);
+    });
     
-    // Parse JSON fields
-    const parsedProduct = parseProductJsonFields(product);
-    parsedProduct.skus = skus.map(sku => ({
-      ...sku,
-      attributes: typeof sku.attributes === 'string' ? JSON.parse(sku.attributes || '{}') : sku.attributes
-    }));
+    const stockMap = new Map();
+    stocks.forEach(stock => {
+      stockMap.set(stock.sku_id, stock);
+    });
     
-    // Cache the result
+    // Merge price and stock data into each SKU
+    parsedProduct.skus = skus.map(sku => {
+      const skuData = {
+        ...sku,
+        attributes: typeof sku.attributes === 'string' ? JSON.parse(sku.attributes || '{}') : sku.attributes
+      };
+      
+      // Add price data if available
+      const price = priceMap.get(sku.sku_id);
+      if (price) {
+        skuData.price = {
+          price: price.price,
+          currency: price.currency || 'USD',
+          sale_price: price.sale_price,
+          compare_at_price: price.compare_at_price,
+          cost_price: price.cost_price,
+          effective_price: price.effective_price || price.price,
+          original_price: price.original_price || price.price
+        };
+      }
+      
+      // Add stock data if available
+      const stock = stockMap.get(sku.sku_id);
+      if (stock) {
+        skuData.stock = {
+          quantity: stock.quantity,
+          reserved_quantity: stock.reserved_quantity,
+          available_quantity: stock.available_quantity,
+          low_stock_threshold: stock.low_stock_threshold,
+          status: stock.status
+        };
+      }
+      
+      return skuData;
+    });
+    
+    // Cache the enriched result
     if (env.CATALOG_KV) {
       await env.CATALOG_KV.put(cacheKey, JSON.stringify(parsedProduct), {
         expirationTtl: CACHE_TTL_SECONDS
       });
     }
     
-    logger('product.fetched', { productId });
+    logger('product.fetched', { productId, skuCount: parsedProduct.skus.length, hasPrices: prices.length > 0, hasStocks: stocks.length > 0 });
     return parsedProduct;
   } catch (err) {
     logError('getProduct: Error', err, { productId });

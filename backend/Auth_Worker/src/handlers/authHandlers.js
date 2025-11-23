@@ -51,7 +51,35 @@ export const login = async (request, env) => {
     logger('user.login', { userId: result.userId });
     // NOTE: This returns both accessToken and refreshToken in JSON.
     // For stronger security prefer setting refresh token in HttpOnly secure cookie (set-Cookie).
-    return new Response(JSON.stringify({ accessToken: result.accessToken, refreshToken: result.refreshToken }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+    // build headers
+    const headers = new Headers();
+    headers.set('Content-Type', 'application/json');
+
+    // ⚠️ For cross-site (different port/frontend/backend), SameSite=None is required
+    // ⚠️ For localhost dev you must REMOVE Secure (browsers ignore Secure cookies on http)
+
+    headers.append(
+      "Set-Cookie",
+      `accessToken=${result.accessToken}; HttpOnly; Path=/; Domain=w2-auth-worker.vg-firmly.workers.dev; SameSite=None; Secure; Max-Age=900`
+    );
+    
+    headers.append(
+      "Set-Cookie",
+      `refreshToken=${result.refreshToken}; HttpOnly; Path=/; Domain=.vg-firmly.workers.dev; SameSite=None; Secure; Max-Age=${30 * 24 * 60 * 60}`
+    );
+    
+
+    // return minimal JSON + cookies
+    return new Response(
+      JSON.stringify({
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken
+      }),
+      { status: 200, headers }
+    );
+
+
   } catch (err) {
     logError('login handler error', err, { handler: 'login' });
     return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });

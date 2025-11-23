@@ -1,0 +1,288 @@
+{
+  "title": "sample 11x",
+  "description": "Rechargeable beard trimmer with stainless-steel blades, adjustable length settings, and up to 90 minutes of cordless use. Designed for clean, precise grooming and easy maintenance.",
+  "short_description": "Rechargeable precision beard trimmer",
+  
+  "brand": "TrimX",
+  "manufacturer": "TrimX Grooming Solutions",
+  "category": "Beauty & Personal Care",
+  "subcategory": "Men's Grooming",
+  
+  "status": "active",
+  "visibility": "public",
+  "featured": 0,
+  "new_arrival": 0,
+  "best_seller": 0,
+  "on_sale": 0,
+  
+  "product_type": "simple",
+  
+  "metadata": {
+    "identifiers": {
+      "mpn": "TX-BT500",
+      "upc": "8967890123456",
+      "sku": "TX-BT500-GRM",
+      "ean": "1234567890123",
+      "gtin": "12345678901234",
+      "model_number": "BT500"
+    },
+    "brand": "TrimX",
+    "manufacturer": "TrimX Grooming Solutions",
+    "category": "Beauty & Personal Care",
+    "subcategory": "Men's Grooming",
+    "tags": ["trimmer", "grooming", "beard", "men care"],
+    "categories": ["Beauty & Personal Care", "Men's Grooming", "Electronics"],
+    "default_sku": null
+  },
+  
+  "attributes": {
+    "dimensions": {
+      "weight": 210,
+      "weight_unit": "g",
+      "length": 15,
+      "width": 4,
+      "height": 3,
+      "dimensions_unit": "cm",
+      "shipping_weight": 250,
+      "shipping_class": "standard"
+    },
+    "color": "Grey",
+    "colors": ["Grey", "Black", "Silver"],
+    "size": "Standard",
+    "sizes": ["Standard"],
+    "material": "Plastic, Stainless Steel",
+    "materials": ["Plastic", "Stainless Steel"],
+    "pattern": "Solid",
+    "style": "Modern",
+    "gender": "Unisex",
+    "age_group": "Adult",
+    "season": "All Season",
+    "country_of_origin": "China"
+  },
+  
+  "inventory": {
+    "stock_status": "in_stock",
+    "stock_quantity": 160,
+    "low_stock_threshold": 10,
+    "manage_stock": 1,
+    "allow_backorders": 0,
+    "backorder_status": "no",
+    "package_quantity": 1,
+    "min_order_quantity": 1,
+    "max_order_quantity": 10
+  },
+  
+  "policies": {
+    "warranty_period": "2 years",
+    "warranty_type": "Manufacturer Warranty",
+    "return_policy": "30 days return policy",
+    "purchase_note": "Includes charging cable and cleaning brush"
+  },
+  
+  "seo": {
+    "meta_title": "TrimX Beard Trimmer - Professional Grooming Tool",
+    "meta_description": "Professional rechargeable beard trimmer with 90-minute battery life. Perfect for precise grooming.",
+    "meta_keywords": "beard trimmer, grooming, men's care, rechargeable trimmer",
+    "permalink": "/products/trimx-beard-trimmer",
+    "canonical_url": "https://example.com/products/trimx-beard-trimmer"
+  },
+  
+  "stats": {
+    "rating_average": 4.5,
+    "rating_count": 120,
+    "review_count": 95,
+    "view_count": 1500,
+    "sales_count": 450,
+    "wishlist_count": 80,
+    "compare_count": 25,
+    "download_count": 0,
+    "total_sales": 450,
+    "average_rating": 4.5
+  },
+  
+  "flags": {
+    "product_type": "simple",
+    "virtual_product": 0,
+    "downloadable_product": 0,
+    "external_product": 0,
+    "requires_shipping": 1,
+    "taxable": 1,
+    "tax_class": "standard",
+    "tax_status": "taxable",
+    "shipping_required": 1,
+    "shipping_taxable": 1,
+    "reviews_allowed": 1,
+    "sold_individually": 0,
+    "purchase_only": 0,
+    "catalog_visibility": "visible"
+  },
+  
+  "relationships": {
+    "parent_id": null,
+    "menu_order": 0,
+    "grouped_products": [],
+    "upsell_ids": [],
+    "cross_sell_ids": [],
+    "related_products": [],
+    "accessories": [],
+    "replacement_parts": []
+  },
+  
+  "media": {
+    "image_url": "https://example.com/images/trimx-trimmer.jpg",
+    "image_alt": "TrimX Beard Trimmer",
+    "product_images": [
+      {
+        "image_id": "img1",
+        "url": "https://example.com/images/trimx-trimmer-1.jpg",
+        "alt": "TrimX Beard Trimmer Front View",
+        "uploaded_at": "2024-01-15T10:00:00Z"
+      },
+      {
+        "image_id": "img2",
+        "url": "https://example.com/images/trimx-trimmer-2.jpg",
+        "alt": "TrimX Beard Trimmer Side View",
+        "uploaded_at": "2024-01-15T10:00:00Z"
+      }
+    ],
+    "gallery_images": [
+      "https://example.com/images/trimx-trimmer-gallery-1.jpg",
+      "https://example.com/images/trimx-trimmer-gallery-2.jpg"
+    ],
+    "video_url": "https://example.com/videos/trimx-trimmer-demo.mp4",
+    "video_embed": null,
+    "downloadable_files": [],
+    "download_limit": null,
+    "download_expiry": null
+  },
+  
+  "variants": {
+    "product_attributes": {
+      "color": ["Grey", "Black", "Silver"],
+      "blade_material": ["Stainless Steel"]
+    },
+    "default_attributes": {
+      "color": "Grey"
+    },
+    "variations": [],
+    "variation_data": {},
+    "variant_data": {}
+  },
+  
+  "extended_data": {
+    "custom_fields": {},
+    "social_data": {
+      "facebook_url": "https://facebook.com/trimx",
+      "twitter_url": "https://twitter.com/trimx",
+      "instagram_url": "https://instagram.com/trimx"
+    },
+    "analytics_data": {},
+    "pricing_data": {},
+    "inventory_data": {},
+    "shipping_data": {
+      "weight": 210,
+      "dimensions": {
+        "length": 15,
+        "width": 4,
+        "height": 3
+      },
+      "shipping_class": "standard"
+    },
+    "tax_data": {},
+    "discount_data": {},
+    "promotion_data": {},
+    "bundle_data": {},
+    "subscription_data": {},
+    "membership_data": {},
+    "gift_card_data": {},
+    "auction_data": {},
+    "rental_data": {},
+    "booking_data": {},
+    "event_data": {},
+    "course_data": {},
+    "service_data": {},
+    "digital_data": {},
+    "physical_data": {
+      "weight": 210,
+      "dimensions": {
+        "length": 15,
+        "width": 4,
+        "height": 3
+      }
+    },
+    "specifications": {
+      "battery_life": "90 minutes",
+      "charging_time": "2 hours",
+      "blade_type": "Stainless Steel",
+      "length_settings": "9 adjustable settings"
+    },
+    "features": [
+      "90-minute battery life",
+      "Stainless steel blades",
+      "9 adjustable length settings",
+      "Cordless operation",
+      "Easy to clean"
+    ],
+    "benefits": [
+      "Precise trimming",
+      "Long battery life",
+      "Easy maintenance"
+    ],
+    "use_cases": [
+      "Beard trimming",
+      "Mustache grooming",
+      "Neckline trimming"
+    ],
+    "compatibility": [],
+    "requirements": [],
+    "included_items": [
+      "Trimmer",
+      "Charging cable",
+      "Cleaning brush",
+      "User manual"
+    ],
+    "care_instructions": "Clean after each use with provided brush",
+    "certifications": ["CE Certified", "FCC Approved"],
+    "awards": [],
+    "testimonials": [],
+    "faq": [
+      {
+        "question": "How long does the battery last?",
+        "answer": "The battery lasts up to 90 minutes on a full charge."
+      }
+    ],
+    "documentation": [],
+    "product_url": null,
+    "button_text": "Buy Now",
+    "date_on_sale_from": null,
+    "date_on_sale_to": null
+  },
+  
+  "skus": [
+    {
+      "price": 21.99,
+      "currency": "USD",
+      "sale_price": 17.99,
+      "compare_at_price": 24.99,
+      "cost_price": 12.00,
+      "stock_quantity": 160,
+      "attributes": {
+        "color": "Grey",
+        "blade_material": "Stainless Steel"
+      }
+    },
+    {
+      "price": 21.99,
+      "currency": "USD",
+      "sale_price": 17.99,
+      "compare_at_price": 24.99,
+      "cost_price": 12.00,
+      "stock_quantity": 80,
+      "attributes": {
+        "color": "Black",
+        "blade_material": "Stainless Steel"
+      }
+    }
+  ]
+}
+

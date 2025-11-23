@@ -318,6 +318,38 @@ export async function getHistory(request, env) {
 }
 
 /**
+ * GET /stock/product/:product_id - Get all stock for a product
+ */
+export async function getProductStock(request, env) {
+  try {
+    const productId = request.params?.product_id;
+    
+    if (!productId) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'validation_error', 
+          message: 'Product ID is required' 
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const stocks = await inventoryService.getProductStocks(productId, env);
+    
+    return new Response(
+      JSON.stringify({ product_id: productId, stocks }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  } catch (err) {
+    logError('getProductStock: Handler error', err);
+    return new Response(
+      JSON.stringify({ error: 'internal_error', message: err.message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+/**
  * POST /stock/check - Check stock availability for multiple SKUs
  */
 export async function checkAvailability(request, env) {
