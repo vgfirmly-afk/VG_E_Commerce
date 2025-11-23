@@ -1,20 +1,38 @@
-import { API_CONFIG } from '../config.js';
-import { fetchJSON } from './fetchClient.js';
+import { API_BASE_URLS } from '../config.js';
 
-const PRICING_URL = API_CONFIG.PRICING_WORKER_URL;
+const API_BASE = API_BASE_URLS.PRICING;
+
+async function fetchWithCredentials(url, options = {}) {
+	return fetch(url, {
+		...options,
+		credentials: 'include',
+		headers: {
+			'Accept': 'application/json',
+			...options.headers
+		}
+	});
+}
 
 export async function getPrice(skuId) {
-  return await fetchJSON(`${PRICING_URL}/api/v1/prices/${skuId}`);
+	const response = await fetchWithCredentials(`${API_BASE}/api/v1/prices/${skuId}`, {
+		method: 'GET'
+	});
+
+	const data = await response.json();
+	if (!response.ok) {
+		throw new Error(data.message || 'Failed to get price');
+	}
+	return data;
 }
 
 export async function getProductPrices(productId) {
-  return await fetchJSON(`${PRICING_URL}/api/v1/prices/product/${productId}`);
-}
+	const response = await fetchWithCredentials(`${API_BASE}/api/v1/prices/product/${productId}`, {
+		method: 'GET'
+	});
 
-export async function calculateTotal(items) {
-  return await fetchJSON(`${PRICING_URL}/api/v1/calculate-total`, {
-    method: 'POST',
-    body: JSON.stringify({ items }),
-  });
+	const data = await response.json();
+	if (!response.ok) {
+		throw new Error(data.message || 'Failed to get product prices');
+	}
+	return data;
 }
-

@@ -1,43 +1,68 @@
-import { API_CONFIG } from '../config.js';
-import { fetchJSON } from './fetchClient.js';
+import { API_BASE_URLS } from '../config.js';
 
-const CATALOG_URL = API_CONFIG.CATALOG_WORKER_URL;
+const API_BASE = API_BASE_URLS.CATALOG;
 
-export async function getProducts({ q = '', category = '', page = 1, limit = 20 } = {}) {
-  const params = new URLSearchParams();
-  if (q) params.append('q', q);
-  if (category) params.append('category', category);
-  params.append('page', page);
-  params.append('limit', limit);
+async function fetchWithCredentials(url, options = {}) {
+	return fetch(url, {
+		...options,
+		credentials: 'include',
+		headers: {
+			'Accept': 'application/json',
+			...options.headers
+		}
+	});
+}
 
-  return await fetchJSON(`${CATALOG_URL}/api/v1/products?${params}`);
+export async function getHomePage(categories = 'Electronics,Toys,Dress', limit = 10) {
+	const params = new URLSearchParams({ categories, limit: limit.toString() });
+	const response = await fetchWithCredentials(`${API_BASE}/api/v1/home?${params}`, {
+		method: 'GET'
+	});
+
+	const data = await response.json();
+	if (!response.ok) {
+		throw new Error(data.message || 'Failed to fetch home page');
+	}
+	return data;
 }
 
 export async function getProduct(productId) {
-  return await fetchJSON(`${CATALOG_URL}/api/v1/products/${productId}`);
+	const response = await fetchWithCredentials(`${API_BASE}/api/v1/products/${productId}`, {
+		method: 'GET'
+	});
+
+	const data = await response.json();
+	if (!response.ok) {
+		throw new Error(data.message || 'Failed to fetch product');
+	}
+	return data;
 }
 
-export async function getHomePage(categories = [], limit = 10) {
-  const params = new URLSearchParams();
-  if (categories.length > 0) {
-    params.append('categories', categories.join(','));
-  }
-  params.append('limit', limit);
+export async function getProductImage(productId, imageId) {
+	const response = await fetch(`${API_BASE}/api/v1/products/${productId}/images/${imageId}`, {
+		method: 'GET',
+		credentials: 'include'
+	});
 
-  return await fetchJSON(`${CATALOG_URL}/api/v1/home?${params}`);
+	if (!response.ok) {
+		throw new Error('Failed to fetch product image');
+	}
+	return response.blob();
 }
 
-export async function searchProducts({ q = '', category = '', page = 1, limit = 20 } = {}) {
-  const params = new URLSearchParams();
-  params.append('q', q);
-  if (category) params.append('category', category);
-  params.append('page', page);
-  params.append('limit', limit);
+export async function searchProducts(query, page = 1, limit = 20) {
+	const params = new URLSearchParams({
+		q: query,
+		page: page.toString(),
+		limit: limit.toString()
+	});
+	const response = await fetchWithCredentials(`${API_BASE}/api/v1/search?${params}`, {
+		method: 'GET'
+	});
 
-  return await fetchJSON(`${CATALOG_URL}/api/v1/search?${params}`);
+	const data = await response.json();
+	if (!response.ok) {
+		throw new Error(data.message || 'Search failed');
+	}
+	return data;
 }
-
-export function getProductImageUrl(productId, imageId) {
-  return `${CATALOG_URL}/api/v1/products/${productId}/images/${imageId}`;
-}
-

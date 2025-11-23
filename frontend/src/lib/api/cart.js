@@ -1,74 +1,113 @@
-import { API_CONFIG } from '../config.js';
-import { fetchClient, fetchJSON } from './fetchClient.js';
+import { API_BASE_URLS } from '../config.js';
 
-const CART_URL = API_CONFIG.CART_WORKER_URL;
+const API_BASE = API_BASE_URLS.CART;
 
-function getHeaders() {
-  const headers = {
-    'Content-Type': 'application/json',
-  };
-  
-  // Get user ID from localStorage (not tokens - those are in httpOnly cookies)
-  const userId = localStorage.getItem('userId');
-  const sessionId = localStorage.getItem('sessionId');
-  
-  if (userId) {
-    headers['X-User-Id'] = userId;
-  } else if (sessionId) {
-    headers['X-Session-Id'] = sessionId;
-  }
-  
-  return headers;
+async function fetchWithCredentials(url, options = {}) {
+	return fetch(url, {
+		...options,
+		credentials: 'include',
+		headers: {
+			'Accept': 'application/json',
+			'Content-Type': 'application/json',
+			...options.headers
+		}
+	});
 }
 
-export async function getCart() {
-  return await fetchJSON(`${CART_URL}/api/v1/cart`, {
-    method: 'GET',
-    headers: getHeaders(),
-  });
+export async function getCart(userId, sessionId) {
+	const headers = {};
+	
+	if (userId) {
+		headers['X-User-Id'] = userId;
+	} else if (sessionId) {
+		headers['X-Session-Id'] = sessionId;
+	}
+
+	const response = await fetchWithCredentials(`${API_BASE}/api/v1/cart`, {
+		method: 'GET',
+		headers
+	});
+
+	const data = await response.json();
+	if (!response.ok) {
+		throw new Error(data.message || 'Failed to get cart');
+	}
+	return data;
 }
 
 export async function getCartById(cartId) {
-  return await fetchJSON(`${CART_URL}/api/v1/cart/${cartId}`, {
-    method: 'GET',
-    headers: getHeaders(),
-  });
+	const response = await fetchWithCredentials(`${API_BASE}/api/v1/cart/${cartId}`, {
+		method: 'GET'
+	});
+
+	const data = await response.json();
+	if (!response.ok) {
+		throw new Error(data.message || 'Failed to get cart');
+	}
+	return data;
 }
 
-export async function addItemToCart(cartId, { sku_id, quantity, product_id, sku_code }) {
-  return await fetchJSON(`${CART_URL}/api/v1/cart/${cartId}/items`, {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({ sku_id, quantity, product_id, sku_code }),
-  });
+export async function addItemToCart(cartId, skuId, quantity) {
+	const response = await fetchWithCredentials(`${API_BASE}/api/v1/cart/${cartId}/items`, {
+		method: 'POST',
+		body: JSON.stringify({
+			sku_id: skuId,
+			quantity
+		})
+	});
+
+	const data = await response.json();
+	if (!response.ok) {
+		throw new Error(data.message || 'Failed to add item to cart');
+	}
+	return data;
 }
 
-export async function updateCartItem(cartId, itemId, quantity) {
-  return await fetchJSON(`${CART_URL}/api/v1/cart/${cartId}/items/${itemId}`, {
-    method: 'PUT',
-    headers: getHeaders(),
-    body: JSON.stringify({ quantity }),
-  });
+export async function updateItemQuantity(cartId, itemId, delta) {
+	const response = await fetchWithCredentials(`${API_BASE}/api/v1/cart/${cartId}/items/${itemId}`, {
+		method: 'PUT',
+		body: JSON.stringify({ delta })
+	});
+
+	const data = await response.json();
+	if (!response.ok) {
+		throw new Error(data.message || 'Failed to update item quantity');
+	}
+	return data;
 }
 
-export async function removeCartItem(cartId, itemId) {
-  return await fetchJSON(`${CART_URL}/api/v1/cart/${cartId}/items/${itemId}`, {
-    method: 'DELETE',
-    headers: getHeaders(),
-  });
-}
+export async function removeItemFromCart(cartId, itemId) {
+	const response = await fetchWithCredentials(`${API_BASE}/api/v1/cart/${cartId}/items/${itemId}`, {
+		method: 'DELETE'
+	});
 
-export async function clearCart(cartId) {
-  return await fetchJSON(`${CART_URL}/api/v1/cart/${cartId}`, {
-    method: 'DELETE',
-    headers: getHeaders(),
-  });
+	const data = await response.json();
+	if (!response.ok) {
+		throw new Error(data.message || 'Failed to remove item from cart');
+	}
+	return data;
 }
 
 export async function getCartTotal(cartId) {
-  return await fetchJSON(`${CART_URL}/api/v1/cart/${cartId}/total`, {
-    method: 'GET',
-    headers: getHeaders(),
-  });
+	const response = await fetchWithCredentials(`${API_BASE}/api/v1/cart/${cartId}/total`, {
+		method: 'GET'
+	});
+
+	const data = await response.json();
+	if (!response.ok) {
+		throw new Error(data.message || 'Failed to get cart total');
+	}
+	return data;
 }
 
+export async function clearCart(cartId) {
+	const response = await fetchWithCredentials(`${API_BASE}/api/v1/cart/${cartId}`, {
+		method: 'DELETE'
+	});
+
+	const data = await response.json();
+	if (!response.ok) {
+		throw new Error(data.message || 'Failed to clear cart');
+	}
+	return data;
+}
