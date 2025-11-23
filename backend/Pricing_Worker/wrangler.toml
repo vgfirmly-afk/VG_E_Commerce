@@ -41,6 +41,15 @@ database_id = "9a88aa6b-0b44-4a67-a710-2340aac6765e"
 #binding = "CA_IMG_BUCKET"
 #bucket_name = "catalog-img-bucket"
 
+# Service binding to Catalog Worker (for direct Worker-to-Worker communication)
+[[services]]
+binding = "CATALOG_WORKER"
+service = "w2-catalog-worker"
+
+# Service binding to Inventory Worker (for direct Worker-to-Worker communication)
+[[services]]
+binding = "INVENTORY_WORKER"
+service = "w2-inventory-worker"
 
 
 

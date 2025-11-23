@@ -66,3 +66,36 @@ export async function searchProducts(query, page = 1, limit = 20) {
 	}
 	return data;
 }
+
+export async function getProducts(page = 1, limit = 20) {
+	const params = new URLSearchParams({
+		page: page.toString(),
+		limit: limit.toString()
+	});
+	const response = await fetchWithCredentials(`${API_BASE}/api/v1/products?${params}`, {
+		method: 'GET'
+	});
+
+	const data = await response.json();
+	if (!response.ok) {
+		throw new Error(data.message || 'Failed to fetch products');
+	}
+	return data;
+}
+
+export async function getProductsByCategory(category, page = 1, limit = 20) {
+	const params = new URLSearchParams({
+		category: category,
+		page: page.toString(),
+		limit: limit.toString()
+	});
+	const response = await fetchWithCredentials(`${API_BASE}/api/v1/products?${params}`, {
+		method: 'GET'
+	});
+
+	const data = await response.json();
+	if (!response.ok) {
+		throw new Error(data.message || 'Failed to fetch products by category');
+	}
+	return data;
+}

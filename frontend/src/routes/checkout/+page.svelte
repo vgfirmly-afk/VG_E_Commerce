@@ -65,9 +65,24 @@
 			return;
 		}
 
+		// Wait for auth to finish loading
+		if ($auth.loading) {
+			const unsubscribe = auth.subscribe((authState) => {
+				if (!authState.loading) {
+					unsubscribe();
+					initializeCheckout();
+				}
+			});
+			return;
+		}
+
+		await initializeCheckout();
+	});
+
+	async function initializeCheckout() {
 		try {
 			loading = true;
-			const userId = $auth.user?.userId || null;
+			const userId = $auth.user?.id || null;
 			const guestSessionId = $guestSession || null;
 			const session = await createCheckoutSession($cart.cartId, userId, guestSessionId);
 			sessionId = session.session_id;
@@ -78,7 +93,7 @@
 		} finally {
 			loading = false;
 		}
-	});
+	}
 
 	async function handleDeliveryAddress() {
 		if (!sessionId) return;
@@ -86,7 +101,7 @@
 		loading = true;
 		error = null;
 		try {
-			const userId = $auth.user?.userId || null;
+			const userId = $auth.user?.id || null;
 			const guestSessionId = $guestSession || null;
 			await setDeliveryAddress(sessionId, deliveryAddress, userId, guestSessionId);
 
@@ -110,7 +125,7 @@
 		loading = true;
 		error = null;
 		try {
-			const userId = $auth.user?.userId || null;
+			const userId = $auth.user?.id || null;
 			const guestSessionId = $guestSession || null;
 			await setBillingAddress(sessionId, billingAddress, userId, guestSessionId);
 			await loadShippingMethods();
@@ -165,12 +180,24 @@
 				error = 'Some items are out of stock. Please update your cart.';
 				return;
 			}
-
-			// Create payment intent
-			await createPaymentIntent();
 		} catch (err) {
 			error = err.message;
 			console.error('Failed to load summary:', err);
+		}
+	}
+
+	async function handleProceedToPayment() {
+		if (!sessionId || !summary) return;
+
+		loading = true;
+		error = null;
+		try {
+			await createPaymentIntent();
+		} catch (err) {
+			error = err.message;
+			console.error('Failed to create payment:', err);
+		} finally {
+			loading = false;
 		}
 	}
 
@@ -204,12 +231,7 @@
 		if (!paymentData?.approval_url) return;
 
 		// PayPal button will be loaded via PayPal SDK
-		// For now, we'll redirect to approval URL
-		setTimeout(() => {
-			if (paymentData?.approval_url) {
-				window.location.href = paymentData.approval_url;
-			}
-		}, 100);
+		// Don't auto-redirect - let user click the button
 	}
 </script>
 
@@ -603,8 +625,16 @@
 							</div>
 						</div>
 
-						{#if paymentData?.approval_url}
-							<div class="mt-6">
+						{#if !paymentData}
+							<button
+								on:click={handleProceedToPayment}
+								disabled={loading}
+								class="mt-6 w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 disabled:opacity-50 text-center font-semibold"
+							>
+								{loading ? 'Processing...' : 'Proceed to Payment'}
+							</button>
+						{:else if paymentData?.approval_url}
+							<div class="mt-6 space-y-3">
 								<a
 									href={paymentData.approval_url}
 									class="block w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 text-center font-semibold"

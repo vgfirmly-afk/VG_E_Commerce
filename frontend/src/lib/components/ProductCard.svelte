@@ -9,9 +9,13 @@
 		}
 	}
 
-	$: imageUrl = product.images && product.images.length > 0 
-		? product.images[0] 
-		: 'https://via.placeholder.com/300x300?text=No+Image';
+	$: imageUrl = product.media?.image_url 
+		|| (product.media?.product_images && product.media.product_images.length > 0 
+			? product.media.product_images[0].url 
+			: null)
+		|| (product.images && product.images.length > 0 
+			? product.images[0] 
+			: 'https://via.placeholder.com/300x300?text=No+Image');
 </script>
 
 <div

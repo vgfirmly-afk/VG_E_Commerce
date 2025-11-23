@@ -2,7 +2,6 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { getProduct } from '$lib/api/catalog.js';
-	import { getProductPrices } from '$lib/api/pricing.js';
 	import { addItemToCart } from '$lib/api/cart.js';
 	import { cart } from '$lib/stores/cart.js';
 	import { auth, guestSession } from '$lib/stores/auth.js';
@@ -10,7 +9,6 @@
 	import { goto } from '$app/navigation';
 
 	let product = null;
-	let prices = {};
 	let selectedSku = null;
 	let quantity = 1;
 	let loading = true;
@@ -23,23 +21,14 @@
 		try {
 			product = await getProduct(productId);
 			
-			// Get prices for all SKUs
-			try {
-				const pricesData = await getProductPrices(productId);
-				if (pricesData && pricesData.skus) {
-					pricesData.skus.forEach((sku) => {
-						if (sku.sku_id && sku.price) {
-							prices[sku.sku_id] = sku.price;
-						}
-					});
-				}
-			} catch (err) {
-				console.error('Failed to load prices:', err);
-			}
-
-			// Select first SKU by default
+			// Select first available SKU by default
 			if (product.skus && product.skus.length > 0) {
-				selectedSku = product.skus[0];
+				const availableSku = product.skus.find(sku => {
+					const stockStatus = sku.stock?.status || 'inactive';
+					const quantity = sku.stock?.quantity || 0;
+					return (stockStatus === 'active' || stockStatus === 'in_stock') && quantity > 0;
+				}) || product.skus[0];
+				selectedSku = availableSku;
 			}
 		} catch (err) {
 			error = err.message;
@@ -60,7 +49,7 @@
 			// Ensure we have a cart
 			let cartId = $cart.cartId;
 			if (!cartId) {
-				const userId = $auth.user?.userId || null;
+				const userId = $auth.user?.id || null;
 				const sessionId = $guestSession || null;
 				const cartData = await getCart(userId, sessionId);
 				cart.setCart(cartData);
@@ -70,7 +59,7 @@
 			await addItemToCart(cartId, selectedSku.sku_id, quantity);
 			
 			// Refresh cart
-			const userId = $auth.user?.userId || null;
+			const userId = $auth.user?.id || null;
 			const sessionId = $guestSession || null;
 			const cartData = await getCart(userId, sessionId);
 			cart.setCart(cartData);
@@ -82,8 +71,7 @@
 			document.body.appendChild(successMsg);
 			setTimeout(() => {
 				successMsg.remove();
-				goto('/cart');
-			}, 1500);
+			}, 3000);
 		} catch (err) {
 			alert(err.message || 'Failed to add product to cart');
 		} finally {
@@ -91,12 +79,31 @@
 		}
 	}
 
-	$: imageUrl = product?.images && product.images.length > 0 
-		? product.images[0] 
-		: 'https://via.placeholder.com/600x600?text=No+Image';
-	$: selectedPrice = selectedSku && prices[selectedSku.sku_id] 
-		? prices[selectedSku.sku_id] 
-		: null;
+	$: imageUrl = product?.media?.image_url 
+		|| (product?.media?.product_images && product.media.product_images.length > 0 
+			? product.media.product_images[0].url 
+			: null)
+		|| (product?.images && product.images.length > 0 
+			? product.images[0] 
+			: 'https://via.placeholder.com/600x600?text=No+Image');
+	
+	$: selectedPrice = selectedSku?.price?.effective_price 
+		|| selectedSku?.price?.sale_price 
+		|| selectedSku?.price?.price 
+		|| null;
+	
+	$: originalPrice = selectedSku?.price?.original_price || selectedSku?.price?.price || null;
+	$: salePrice = selectedSku?.price?.sale_price || null;
+	$: hasDiscount = salePrice && originalPrice && salePrice < originalPrice;
+	$: discountPercent = hasDiscount 
+		? Math.round(((originalPrice - salePrice) / originalPrice) * 100) 
+		: 0;
+	
+	$: selectedStock = selectedSku?.stock || null;
+	$: stockQuantity = selectedStock?.quantity || 0;
+	$: stockStatus = selectedStock?.status || 'inactive';
+	$: isInStock = (stockStatus === 'active' || stockStatus === 'in_stock') && stockQuantity > 0;
+	$: canAddToCart = selectedSku && isInStock && !addingToCart;
 </script>
 
 <svelte:head>
@@ -145,37 +152,54 @@
 				<!-- SKU Selection -->
 				{#if product.skus && product.skus.length > 0}
 					<div>
-						<h2 class="text-2xl font-semibold mb-4 text-gray-800">Select Variant</h2>
-						<div class="space-y-3">
+						<h2 class="text-xl font-semibold mb-3 text-gray-800">Select Variant</h2>
+						<div class="grid grid-cols-1 gap-2">
 							{#each product.skus as sku}
+								{@const skuPrice = sku.price?.effective_price || sku.price?.sale_price || sku.price?.price}
+								{@const skuStock = sku.stock}
+								{@const stockQty = skuStock?.quantity || 0}
+								{@const stockStat = skuStock?.status || 'inactive'}
+								{@const isAvailable = (stockStat === 'active' || stockStat === 'in_stock') && stockQty > 0}
 								<label
-									class="flex items-center p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-all duration-200 {selectedSku?.sku_id === sku.sku_id
-										? 'border-blue-500 bg-blue-50 shadow-md'
-										: 'border-gray-200'}"
+									class="flex items-center p-2.5 border-2 rounded-lg transition-all duration-200 {selectedSku?.sku_id === sku.sku_id
+										? 'border-blue-500 bg-blue-50 shadow-sm'
+										: isAvailable
+											? 'border-gray-200 hover:border-blue-300 hover:bg-gray-50 cursor-pointer'
+											: 'border-gray-200 opacity-50 cursor-not-allowed pointer-events-none'}"
 								>
 									<input
 										type="radio"
 										name="sku"
 										value={sku.sku_id}
 										checked={selectedSku?.sku_id === sku.sku_id}
-										on:change={() => (selectedSku = sku)}
-										class="mr-4 w-5 h-5 text-blue-600"
+										on:change={() => isAvailable && (selectedSku = sku)}
+										disabled={!isAvailable}
+										class="mr-3 w-4 h-4 text-blue-600"
 									/>
-									<div class="flex-1">
-										<div class="font-medium text-gray-800">
-											{#if sku.attributes}
-												{Object.entries(sku.attributes)
-													.map(([key, value]) => `${key}: ${value}`)
-													.join(', ')}
-											{:else}
-												{sku.sku_code || sku.sku_id}
-											{/if}
-										</div>
-										{#if prices[sku.sku_id]}
-											<div class="text-xl font-bold text-blue-600 mt-1">
-												${prices[sku.sku_id].toFixed(2)}
+									<div class="flex-1 flex items-center justify-between gap-3">
+										<div class="flex-1 min-w-0">
+											<div class="font-medium text-sm text-gray-800 mb-1">
+												{#if sku.attributes}
+													{Object.entries(sku.attributes)
+														.map(([key, value]) => `${key}: ${value}`)
+														.join(' • ')}
+												{:else}
+													{sku.sku_code || 'Default'}
+												{/if}
 											</div>
-										{/if}
+											<div class="flex items-center gap-3 text-xs">
+												{#if skuPrice}
+													<span class="font-bold text-blue-600">
+														${skuPrice.toFixed(2)}
+													</span>
+												{/if}
+												<span class="px-2 py-0.5 rounded text-xs font-medium {isAvailable 
+													? 'bg-green-100 text-green-700' 
+													: 'bg-red-100 text-red-700'}">
+													{isAvailable ? `${stockQty} in stock` : 'Out of stock'}
+												</span>
+											</div>
+										</div>
 									</div>
 								</label>
 							{/each}
@@ -183,8 +207,62 @@
 					</div>
 				{/if}
 
+				<!-- Selected SKU Details -->
+				{#if selectedSku}
+					<div class="p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg border border-gray-200">
+						<div class="space-y-3">
+							<!-- Price Section -->
+							<div>
+								<div class="text-xs text-gray-600 mb-2 font-medium">Selected Variant Price</div>
+								<div class="flex items-baseline gap-3">
+									{#if hasDiscount && originalPrice}
+										<div class="flex items-baseline gap-2">
+											<span class="text-xl text-gray-400 line-through">
+												${originalPrice.toFixed(2)}
+											</span>
+											<span class="text-3xl font-bold text-blue-600">
+												${salePrice.toFixed(2)}
+											</span>
+										</div>
+										<span class="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded">
+											{discountPercent}% OFF
+										</span>
+									{:else if selectedPrice}
+										<div class="text-3xl font-bold text-blue-600">
+											${selectedPrice.toFixed(2)}
+										</div>
+									{:else}
+										<div class="text-sm text-gray-500">Price not available</div>
+									{/if}
+									{#if selectedSku?.price?.currency}
+										<span class="text-sm text-gray-600">{selectedSku.price.currency}</span>
+									{/if}
+								</div>
+							</div>
+							
+							<!-- Stock Section -->
+							<div class="flex items-center justify-between pt-2 border-t border-gray-200">
+								<div>
+									<div class="text-xs text-gray-600 mb-1">Stock Status</div>
+									<span class="inline-block px-3 py-1 rounded-full text-sm font-semibold {isInStock 
+										? 'bg-green-100 text-green-700' 
+										: 'bg-red-100 text-red-700'}">
+										{isInStock ? `${stockQuantity} available` : 'Out of stock'}
+									</span>
+								</div>
+								{#if selectedSku.sku_code}
+									<div class="text-right">
+										<div class="text-xs text-gray-600 mb-1">SKU Code</div>
+										<div class="text-sm font-mono text-gray-700">{selectedSku.sku_code}</div>
+									</div>
+								{/if}
+							</div>
+						</div>
+					</div>
+				{/if}
+
 				<!-- Quantity and Add to Cart -->
-				<div class="flex items-center gap-6 pt-6 border-t border-gray-200">
+				<div class="space-y-4 pt-6 border-t border-gray-200">
 					<div>
 						<label for="quantity" class="block text-sm font-medium text-gray-700 mb-2">
 							Quantity
@@ -192,7 +270,7 @@
 						<div class="flex items-center gap-2">
 							<button
 								on:click={() => quantity > 1 && quantity--}
-								disabled={quantity <= 1}
+								disabled={quantity <= 1 || !isInStock}
 								class="w-10 h-10 bg-gray-200 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed font-bold transition-colors duration-200"
 							>
 								−
@@ -201,33 +279,40 @@
 								id="quantity"
 								type="number"
 								min="1"
+								max={stockQuantity || 1}
 								bind:value={quantity}
-								class="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+								disabled={!isInStock}
+								class="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
 							/>
 							<button
-								on:click={() => quantity++}
-								class="w-10 h-10 bg-gray-200 rounded-lg hover:bg-gray-300 font-bold transition-colors duration-200"
+								on:click={() => {
+									if (quantity < stockQuantity) quantity++;
+								}}
+								disabled={!isInStock || quantity >= stockQuantity}
+								class="w-10 h-10 bg-gray-200 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed font-bold transition-colors duration-200"
 							>
 								+
 							</button>
 						</div>
 					</div>
-				</div>
 
-				<button
-					on:click={handleAddToCart}
-					disabled={addingToCart || !selectedSku}
-					class="w-full btn-primary py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-				>
-					{addingToCart ? (
-						<span class="flex items-center justify-center gap-2">
-							<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-							Adding to cart...
-						</span>
-					) : (
-						'Add to Cart'
-					)}
-				</button>
+					<button
+						on:click={handleAddToCart}
+						disabled={!canAddToCart}
+						class="w-full btn-primary py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+					>
+						{#if addingToCart}
+							<span class="flex items-center justify-center gap-2">
+								<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+								Adding to cart...
+							</span>
+						{:else if !isInStock}
+							Out of Stock
+						{:else}
+							Add to Cart
+						{/if}
+					</button>
+				</div>
 			</div>
 		</div>
 	{:else}

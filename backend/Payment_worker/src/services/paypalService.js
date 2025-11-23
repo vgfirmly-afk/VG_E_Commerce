@@ -64,7 +64,7 @@ export async function createPayPalOrder(orderData, env) {
         reference_id: orderData.reference_id || orderData.checkout_session_id,
         amount: {
           currency_code: orderData.currency || 'USD',
-          value: orderData.amount.toString()
+          value: Number(orderData.amount).toFixed(2).toString()
         },
         description: orderData.description || 'Order payment'
       }],

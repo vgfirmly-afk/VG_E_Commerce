@@ -12,7 +12,98 @@ import {
 import { logError } from '../utils/logger.js';
 
 /**
- * GET /prices/:sku_id - Get price for a SKU
+ * Fetch product name and SKU attributes from Catalog Worker using service binding
+ * Returns { productName, attributes } or null
+ */
+async function getProductNameAndSkuAttributes(productId, skuId, env) {
+  try {
+    const catalogWorker = env.CATALOG_WORKER;
+    if (!catalogWorker) {
+      logError('getProductNameAndSkuAttributes: CATALOG_WORKER binding not available', null, { productId, skuId });
+      return null;
+    }
+    
+    const productRequest = new Request(`https://catalog-worker/api/v1/products/${encodeURIComponent(productId)}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'X-Source': 'pricing-worker-service-binding'
+      }
+    });
+    
+    const response = await catalogWorker.fetch(productRequest);
+    if (!response.ok) {
+      logError('getProductNameAndSkuAttributes: Failed to get product', null, {
+        productId,
+        skuId,
+        status: response.status
+      });
+      return null;
+    }
+    
+    const productData = await response.json();
+    const productName = productData.title || productData.name || null;
+    
+    // Find the specific SKU in the product's SKUs array
+    let skuAttributes = null;
+    if (productData.skus && Array.isArray(productData.skus)) {
+      const sku = productData.skus.find(s => s.sku_id === skuId);
+      if (sku && sku.attributes) {
+        // Attributes might be a string (JSON) or already an object
+        skuAttributes = typeof sku.attributes === 'string' 
+          ? JSON.parse(sku.attributes || '{}') 
+          : sku.attributes;
+      }
+    }
+    
+    return {
+      productName,
+      attributes: skuAttributes
+    };
+  } catch (err) {
+    logError('getProductNameAndSkuAttributes: Error', err, { productId, skuId });
+    return null;
+  }
+}
+
+/**
+ * Fetch stock quantity from Inventory Worker using service binding
+ */
+async function getStockFromInventory(skuId, env) {
+  try {
+    const inventoryWorker = env.INVENTORY_WORKER;
+    if (!inventoryWorker) {
+      logError('getStockFromInventory: INVENTORY_WORKER binding not available', null, { skuId });
+      return null;
+    }
+    
+    const stockRequest = new Request(`https://inventory-worker/api/v1/stock/${encodeURIComponent(skuId)}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'X-Source': 'pricing-worker-service-binding'
+      }
+    });
+    
+    const response = await inventoryWorker.fetch(stockRequest);
+    if (!response.ok) {
+      logError('getStockFromInventory: Failed to get stock', null, {
+        skuId,
+        status: response.status
+      });
+      return null;
+    }
+    
+    const stockData = await response.json();
+    return stockData.available_quantity || stockData.quantity || 0;
+  } catch (err) {
+    logError('getStockFromInventory: Error', err, { skuId });
+    return null;
+  }
+}
+
+/**
+ * GET /prices/:sku_id - Get price for a SKU with product name and stock
  */
 export async function getPrice(request, env) {
   try {
@@ -39,8 +130,23 @@ export async function getPrice(request, env) {
       );
     }
     
+    // Fetch product name, SKU attributes, and stock in parallel using service bindings
+    const productId = price.product_id;
+    const [productInfo, stockQuantity] = await Promise.all([
+      productId ? getProductNameAndSkuAttributes(productId, skuId, env) : Promise.resolve(null),
+      getStockFromInventory(skuId, env)
+    ]);
+    
+    // Combine all data into one response
+    const responseData = {
+      ...price,
+      product_name: productInfo?.productName || null,
+      attributes: productInfo?.attributes || null,
+      stock: stockQuantity !== null ? stockQuantity : null
+    };
+    
     return new Response(
-      JSON.stringify(price),
+      JSON.stringify(responseData),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (err) {

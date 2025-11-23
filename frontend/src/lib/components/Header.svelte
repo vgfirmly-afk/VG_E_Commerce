@@ -38,6 +38,16 @@
 			loginEmail = '';
 			loginPassword = '';
 			await loadCart();
+			
+			// Check for return URL after successful login
+			if (typeof window !== 'undefined') {
+				const returnUrl = sessionStorage.getItem('returnUrl');
+				if (returnUrl) {
+					sessionStorage.removeItem('returnUrl');
+					goto(returnUrl);
+					return;
+				}
+			}
 		} catch (err) {
 			error = err.message || 'Login failed';
 		} finally {
@@ -71,6 +81,16 @@
 				fullName: ''
 			};
 			await loadCart();
+			
+			// Check for return URL after successful registration/login
+			if (typeof window !== 'undefined') {
+				const returnUrl = sessionStorage.getItem('returnUrl');
+				if (returnUrl) {
+					sessionStorage.removeItem('returnUrl');
+					goto(returnUrl);
+					return;
+				}
+			}
 		} catch (err) {
 			error = err.message || 'Registration failed';
 		} finally {
@@ -95,7 +115,11 @@
 
 	async function loadCart() {
 		try {
-			const userId = $auth.user?.userId || null;
+			// Wait for auth to finish loading
+			if ($auth.loading) {
+				return;
+			}
+			const userId = $auth.user?.id || null;
 			const sessionId = $guestSession || null;
 			if (userId || sessionId) {
 				const cartData = await getCart(userId, sessionId);
@@ -108,6 +132,16 @@
 
 	onMount(() => {
 		loadCart();
+		
+		// Check for login query parameter
+		if (typeof window !== 'undefined') {
+			const urlParams = new URLSearchParams(window.location.search);
+			if (urlParams.get('login') === 'true') {
+				authMode = 'login';
+				showAuthModal = true;
+				error = '';
+			}
+		}
 	});
 </script>
 
@@ -268,14 +302,14 @@
 						disabled={loading}
 						class="w-full btn-primary py-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
 					>
-						{loading ? (
+						{#if loading}
 							<span class="flex items-center justify-center gap-2">
 								<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
 								Logging in...
 							</span>
-						) : (
-							'Login'
-						)}
+						{:else}
+							Login
+						{/if}
 					</button>
 				</form>
 				<p class="mt-6 text-center text-sm text-gray-600">
@@ -384,14 +418,14 @@
 						disabled={loading}
 						class="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 active:scale-95 transform transition-all duration-200 font-medium shadow-md hover:shadow-lg text-lg disabled:opacity-50 disabled:cursor-not-allowed"
 					>
-						{loading ? (
+						{#if loading}
 							<span class="flex items-center justify-center gap-2">
 								<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
 								Creating account...
 							</span>
-						) : (
-							'Sign Up'
-						)}
+						{:else}
+							Sign Up
+						{/if}
 					</button>
 				</form>
 				<p class="mt-6 text-center text-sm text-gray-600">
