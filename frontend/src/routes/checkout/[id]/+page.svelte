@@ -851,14 +851,17 @@
 								{loading ? 'Processing...' : 'Proceed to Payment'}
 							</button>
 						{:else if paymentUrl}
-							<div class="mt-6 space-y-3">
+							<div class="mt-6">
 								<a
 									href={paymentUrl}
 									target="_blank"
 									rel="noopener noreferrer"
-									class="block w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 text-center font-semibold"
+									class="paypal-button"
 								>
-									Pay with PayPal
+									<svg class="paypal-logo" viewBox="0 0 24 24" fill="currentColor">
+										<path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.19zm1.461-13.462l.653 4.185a.387.387 0 0 0 .373.33h3.743c3.23 0 5.716-1.284 6.469-5.332.033-.18.063-.352.09-.52-.407-.276-1.24-.585-2.566-.585h-6.703a.864.864 0 0 0-.853.98l.632 4.04z"/>
+									</svg>
+									<span>Pay with PayPal</span>
 								</a>
 							</div>
 						{/if}
