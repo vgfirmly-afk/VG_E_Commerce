@@ -194,7 +194,7 @@ jobs:
       - name: Step 3 - Deploy to staging using Wrangler (staging token)
         if: steps.verify_token.outputs.token_valid == 'true' && steps.check_token.outputs.use_staging == 'true'
         env:
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN_STAGING }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN_STAGING }}
         run: |
           cd "${{ matrix.dir }}"
           echo "🚀 Deploying to staging..."
@@ -206,7 +206,7 @@ jobs:
       - name: Step 3 - Deploy to staging using Wrangler (prod token fallback)
         if: steps.verify_token.outputs.token_valid == 'true' && steps.check_token.outputs.use_staging != 'true'
         env:
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN_PROD }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN_PROD }}
         run: |
           cd "${{ matrix.dir }}"
           echo "🚀 Deploying to staging..."
