@@ -190,7 +190,7 @@ jobs:
           apiToken: ${{ secrets.CF_API_TOKEN_PRODUCTION }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
           workingDirectory: ${{ matrix.worker_dir }}
-          command: rollback --env prod --message "Auto-rollback: Health check failed after deployment"
+          command: rollback --env prod --message 'Auto-rollback: Health check failed after deployment'
         continue-on-error: true
 
       - name: Send Slack notification - Deployment success
