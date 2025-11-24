@@ -109,7 +109,7 @@ jobs:
           if [ "${{ steps.check_token.outputs.use_staging }}" = "true" ]; then
             TOKEN="${{ secrets.CF_API_TOKEN_STAGING }}"
             TOKEN_NAME="CF_API_TOKEN_STAGING"
-          else
+          else  
             TOKEN="${{ secrets.CF_API_TOKEN_PROD }}"
             TOKEN_NAME="CF_API_TOKEN_PROD"
           fi
