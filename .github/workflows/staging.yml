@@ -114,13 +114,56 @@ jobs:
             TOKEN_NAME="CF_API_TOKEN_PROD"
           fi
 
-          echo "TOKEN: snC09wzynj9EHa6MyDgdM2yBVP1jAUx_-o-dMOYU"
           echo "🔐 Testing $TOKEN_NAME with Cloudflare API..."
-          echo "Making request to: https://api.cloudflare.com/client/v4/user/tokens/verify"
           echo ""
           
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "https://api.cloudflare.com/client/v4/user/tokens/verify" \
-            -H "Authorization: Bearer snC09wzynj9EHa6MyDgdM2yBVP1jAUx_-o-dMOYU" \
+          # First, get the account ID from accounts list
+          echo "Step 2a: Getting account information..."
+          ACCOUNTS_RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "https://api.cloudflare.com/client/v4/accounts" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" 2>&1)
+          
+          ACCOUNTS_HTTP_CODE=$(echo "$ACCOUNTS_RESPONSE" | tail -n1)
+          ACCOUNTS_BODY=$(echo "$ACCOUNTS_RESPONSE" | sed '$d')
+          
+          if [ "$ACCOUNTS_HTTP_CODE" != "200" ]; then
+            echo "::error::Failed to get accounts (HTTP $ACCOUNTS_HTTP_CODE)"
+            echo "Response: $ACCOUNTS_BODY"
+            exit 1
+          fi
+          
+          # Extract the first account ID from the result array
+          # Try using jq if available (more reliable)
+          if command -v jq >/dev/null 2>&1; then
+            ACCOUNT_ID=$(echo "$ACCOUNTS_BODY" | jq -r '.result[0].id // empty' 2>/dev/null)
+          fi
+          
+          # Fallback to sed/grep if jq is not available
+          if [ -z "$ACCOUNT_ID" ]; then
+            ACCOUNT_ID=$(echo "$ACCOUNTS_BODY" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p' | head -1)
+          fi
+          
+          # Another fallback method
+          if [ -z "$ACCOUNT_ID" ]; then
+            ACCOUNT_ID=$(echo "$ACCOUNTS_BODY" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+          fi
+          
+          if [ -z "$ACCOUNT_ID" ]; then
+            echo "::error::Could not extract account ID from accounts response"
+            echo "Response: $ACCOUNTS_BODY"
+            exit 1
+          fi
+          
+          echo "✓ Account ID: $ACCOUNT_ID"
+          echo ""
+          
+          # Now verify the token using the account-specific endpoint
+          echo "Step 2b: Verifying token with account-specific endpoint..."
+          echo "Making request to: https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/tokens/verify"
+          echo ""
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/tokens/verify" \
+            -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: application/json" 2>&1)
           
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
@@ -130,7 +173,7 @@ jobs:
           
           if [ "$HTTP_CODE" = "200" ]; then
             echo "✓ Token is valid and accessible!"
-            echo "Response: $BODY" | head -c 200
+            echo "Response: $BODY" | head -c 300
             echo ""
             echo "token_valid=true" >> $GITHUB_OUTPUT
           else
