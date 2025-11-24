@@ -1,6 +1,5 @@
 name: PR → Simple Staging (matrix)
 
-# Trigger on PRs (opened, reopened, synchronize)
 on:
   pull_request:
     types: [opened, reopened, synchronize]
@@ -54,36 +53,13 @@ jobs:
       - name: Install root dependencies
         run: npm ci
 
-      - name: Verify Cloudflare API token is set
-        run: |
-          if [ -z "${{ secrets.CF_API_TOKEN_STAGING }}" ]; then
-            echo "::error::CF_API_TOKEN_STAGING secret is not set"
-            echo ""
-            echo "To fix this:"
-            echo "1. Go to GitHub Settings > Environments > staging > Secrets"
-            echo "   OR GitHub Settings > Secrets and variables > Actions"
-            echo "2. Add a secret named: CF_API_TOKEN_STAGING"
-            echo "3. Value should be your Cloudflare API token"
-            echo ""
-            echo "Token requirements:"
-            echo "- Create at: https://dash.cloudflare.com/profile/api-tokens"
-            echo "- Permissions needed: Workers:Edit, Account:Read, D1:Edit, KV:Edit, R2:Edit"
-            echo "- Use 'Edit Cloudflare Workers' template or create custom token"
-            exit 1
-          fi
-          echo "✓ Token secret is configured"
-
-      - name: Log deployment info
-        run: |
-          echo "Deploying ${{ github.repository }}:${{ github.sha }} -> staging for ${{ matrix.prod_name }}"
-          echo "Working directory: ${{ matrix.dir }}"
-
-      - name: Deploy to staging using Wrangler Action
+      - name: Publish to staging (Wrangler Action)
+        # use the same auth method as your preview job: apiToken via secrets
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN_STAGING }}
-          workingDirectory: ${{ matrix.dir }}
-          command: deploy --env staging
+          # run deploy and set working directory for each matrix item
+          command: deploy --env staging --cwd ${{ matrix.dir }}
 
       - name: Wait for staging propagation
         run: sleep ${{ env.PUBLISH_SLEEP_SECONDS }}
