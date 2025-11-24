@@ -1,0 +1,321 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+    paths: ['backend/**', '.github/workflows/production-deploy.yml']
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: 20
+  WRANGLER_VERSION: 4.49.0
+
+permissions:
+  contents: write
+  deployments: write
+
+jobs:
+  deploy-production:
+    name: Deploy ${{ matrix.worker_name }} to Production
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - worker_dir: backend/Auth_Worker
+            worker_name: w2-auth-worker
+          - worker_dir: backend/Cart_Worker
+            worker_name: w2-cart-worker
+          - worker_dir: backend/Catalog_worker
+            worker_name: w2-catalog-worker
+          - worker_dir: backend/Checkout_Worker
+            worker_name: w2-checkout-worker
+          - worker_dir: backend/Fullfilment_Worker
+            worker_name: w2-fullfillment-worker
+          - worker_dir: backend/Invertory_Worker
+            worker_name: w2-inventory-worker
+          - worker_dir: backend/Payment_worker
+            worker_name: w2-payment-worker
+          - worker_dir: backend/Pricing_Worker
+            worker_name: w2-pricing-worker
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if worker changed
+        id: check_changes
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✓ Manual trigger - deploying ${{ matrix.worker_name }}"
+            exit 0
+          fi
+          
+          # Get the previous commit (before merge) and current commit
+          PREV_SHA="${{ github.event.before }}"
+          CURRENT_SHA="${{ github.sha }}"
+          
+          # If PREV_SHA is empty (first commit or manual), check against HEAD~1
+          if [ -z "$PREV_SHA" ] || [ "$PREV_SHA" = "0000000000000000000000000000000000000000" ]; then
+            PREV_SHA=$(git rev-parse HEAD~1 2>/dev/null || echo "")
+          fi
+          
+          if [ -z "$PREV_SHA" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✓ No previous commit found - deploying ${{ matrix.worker_name }}"
+            exit 0
+          fi
+          
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$PREV_SHA" "$CURRENT_SHA" 2>/dev/null || echo "")
+          
+          # Check if files in this worker directory changed
+          WORKER_CHANGED=$(echo "$CHANGED_FILES" | grep "^${{ matrix.worker_dir }}/" || echo "")
+          
+          if [ -n "$WORKER_CHANGED" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✓ ${{ matrix.worker_name }} has changes - will deploy"
+            echo "previous_sha=$PREV_SHA" >> $GITHUB_OUTPUT
+            echo "current_sha=$CURRENT_SHA" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "✗ ${{ matrix.worker_name }} - no changes - skipping"
+          fi
+
+      - name: Set up Node.js
+        if: steps.check_changes.outputs.changed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.check_changes.outputs.changed == 'true'
+        env:
+          HUSKY: 0
+        run: |
+          npm install -g wrangler@${{ env.WRANGLER_VERSION }}
+          npm ci --ignore-scripts || true
+          cd ${{ matrix.worker_dir }}
+          npm ci --ignore-scripts
+
+      - name: Run linting
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          cd ${{ matrix.worker_dir }}
+          # Try to run lint from worker directory, fallback to root if not available
+          if npm run lint 2>/dev/null; then
+            echo "Linting passed"
+          else
+            echo "No lint script in worker, running from root..."
+            cd ${{ github.workspace }}
+            npm run lint -- ${{ matrix.worker_dir }} || (echo "Linting failed" && exit 1)
+          fi
+
+      - name: Run tests
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          cd ${{ matrix.worker_dir }}
+          npm run test || (echo "Tests failed" && exit 1)
+
+      - name: Run test coverage
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          cd ${{ matrix.worker_dir }}
+          npm run test:coverage || (echo "Coverage check failed" && exit 1)
+
+      - name: Get previous deployment version
+        if: steps.check_changes.outputs.changed == 'true'
+        id: get_previous_version
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN_PRODUCTION }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          cd ${{ matrix.worker_dir }}
+          # Get the current production deployment version before deploying
+          # Try with jq first, fallback to grep/sed if jq not available
+          if command -v jq &> /dev/null; then
+            PREV_VERSION=$(wrangler deployments list --env prod --format json 2>/dev/null | jq -r '.[0].version_id // "unknown"' || echo "unknown")
+          else
+            PREV_VERSION=$(wrangler deployments list --env prod 2>/dev/null | head -n 2 | tail -n 1 | awk '{print $1}' || echo "unknown")
+          fi
+          echo "previous_version=$PREV_VERSION" >> $GITHUB_OUTPUT
+          echo "Previous deployment version: $PREV_VERSION"
+
+      - name: Deploy to production
+        if: steps.check_changes.outputs.changed == 'true'
+        id: deploy
+        env:
+          HUSKY: 0
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN_PRODUCTION }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          cd ${{ matrix.worker_dir }}
+          wrangler deploy --env prod
+          # Get the new deployment version
+          sleep 2
+          if command -v jq &> /dev/null; then
+            NEW_VERSION=$(wrangler deployments list --env prod --format json 2>/dev/null | jq -r '.[0].version_id // "unknown"' || echo "unknown")
+          else
+            NEW_VERSION=$(wrangler deployments list --env prod 2>/dev/null | head -n 2 | tail -n 1 | awk '{print $1}' || echo "unknown")
+          fi
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New deployment version: $NEW_VERSION"
+
+      - name: Wait for deployment propagation
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          echo "Waiting for deployment to propagate..."
+          sleep 10
+
+      - name: Health check
+        if: steps.check_changes.outputs.changed == 'true'
+        id: health_check
+        run: |
+          WORKER_URL="https://${{ matrix.worker_name }}.vg-firmly.workers.dev/_/health"
+          MAX_RETRIES=5
+          RETRY_COUNT=0
+          HEALTH_OK=false
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$WORKER_URL" || echo "000")
+            
+            if [ "$HTTP_CODE" = "200" ]; then
+              HEALTH_OK=true
+              echo "✓ Health check passed (HTTP $HTTP_CODE)"
+              break
+            else
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              echo "✗ Health check failed (HTTP $HTTP_CODE), retry $RETRY_COUNT/$MAX_RETRIES"
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                sleep 5
+              fi
+            fi
+          done
+          
+          if [ "$HEALTH_OK" = "true" ]; then
+            echo "health_status=ok" >> $GITHUB_OUTPUT
+          else
+            echo "health_status=failed" >> $GITHUB_OUTPUT
+            echo "Health check failed after $MAX_RETRIES attempts"
+            exit 1
+          fi
+
+      - name: Rollback deployment
+        id: rollback
+        if: steps.check_changes.outputs.changed == 'true' && steps.health_check.outcome == 'failure'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN_PRODUCTION }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          cd ${{ matrix.worker_dir }}
+          PREV_VERSION="${{ steps.get_previous_version.outputs.previous_version }}"
+          PREV_SHA="${{ steps.check_changes.outputs.previous_sha }}"
+          
+          if [ "$PREV_VERSION" != "unknown" ] && [ -n "$PREV_VERSION" ]; then
+            echo "Rolling back to previous version: $PREV_VERSION"
+            wrangler rollback --env prod --message "Auto-rollback: Health check failed after deployment" && {
+              echo "rollback_status=success" >> $GITHUB_OUTPUT
+              echo "Rollback successful using wrangler rollback"
+            } || {
+              echo "Wrangler rollback failed, trying alternative method..."
+              if [ -n "$PREV_SHA" ] && [ "$PREV_SHA" != "0000000000000000000000000000000000000000" ]; then
+                git checkout "$PREV_SHA"
+                wrangler deploy --env prod && {
+                  echo "rollback_status=success" >> $GITHUB_OUTPUT
+                  echo "Rollback successful by deploying previous commit"
+                } || {
+                  echo "rollback_status=failed" >> $GITHUB_OUTPUT
+                  echo "Rollback failed - could not deploy previous commit"
+                }
+                git checkout "${{ github.sha }}"
+              else
+                echo "rollback_status=failed" >> $GITHUB_OUTPUT
+                echo "Could not rollback - no valid previous commit"
+              fi
+            }
+          else
+            echo "Could not determine previous version for rollback"
+            echo "rollback_status=failed" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload coverage
+        if: steps.check_changes.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: coverage-${{ matrix.worker_name }}-prod
+          path: ${{ matrix.worker_dir }}/coverage
+          retention-days: 30
+
+      - name: Send Slack notification - Deployment success
+        if: steps.check_changes.outputs.changed == 'true' && steps.health_check.outcome == 'success'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          WORKER_URL="https://${{ matrix.worker_name }}.vg-firmly.workers.dev"
+          COMMIT_SHA="${{ github.sha }}"
+          COMMIT_MSG=$(git log -1 --pretty=format:"%s" "$COMMIT_SHA" || echo "N/A")
+          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/$COMMIT_SHA"
+          
+          curl -X POST -H 'Content-type: application/json' \
+            -d "{\"text\":\"✅ *Production Deployment Successful*\\n*Worker:* ${{ matrix.worker_name }}\\n*URL:* $WORKER_URL\\n*Commit:* <$COMMIT_URL|${COMMIT_SHA:0:7}>\\n*Message:* $COMMIT_MSG\"}" \
+            "$SLACK_WEBHOOK_URL" || true
+
+      - name: Send Slack notification - Deployment failed with rollback
+        if: steps.check_changes.outputs.changed == 'true' && steps.health_check.outcome == 'failure' && steps.rollback.outcome == 'success'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          WORKER_URL="https://${{ matrix.worker_name }}.vg-firmly.workers.dev"
+          COMMIT_SHA="${{ github.sha }}"
+          COMMIT_MSG=$(git log -1 --pretty=format:"%s" "$COMMIT_SHA" || echo "N/A")
+          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/$COMMIT_SHA"
+          PREV_SHA="${{ steps.check_changes.outputs.previous_sha }}"
+          
+          curl -X POST -H 'Content-type: application/json' \
+            -d "{\"text\":\"⚠️ *Production Deployment Failed - Rollback Executed*\\n*Worker:* ${{ matrix.worker_name }}\\n*URL:* $WORKER_URL\\n*Failed Commit:* <$COMMIT_URL|${COMMIT_SHA:0:7}>\\n*Commit Message:* $COMMIT_MSG\\n*Rolled back to:* ${PREV_SHA:0:7}\\n*Reason:* Health check failed after deployment\"}" \
+            "$SLACK_WEBHOOK_URL" || true
+
+      - name: Send Slack notification - Deployment failed without rollback
+        if: steps.check_changes.outputs.changed == 'true' && steps.health_check.outcome == 'failure' && (steps.rollback.outcome == 'failure' || steps.rollback.outcome == 'skipped')
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          WORKER_URL="https://${{ matrix.worker_name }}.vg-firmly.workers.dev"
+          COMMIT_SHA="${{ github.sha }}"
+          COMMIT_MSG=$(git log -1 --pretty=format:"%s" "$COMMIT_SHA" || echo "N/A")
+          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/$COMMIT_SHA"
+          
+          curl -X POST -H 'Content-type: application/json' \
+            -d "{\"text\":\"❌ *Production Deployment Failed - Rollback Failed*\\n*Worker:* ${{ matrix.worker_name }}\\n*URL:* $WORKER_URL\\n*Failed Commit:* <$COMMIT_URL|${COMMIT_SHA:0:7}>\\n*Commit Message:* $COMMIT_MSG\\n*Reason:* Health check failed and rollback could not be executed\\n*Action Required:* Manual intervention needed\"}" \
+            "$SLACK_WEBHOOK_URL" || true
+
+      - name: Send Slack notification - Tests/Lint failed
+        if: steps.check_changes.outputs.changed == 'true' && (failure() && steps.health_check.outcome != 'failure')
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          COMMIT_SHA="${{ github.sha }}"
+          COMMIT_MSG=$(git log -1 --pretty=format:"%s" "$COMMIT_SHA" || echo "N/A")
+          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/$COMMIT_SHA"
+          
+          curl -X POST -H 'Content-type: application/json' \
+            -d "{\"text\":\"❌ *Production Deployment Blocked*\\n*Worker:* ${{ matrix.worker_name }}\\n*Commit:* <$COMMIT_URL|${COMMIT_SHA:0:7}>\\n*Commit Message:* $COMMIT_MSG\\n*Reason:* Pre-deployment checks failed (lint/test/coverage)\\n*Action Required:* Fix issues before deployment\"}" \
+            "$SLACK_WEBHOOK_URL" || true
+
+      - name: Send Slack notification - Skipped
+        if: steps.check_changes.outputs.changed == 'false'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            -d "{\"text\":\"⏭️ *Production Deployment Skipped*\\n*Worker:* ${{ matrix.worker_name }}\\n*Reason:* No changes detected in this worker\"}" \
+            "$SLACK_WEBHOOK_URL" || true
+
