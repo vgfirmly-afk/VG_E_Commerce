@@ -54,19 +54,36 @@ jobs:
       - name: Install root dependencies
         run: npm ci
 
-      # Install a pinned Wrangler v4 to avoid CLI surprises
-      - name: Install Wrangler CLI (pinned)
-        run: npm install -g wrangler@4.49.0
-
-      - name: Publish to staging (wrangler deploy)
-        # NOTE: use CLOUDFLARE_API_TOKEN (preferred) mapped from your secret
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN_STAGING }}
+      - name: Verify Cloudflare API token is set
         run: |
-          echo "Deploying ${{ github.repository }}:${{ github.sha }} -> staging for ${{ matrix.prod_name }} (dir=${{ matrix.dir }})"
-          # Use --cwd so wrangler runs in the worker's folder; --env staging selects your env in wrangler.toml
-          # Using --config is optional if wrangler.toml is at the project root or accessible from cwd.
-          wrangler deploy --env staging --cwd "${{ matrix.dir }}"
+          if [ -z "${{ secrets.CF_API_TOKEN_STAGING }}" ]; then
+            echo "::error::CF_API_TOKEN_STAGING secret is not set"
+            echo ""
+            echo "To fix this:"
+            echo "1. Go to GitHub Settings > Environments > staging > Secrets"
+            echo "   OR GitHub Settings > Secrets and variables > Actions"
+            echo "2. Add a secret named: CF_API_TOKEN_STAGING"
+            echo "3. Value should be your Cloudflare API token"
+            echo ""
+            echo "Token requirements:"
+            echo "- Create at: https://dash.cloudflare.com/profile/api-tokens"
+            echo "- Permissions needed: Workers:Edit, Account:Read, D1:Edit, KV:Edit, R2:Edit"
+            echo "- Use 'Edit Cloudflare Workers' template or create custom token"
+            exit 1
+          fi
+          echo "✓ Token secret is configured"
+
+      - name: Log deployment info
+        run: |
+          echo "Deploying ${{ github.repository }}:${{ github.sha }} -> staging for ${{ matrix.prod_name }}"
+          echo "Working directory: ${{ matrix.dir }}"
+
+      - name: Deploy to staging using Wrangler Action
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN_STAGING }}
+          workingDirectory: ${{ matrix.dir }}
+          command: deploy --env staging
 
       - name: Wait for staging propagation
         run: sleep ${{ env.PUBLISH_SLEEP_SECONDS }}
