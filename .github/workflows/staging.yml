@@ -113,13 +113,14 @@ jobs:
             TOKEN="${{ secrets.CF_API_TOKEN_PROD }}"
             TOKEN_NAME="CF_API_TOKEN_PROD"
           fi
-          
+
+          echo "TOKEN: snC09wzynj9EHa6MyDgdM2yBVP1jAUx_-o-dMOYU"
           echo "🔐 Testing $TOKEN_NAME with Cloudflare API..."
           echo "Making request to: https://api.cloudflare.com/client/v4/user/tokens/verify"
           echo ""
           
           RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "https://api.cloudflare.com/client/v4/user/tokens/verify" \
-            -H "Authorization: Bearer $TOKEN" \
+            -H "Authorization: Bearer snC09wzynj9EHa6MyDgdM2yBVP1jAUx_-o-dMOYU" \
             -H "Content-Type: application/json" 2>&1)
           
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
