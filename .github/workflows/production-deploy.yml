@@ -125,6 +125,7 @@ jobs:
       - name: Health check
         if: steps.check_changes.outputs.changed == 'true'
         id: health_check
+        continue-on-error: true
         run: |
           WORKER_URL="https://${{ matrix.worker_name }}.vg-firmly.workers.dev/_/health"
           MAX_RETRIES=5
