@@ -15,7 +15,7 @@ permissions:
   contents: write
   deployments: write
 
-jobs:
+jobs: 
   deploy-production:
     name: Deploy ${{ matrix.worker_name }} to Production
     runs-on: ubuntu-latest
