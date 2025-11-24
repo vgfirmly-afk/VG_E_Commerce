@@ -117,7 +117,7 @@ jobs:
           PR_URL="${{ github.event.pull_request.html_url }}"
           [ -z "$PR_URL" ] && PR_URL="Manual trigger"
           curl -X POST -H 'Content-type: application/json' \
-            -d "{\"text\":\"✅ *Deployment Successful*\\n*Worker:* ${{ matrix.worker_name }}\\n*URL:* $WORKER_URL\\n*PR:* $PR_URL\"}" \
+            -d "{\"text\":\"✅ *Staging Successful*\\n*Worker:* ${{ matrix.worker_name }}\\n*URL:* $WORKER_URL\\n*PR:* $PR_URL\"}" \
             "$SLACK_WEBHOOK_URL" || true
 
       - name: Send Slack notification - Skipped  
@@ -126,5 +126,5 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
-            -d "{\"text\":\"⏭️ *Deployment Skipped*\\n*Worker:* ${{ matrix.worker_name }}\\n*Reason:* No changes detected in this worker\"}" \
+            -d "{\"text\":\"⏭️ *Staging Skipped*\\n*Worker:* ${{ matrix.worker_name }}\\n*Reason:* No changes detected in this worker\"}" \
             "$SLACK_WEBHOOK_URL" || true
