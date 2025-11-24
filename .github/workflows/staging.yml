@@ -96,14 +96,12 @@ jobs:
             exit 1
           fi
 
-      - name: Deploy to staging using Wrangler Action
+      - name: Deploy to staging using Wrangler
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN_STAGING }}
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CF_API_TOKEN_STAGING }}
-          workingDirectory: ${{ matrix.dir }}
-          command: deploy --env staging
+        run: |
+          cd "${{ matrix.dir }}"
+          wrangler deploy --env staging
 
       - name: Wait for staging propagation
         run: sleep ${{ env.PUBLISH_SLEEP_SECONDS }}
