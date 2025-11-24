@@ -63,7 +63,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN_STAGING }}
         run: |
-          echo "Deploying ${GITHUB_REPOSITORY}:${GITHUB_SHA} -> staging for ${matrix.prod_name} (dir=${{ matrix.dir }})"
+          echo "Deploying ${{ github.repository }}:${{ github.sha }} -> staging for ${{ matrix.prod_name }} (dir=${{ matrix.dir }})"
           # Use --cwd so wrangler runs in the worker's folder; --env staging selects your env in wrangler.toml
           # Using --config is optional if wrangler.toml is at the project root or accessible from cwd.
           wrangler deploy --env staging --cwd "${{ matrix.dir }}"
