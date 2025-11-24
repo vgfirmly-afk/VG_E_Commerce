@@ -1,0 +1,10 @@
+# API Configuration
+# 
+# IMPORTANT: This file should NOT contain actual secrets!
+# All secrets should be stored as GitHub Secrets:
+# - CF_API_TOKEN_STAGING
+# - CF_API_TOKEN_PRODUCTION
+# - CF_ACCOUNT_ID
+# - SLACK_WEBHOOK_URL
+#
+# To add secrets, go to: Repository Settings > Secrets and variables > Actions
