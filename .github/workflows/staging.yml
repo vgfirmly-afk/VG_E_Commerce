@@ -65,38 +65,7 @@ jobs:
           npm ci
           npm install -g wrangler@4.49.0
 
-      - name: Verify Cloudflare API token is set
-        run: |
-          if [ -z "${{ secrets.CF_API_TOKEN_STAGING }}" ]; then
-            echo "::error::CF_API_TOKEN_STAGING secret is not set"
-            echo ""
-            echo "To fix this:"
-            echo "1. Go to GitHub Settings > Environments > staging > Secrets"
-            echo "   OR GitHub Settings > Secrets and variables > Actions"
-            echo "2. Add a secret named: CF_API_TOKEN_STAGING"
-            echo "3. Value should be your Cloudflare API token"
-            echo ""
-            echo "Token requirements:"
-            echo "- Create at: https://dash.cloudflare.com/profile/api-tokens"
-            echo "- Permissions needed: Workers:Edit, Account:Read, D1:Edit, KV:Edit, R2:Edit"
-            echo "- Use 'Edit Cloudflare Workers' template or create custom token"
-            exit 1
-          fi
-          echo "✓ Token secret is configured"
-
-      - name: Log deployment info
-        run: |
-          echo "Deploying ${{ github.repository }}:${{ github.sha }} -> staging for ${{ matrix.prod_name }}"
-          echo "Working directory: ${{ matrix.dir }}"
-          # Verify token is accessible (without exposing it)
-          if [ -n "${{ secrets.CF_API_TOKEN_STAGING }}" ]; then
-            echo "✓ Token is accessible (length: $(echo -n '${{ secrets.CF_API_TOKEN_STAGING }}' | wc -c))"
-          else
-            echo "::error::Token is empty or not accessible"
-            exit 1
-          fi
-
-      - name: Step 1: Check API token availability
+      - name: Step 1 - Check API token availability
         id: check_token
         run: |
           echo "🔍 Checking for Cloudflare API tokens..."
@@ -134,7 +103,7 @@ jobs:
           echo "Selected token: $SELECTED_TOKEN"
           echo "token_name=$SELECTED_TOKEN" >> $GITHUB_OUTPUT
 
-      - name: Step 2: Verify token with Cloudflare API
+      - name: Step 2 - Verify token with Cloudflare API
         id: verify_token
         run: |
           if [ "${{ steps.check_token.outputs.use_staging }}" = "true" ]; then
@@ -178,7 +147,7 @@ jobs:
             exit 1
           fi
 
-      - name: Step 3: Deploy to staging using Wrangler (staging token)
+      - name: Step 3 - Deploy to staging using Wrangler (staging token)
         if: steps.verify_token.outputs.token_valid == 'true' && steps.check_token.outputs.use_staging == 'true'
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN_STAGING }}
@@ -190,7 +159,7 @@ jobs:
           echo ""
           wrangler deploy --env staging
 
-      - name: Step 3: Deploy to staging using Wrangler (prod token fallback)
+      - name: Step 3 - Deploy to staging using Wrangler (prod token fallback)
         if: steps.verify_token.outputs.token_valid == 'true' && steps.check_token.outputs.use_staging != 'true'
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN_PROD }}
