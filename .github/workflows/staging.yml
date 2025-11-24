@@ -1,4 +1,4 @@
-name: PR → Simple Staging (matrix)
+name: PR → Staging (matrix)
 
 # Trigger on PRs (opened, reopened, synchronize)
 on:
