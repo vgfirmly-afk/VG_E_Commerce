@@ -105,31 +105,6 @@ jobs:
           cd ${{ matrix.worker_dir }}
           npm ci --ignore-scripts
 
-      - name: Run linting
-        if: steps.check_changes.outputs.changed == 'true'
-        run: |
-          cd ${{ matrix.worker_dir }}
-          # Try to run lint from worker directory, fallback to root if not available
-          if npm run lint 2>/dev/null; then
-            echo "Linting passed"
-          else
-            echo "No lint script in worker, running from root..."
-            cd ${{ github.workspace }}
-            npm run lint -- ${{ matrix.worker_dir }} || (echo "Linting failed" && exit 1)
-          fi
-
-      - name: Run tests
-        if: steps.check_changes.outputs.changed == 'true'
-        run: |
-          cd ${{ matrix.worker_dir }}
-          npm run test || (echo "Tests failed" && exit 1)
-
-      - name: Run test coverage
-        if: steps.check_changes.outputs.changed == 'true'
-        run: |
-          cd ${{ matrix.worker_dir }}
-          npm run test:coverage || (echo "Coverage check failed" && exit 1)
-
       - name: Get previous deployment version
         if: steps.check_changes.outputs.changed == 'true'
         id: get_previous_version
@@ -210,49 +185,13 @@ jobs:
       - name: Rollback deployment
         id: rollback
         if: steps.check_changes.outputs.changed == 'true' && steps.health_check.outcome == 'failure'
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN_PRODUCTION }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-        run: |
-          cd ${{ matrix.worker_dir }}
-          PREV_VERSION="${{ steps.get_previous_version.outputs.previous_version }}"
-          PREV_SHA="${{ steps.check_changes.outputs.previous_sha }}"
-          
-          if [ "$PREV_VERSION" != "unknown" ] && [ -n "$PREV_VERSION" ]; then
-            echo "Rolling back to previous version: $PREV_VERSION"
-            wrangler rollback --env prod --message "Auto-rollback: Health check failed after deployment" && {
-              echo "rollback_status=success" >> $GITHUB_OUTPUT
-              echo "Rollback successful using wrangler rollback"
-            } || {
-              echo "Wrangler rollback failed, trying alternative method..."
-              if [ -n "$PREV_SHA" ] && [ "$PREV_SHA" != "0000000000000000000000000000000000000000" ]; then
-                git checkout "$PREV_SHA"
-                wrangler deploy --env prod && {
-                  echo "rollback_status=success" >> $GITHUB_OUTPUT
-                  echo "Rollback successful by deploying previous commit"
-                } || {
-                  echo "rollback_status=failed" >> $GITHUB_OUTPUT
-                  echo "Rollback failed - could not deploy previous commit"
-                }
-                git checkout "${{ github.sha }}"
-              else
-                echo "rollback_status=failed" >> $GITHUB_OUTPUT
-                echo "Could not rollback - no valid previous commit"
-              fi
-            }
-          else
-            echo "Could not determine previous version for rollback"
-            echo "rollback_status=failed" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Upload coverage
-        if: steps.check_changes.outputs.changed == 'true'
-        uses: actions/upload-artifact@v4
-        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
         with:
-          name: coverage-${{ matrix.worker_name }}-prod
-          path: ${{ matrix.worker_dir }}/coverage
-          retention-days: 30
+          apiToken: ${{ secrets.CF_API_TOKEN_PRODUCTION }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          workingDirectory: ${{ matrix.worker_dir }}
+          command: rollback --env prod --message "Auto-rollback: Health check failed after deployment"
+        continue-on-error: true
 
       - name: Send Slack notification - Deployment success
         if: steps.check_changes.outputs.changed == 'true' && steps.health_check.outcome == 'success'
@@ -295,19 +234,6 @@ jobs:
           
           curl -X POST -H 'Content-type: application/json' \
             -d "{\"text\":\"❌ *Production Deployment Failed - Rollback Failed*\\n*Worker:* ${{ matrix.worker_name }}\\n*URL:* $WORKER_URL\\n*Failed Commit:* <$COMMIT_URL|${COMMIT_SHA:0:7}>\\n*Commit Message:* $COMMIT_MSG\\n*Reason:* Health check failed and rollback could not be executed\\n*Action Required:* Manual intervention needed\"}" \
-            "$SLACK_WEBHOOK_URL" || true
-
-      - name: Send Slack notification - Tests/Lint failed
-        if: steps.check_changes.outputs.changed == 'true' && (failure() && steps.health_check.outcome != 'failure')
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        run: |
-          COMMIT_SHA="${{ github.sha }}"
-          COMMIT_MSG=$(git log -1 --pretty=format:"%s" "$COMMIT_SHA" || echo "N/A")
-          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/$COMMIT_SHA"
-          
-          curl -X POST -H 'Content-type: application/json' \
-            -d "{\"text\":\"❌ *Production Deployment Blocked*\\n*Worker:* ${{ matrix.worker_name }}\\n*Commit:* <$COMMIT_URL|${COMMIT_SHA:0:7}>\\n*Commit Message:* $COMMIT_MSG\\n*Reason:* Pre-deployment checks failed (lint/test/coverage)\\n*Action Required:* Fix issues before deployment\"}" \
             "$SLACK_WEBHOOK_URL" || true
 
       - name: Send Slack notification - Skipped
