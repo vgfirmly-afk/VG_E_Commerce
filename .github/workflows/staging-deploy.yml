@@ -45,7 +45,7 @@ jobs:
           - worker_dir: backend/Pricing_Worker
             worker_name: w2-pricing-worker
 
-    steps:
+    steps: 
       - name: Checkout code
         uses: actions/checkout@v4
         with:
