@@ -3,14 +3,12 @@ main = "src/index.js"
 compatibility_date = "2025-11-09"
 compatibility_flags = ["nodejs_compat"]
 
-
 # Do not store private keys in vars for production. Use `wrangler secret put`.
 [vars]
 HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
 HONEYCOMB_DATASET = "Week_Two_Main_Project"
 PRICING_WORKER_URL = "https://w2-pricing-worker.vg-firmly.workers.dev"
-INVENTORY_WORKER_URL = "https://w2-inventory-worker.vg-firmly.workers.dev" 
-
+INVENTORY_WORKER_URL = "https://w2-inventory-worker.vg-firmly.workers.dev"
 
 #PRICING_SERVICE_TOKEN = `VPzxLDdSpE0EfyX/h9HnRxTQ2rIegJC/ilXw74dY1YE=`
 
@@ -52,6 +50,105 @@ id = "2123ddcaae9548da98e4f7ae02334c61"
 #[[r2_buckets]]
 #binding = "CA_IMG_BUCKET"
 #bucket_name = "catalog-img-bucket"
+
+# --------------------------
+# staging environment
+# --------------------------
+[env.staging]
+name = "stageenv-w2-checkout-worker"
+
+[env.staging.vars]
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+PRICING_WORKER_URL = "https://stageenv-w2-pricing-worker.vg-firmly.workers.dev"
+INVENTORY_WORKER_URL = "https://stageenv-w2-inventory-worker.vg-firmly.workers.dev"
+
+[[env.staging.d1_databases]]
+binding = "CHECKOUT_DB"
+database_name = "checkout_db"
+database_id = "59778a80-01e5-4c6b-8de0-38264e51efdd"
+
+[[env.staging.kv_namespaces]]
+binding = "CHECKOUT_KV"
+id = "2123ddcaae9548da98e4f7ae02334c61"
+
+[[env.staging.services]]
+binding = "PRICING_WORKER"
+service = "stageenv-w2-pricing-worker"
+
+[[env.staging.services]]
+binding = "INVENTORY_WORKER"
+service = "stageenv-w2-inventory-worker"
+
+[[env.staging.services]]
+binding = "CART_WORKER"
+service = "stageenv-w2-cart-worker"
+
+# --------------------------
+# dev environment
+# --------------------------
+[env.dev]
+name = "devenv-w2-checkout-worker"
+
+[env.dev.vars]
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+PRICING_WORKER_URL = "http://localhost:49861"
+INVENTORY_WORKER_URL = "http://localhost:8788"
+
+[[env.dev.d1_databases]]
+binding = "CHECKOUT_DB"
+database_name = "checkout_db"
+database_id = "59778a80-01e5-4c6b-8de0-38264e51efdd"
+
+[[env.dev.kv_namespaces]]
+binding = "CHECKOUT_KV"
+id = "2123ddcaae9548da98e4f7ae02334c61"
+
+[[env.dev.services]]
+binding = "PRICING_WORKER"
+service = "devenv-w2-pricing-worker"
+
+[[env.dev.services]]
+binding = "INVENTORY_WORKER"
+service = "devenv-w2-inventory-worker"
+
+[[env.dev.services]]
+binding = "CART_WORKER"
+service = "devenv-w2-cart-worker"
+
+# --------------------------
+# prod environment
+# --------------------------
+[env.prod]
+name = "w2-checkout-worker"
+
+[env.prod.vars]
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+PRICING_WORKER_URL = "https://w2-pricing-worker.vg-firmly.workers.dev"
+INVENTORY_WORKER_URL = "https://w2-inventory-worker.vg-firmly.workers.dev"
+
+[[env.prod.d1_databases]]
+binding = "CHECKOUT_DB"
+database_name = "checkout_db"
+database_id = "59778a80-01e5-4c6b-8de0-38264e51efdd"
+
+[[env.prod.kv_namespaces]]
+binding = "CHECKOUT_KV"
+id = "2123ddcaae9548da98e4f7ae02334c61"
+
+[[env.prod.services]]
+binding = "PRICING_WORKER"
+service = "w2-pricing-worker"
+
+[[env.prod.services]]
+binding = "INVENTORY_WORKER"
+service = "w2-inventory-worker"
+
+[[env.prod.services]]
+binding = "CART_WORKER"
+service = "w2-cart-worker"
 
 
 

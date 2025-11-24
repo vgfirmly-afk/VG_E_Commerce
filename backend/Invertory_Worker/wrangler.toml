@@ -3,15 +3,13 @@ main = "src/index.js"
 compatibility_date = "2025-11-15"
 compatibility_flags = ["nodejs_compat"]
 
-
 # Do not store private keys in vars for production. Use `wrangler secret put`.
 [vars]
 HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
 HONEYCOMB_DATASET = "Week_Two_Main_Project"
 INVENTORY_WORKER_URL = "https://w2-inventory-worker.vg-firmly.workers.dev"
 # Catalog Worker URL for whitelisting inter-worker requests
-CATALOG_WORKER_URL = "https://w2-catalog-worker.vg-firmly.workers.dev" 
-
+CATALOG_WORKER_URL = "https://w2-catalog-worker.vg-firmly.workers.dev"
 
 # Service token for inter-worker authentication (set as secret: wrangler secret put INVENTORY_SERVICE_TOKEN)
 # Must match the token used by Catalog Worker
@@ -38,6 +36,69 @@ id = "986f8fd52d704246abcf38a8c98ee76e"
 #[[r2_buckets]]
 #binding = "CA_IMG_BUCKET"
 #bucket_name = "catalog-img-bucket"
+
+# --------------------------
+# staging environment
+# --------------------------
+[env.staging]
+name = "stageenv-w2-inventory-worker"
+
+[env.staging.vars]
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+INVENTORY_WORKER_URL = "https://stageenv-w2-inventory-worker.vg-firmly.workers.dev"
+CATALOG_WORKER_URL = "https://stageenv-w2-catalog-worker.vg-firmly.workers.dev"
+
+[[env.staging.d1_databases]]
+binding = "INVENTORY_DB"
+database_name = "inventory_db"
+database_id = "99260f3e-7a26-427e-982f-0570417bb1bd"
+
+[[env.staging.kv_namespaces]]
+binding = "INVENTORY_KV"
+id = "986f8fd52d704246abcf38a8c98ee76e"
+
+# --------------------------
+# dev environment
+# --------------------------
+[env.dev]
+name = "devenv-w2-inventory-worker"
+
+[env.dev.vars]
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+INVENTORY_WORKER_URL = "http://localhost:8788"
+CATALOG_WORKER_URL = "http://localhost:8787"
+
+[[env.dev.d1_databases]]
+binding = "INVENTORY_DB"
+database_name = "inventory_db"
+database_id = "99260f3e-7a26-427e-982f-0570417bb1bd"
+
+[[env.dev.kv_namespaces]]
+binding = "INVENTORY_KV"
+id = "986f8fd52d704246abcf38a8c98ee76e"
+
+# --------------------------
+# prod environment
+# --------------------------
+[env.prod]
+name = "w2-inventory-worker"
+
+[env.prod.vars]
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+INVENTORY_WORKER_URL = "https://w2-inventory-worker.vg-firmly.workers.dev"
+CATALOG_WORKER_URL = "https://w2-catalog-worker.vg-firmly.workers.dev"
+
+[[env.prod.d1_databases]]
+binding = "INVENTORY_DB"
+database_name = "inventory_db"
+database_id = "99260f3e-7a26-427e-982f-0570417bb1bd"
+
+[[env.prod.kv_namespaces]]
+binding = "INVENTORY_KV"
+id = "986f8fd52d704246abcf38a8c98ee76e"
 
 
 

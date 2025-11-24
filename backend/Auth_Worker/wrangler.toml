@@ -26,7 +26,61 @@ id = "638e27416b9a44f3b94ba4046c0fa57a"
 # binding = "LOGS_BUCKET"
 # bucket_name = "ecom-auth-logs"
 
+# --------------------------
+# staging environment
+# --------------------------
+[env.staging]
+name = "stageenv-w2-auth-worker"     # <--- dashed name (valid)
+
+[env.staging.vars]
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+
+[[env.staging.d1_databases]]
+binding = "AUTH_DB"
+database_name = "auth_db"
+database_id = "20277c6e-3e08-46be-a7bb-4487517629a3"
+
+[[env.staging.kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "638e27416b9a44f3b94ba4046c0fa57a"
+
+# --------------------------
+# dev environment
+# --------------------------
+[env.dev]
+name = "devenv-w2-auth-worker"
+
+[env.dev.vars]
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+
+[[env.dev.d1_databases]]
+binding = "AUTH_DB"
+database_name = "auth_db"
+database_id = "20277c6e-3e08-46be-a7bb-4487517629a3"
+
+[[env.dev.kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "638e27416b9a44f3b94ba4046c0fa57a"
 
 
 
+# --------------------------
+# prod environment
+# --------------------------
+[env.prod]
+name = "w2-auth-worker"
 
+[env.prod.vars]
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+
+[[env.prod.d1_databases]]
+binding = "AUTH_DB"
+database_name = "auth_db"
+database_id = "20277c6e-3e08-46be-a7bb-4487517629a3"
+
+[[env.prod.kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "638e27416b9a44f3b94ba4046c0fa57a"

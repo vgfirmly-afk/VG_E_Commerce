@@ -3,14 +3,12 @@ main = "src/index.js"
 compatibility_date = "2025-11-15"
 compatibility_flags = ["nodejs_compat"]
 
-
 # Do not store private keys in vars for production. Use `wrangler secret put`.
 [vars]
 HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
 HONEYCOMB_DATASET = "Week_Two_Main_Project"
 PRICING_WORKER_URL = "https://w2-pricing-worker.vg-firmly.workers.dev"
-INVENTORY_WORKER_URL = "https://w2-inventory-worker.vg-firmly.workers.dev" 
-
+INVENTORY_WORKER_URL = "https://w2-inventory-worker.vg-firmly.workers.dev"
 
 #PRICING_SERVICE_TOKEN = `VPzxLDdSpE0EfyX/h9HnRxTQ2rIegJC/ilXw74dY1YE=`
 
@@ -48,6 +46,93 @@ id = "b52b3398ed5e40f7bd92bd665e817752"
 #[[r2_buckets]]
 #binding = "CA_IMG_BUCKET"
 #bucket_name = "catalog-img-bucket"
+
+# --------------------------
+# staging environment
+# --------------------------
+[env.staging]
+name = "stageenv-w2-cart-worker"
+
+[env.staging.vars]
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+PRICING_WORKER_URL = "https://stageenv-w2-pricing-worker.vg-firmly.workers.dev"
+INVENTORY_WORKER_URL = "https://stageenv-w2-inventory-worker.vg-firmly.workers.dev"
+
+[[env.staging.d1_databases]]
+binding = "CART_DB"
+database_name = "cart_db"
+database_id = "408fcdc8-3cf3-41dd-a768-a5ddcb5be113"
+
+[[env.staging.kv_namespaces]]
+binding = "CART_KV"
+id = "b52b3398ed5e40f7bd92bd665e817752"
+
+[[env.staging.services]]
+binding = "PRICING_WORKER"
+service = "stageenv-w2-pricing-worker"
+
+[[env.staging.services]]
+binding = "INVENTORY_WORKER"
+service = "stageenv-w2-inventory-worker"
+
+# --------------------------
+# dev environment
+# --------------------------
+[env.dev]
+name = "devenv-w2-cart-worker"
+
+[env.dev.vars]
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+PRICING_WORKER_URL = "http://localhost:49861"
+INVENTORY_WORKER_URL = "http://localhost:8788"
+
+[[env.dev.d1_databases]]
+binding = "CART_DB"
+database_name = "cart_db"
+database_id = "408fcdc8-3cf3-41dd-a768-a5ddcb5be113"
+
+[[env.dev.kv_namespaces]]
+binding = "CART_KV"
+id = "b52b3398ed5e40f7bd92bd665e817752"
+
+[[env.dev.services]]
+binding = "PRICING_WORKER"
+service = "devenv-w2-pricing-worker"
+
+[[env.dev.services]]
+binding = "INVENTORY_WORKER"
+service = "devenv-w2-inventory-worker"
+
+# --------------------------
+# prod environment
+# --------------------------
+[env.prod]
+name = "w2-cart-worker"
+
+[env.prod.vars]
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+PRICING_WORKER_URL = "https://w2-pricing-worker.vg-firmly.workers.dev"
+INVENTORY_WORKER_URL = "https://w2-inventory-worker.vg-firmly.workers.dev"
+
+[[env.prod.d1_databases]]
+binding = "CART_DB"
+database_name = "cart_db"
+database_id = "408fcdc8-3cf3-41dd-a768-a5ddcb5be113"
+
+[[env.prod.kv_namespaces]]
+binding = "CART_KV"
+id = "b52b3398ed5e40f7bd92bd665e817752"
+
+[[env.prod.services]]
+binding = "PRICING_WORKER"
+service = "w2-pricing-worker"
+
+[[env.prod.services]]
+binding = "INVENTORY_WORKER"
+service = "w2-inventory-worker"
 
 
 
