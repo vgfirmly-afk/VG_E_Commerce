@@ -85,15 +85,15 @@ jobs:
             fi
           fi
           
-          # Check if any backend files changed (exclude .github and workflow files)
-          BACKEND_CHANGED=$(echo "$CHANGED_FILES" | grep -E "^backend/" | grep -v "^\.github/" || echo "")
+          # Check if any backend files changed (exclude .github, coverage, and node_modules)
+          BACKEND_CHANGED=$(echo "$CHANGED_FILES" | grep -E "^backend/" | grep -v "^\.github/" | grep -v "/coverage/" | grep -v "/node_modules/" || echo "")
           
           # Only check worker if backend files actually changed
           if [ -n "$BACKEND_CHANGED" ]; then
-            # Check if files in this specific worker directory changed
+            # Check if files in this specific worker directory changed (exclude coverage and node_modules)
             # Escape the directory path and use exact prefix match
             WORKER_PATTERN="^$(echo "$WORKER_DIR" | sed 's/[.[\*^$()+?{|]/\\&/g')/"
-            WORKER_CHANGED=$(echo "$CHANGED_FILES" | grep -E "$WORKER_PATTERN" || echo "")
+            WORKER_CHANGED=$(echo "$CHANGED_FILES" | grep -E "$WORKER_PATTERN" | grep -v "/coverage/" | grep -v "/node_modules/" || echo "")
             
             if [ -n "$WORKER_CHANGED" ]; then
               CHANGED=true
