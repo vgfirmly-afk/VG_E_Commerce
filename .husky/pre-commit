@@ -1,42 +1,42 @@
-# echo "Running pre-commit checks..."
-# npm run format
+echo "Running pre-commit checks..."
+npm run format
 
-# # # # Lint the codebase to ensure code quality
-# echo "Linting the codebase..."
-# npm run lint
+# # # Lint the codebase to ensure code quality
+echo "Linting the codebase..."
+npm run lint
 
-# echo "Checking for unused files/dependencies..."
-# npm run knip
-
-
-# echo "Running tests..."
-# # npm test
-# npm --workspace backend/Auth_Worker run test
-# npm --workspace backend/Catalog_worker run test
-# npm --workspace backend/Cart_Worker run test
-# npm --workspace backend/Checkout_Worker run test
-# npm --workspace backend/Fullfilment_Worker run test
-# npm --workspace backend/Invertory_Worker run test
-# npm --workspace backend/Pricing_Worker run test
-# npm --workspace backend/Payment_worker run test
-
-# echo "Unit Tests Completed"
-
-# #!/bin/sh
+echo "Checking for unused files/dependencies..."
+npm run knip
 
 
-# echo "Running coverage check..."
+echo "Running tests..."
+# npm test
+npm --workspace backend/Auth_Worker run test
+npm --workspace backend/Catalog_worker run test
+npm --workspace backend/Cart_Worker run test
+npm --workspace backend/Checkout_Worker run test
+npm --workspace backend/Fullfilment_Worker run test
+npm --workspace backend/Invertory_Worker run test
+npm --workspace backend/Pricing_Worker run test
+npm --workspace backend/Payment_worker run test
 
-# npm --workspace backend/Auth_Worker run coverage
-# npm --workspace backend/Catalog_worker run coverage
-# npm --workspace backend/Cart_Worker run coverage
-# npm --workspace backend/Checkout_Worker run coverage
-# npm --workspace backend/Fullfilment_Worker run coverage
-# npm --workspace backend/Invertory_Worker run coverage
-# npm --workspace backend/Pricing_Worker run coverage
-# npm --workspace backend/Payment_worker run coverage
+echo "Unit Tests Completed"
+
+#!/bin/sh
 
 
-# echo "Coverage Checks Completed"
+echo "Running coverage check..."
 
-# echo "Pre-commit checks completed successfully"
+npm --workspace backend/Auth_Worker run test:coverage
+npm --workspace backend/Catalog_worker run test:coverage
+npm --workspace backend/Cart_Worker run test:coverage
+npm --workspace backend/Checkout_Worker run test:coverage
+npm --workspace backend/Fullfilment_Worker run test:coverage
+npm --workspace backend/Invertory_Worker run test:coverage
+npm --workspace backend/Pricing_Worker run test:coverage
+npm --workspace backend/Payment_worker run test:coverage
+
+
+echo "Coverage Checks Completed"
+
+echo "Pre-commit checks completed successfully"

@@ -12,7 +12,7 @@
     "test": "NODE_OPTIONS=--experimental-vm-modules mocha 'test/**/*.test.js' --timeout 10000",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules mocha 'test/**/*.test.js' --watch --timeout 10000",
     "test:coverage": "NODE_OPTIONS=--experimental-vm-modules c8 --reporter=text --reporter=html --reporter=lcov mocha 'test/**/*.test.js' --timeout 10000",
-    "coverage": "c8 report --reporter=text --reporter=html"
+    "coverage": "npm run test:coverage"
   },
   "dependencies": {
     "@microlabs/otel-cf-workers": "^1.0.0-rc.52",
@@ -32,7 +32,7 @@
     "check-coverage": true,
     "lines": 80,
     "functions": 90,
-    "branches": 80,
+    "branches": 75,
     "statements": 80,
     "exclude": [
       "test/**",

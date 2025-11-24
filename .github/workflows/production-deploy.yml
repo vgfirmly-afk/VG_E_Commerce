@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-    paths: ['backend/**', '.github/workflows/production-deploy.yml']
+    paths: ["backend/**", ".github/workflows/production-deploy.yml"]
   workflow_dispatch:
 
 env:
@@ -15,7 +15,7 @@ permissions:
   contents: write
   deployments: write
 
-jobs: 
+jobs:
   deploy-production:
     name: Deploy ${{ matrix.worker_name }} to Production
     runs-on: ubuntu-latest
@@ -57,27 +57,27 @@ jobs:
             echo "✓ Manual trigger - deploying ${{ matrix.worker_name }}"
             exit 0
           fi
-          
+
           # Get the previous commit (before merge) and current commit
           PREV_SHA="${{ github.event.before }}"
           CURRENT_SHA="${{ github.sha }}"
-          
+
           # If PREV_SHA is empty (first commit or manual), check against HEAD~1
           if [ -z "$PREV_SHA" ] || [ "$PREV_SHA" = "0000000000000000000000000000000000000000" ]; then
             PREV_SHA=$(git rev-parse HEAD~1 2>/dev/null || echo "")
           fi
-          
+
           if [ -z "$PREV_SHA" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
             echo "✓ No previous commit found - deploying ${{ matrix.worker_name }}"
             exit 0
           fi
-          
+
           CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$PREV_SHA" "$CURRENT_SHA" 2>/dev/null || echo "")
-          
+
           # Check if files in this worker directory changed
           WORKER_CHANGED=$(echo "$CHANGED_FILES" | grep "^${{ matrix.worker_dir }}/" || echo "")
-          
+
           if [ -n "$WORKER_CHANGED" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
             echo "✓ ${{ matrix.worker_name }} has changes - will deploy"
@@ -93,7 +93,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
 
       - name: Install dependencies
         if: steps.check_changes.outputs.changed == 'true'
@@ -131,7 +131,7 @@ jobs:
           MAX_RETRIES=5
           RETRY_COUNT=0
           HEALTH_OK=false
-          
+
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$WORKER_URL" || echo "000")
             
@@ -147,7 +147,7 @@ jobs:
               fi
             fi
           done
-          
+
           if [ "$HEALTH_OK" = "true" ]; then
             echo "health_status=ok" >> $GITHUB_OUTPUT
           else
@@ -155,7 +155,6 @@ jobs:
             echo "Health check failed after $MAX_RETRIES attempts"
             exit 1
           fi
-
 
       - name: Rollback deployment
         id: rollback
@@ -177,7 +176,7 @@ jobs:
           COMMIT_SHA="${{ github.sha }}"
           COMMIT_MSG=$(git log -1 --pretty=format:"%s" "$COMMIT_SHA" || echo "N/A")
           COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/$COMMIT_SHA"
-          
+
           curl -X POST -H 'Content-type: application/json' \
             -d "{\"text\":\"✅ *Production Deployment Successful*\\n*Worker:* ${{ matrix.worker_name }}\\n*URL:* $WORKER_URL\\n*Commit:* <$COMMIT_URL|${COMMIT_SHA:0:7}>\\n*Message:* $COMMIT_MSG\"}" \
             "$SLACK_WEBHOOK_URL" || true
@@ -192,7 +191,7 @@ jobs:
           COMMIT_MSG=$(git log -1 --pretty=format:"%s" "$COMMIT_SHA" || echo "N/A")
           COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/$COMMIT_SHA"
           PREV_SHA="${{ steps.check_changes.outputs.previous_sha }}"
-          
+
           curl -X POST -H 'Content-type: application/json' \
             -d "{\"text\":\"⚠️ *Production Deployment Failed - Rollback Executed*\\n*Worker:* ${{ matrix.worker_name }}\\n*URL:* $WORKER_URL\\n*Failed Commit:* <$COMMIT_URL|${COMMIT_SHA:0:7}>\\n*Commit Message:* $COMMIT_MSG\\n*Rolled back to:* ${PREV_SHA:0:7}\\n*Reason:* Health check failed after deployment\"}" \
             "$SLACK_WEBHOOK_URL" || true
@@ -206,7 +205,7 @@ jobs:
           COMMIT_SHA="${{ github.sha }}"
           COMMIT_MSG=$(git log -1 --pretty=format:"%s" "$COMMIT_SHA" || echo "N/A")
           COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/$COMMIT_SHA"
-          
+
           curl -X POST -H 'Content-type: application/json' \
             -d "{\"text\":\"❌ *Production Deployment Failed - Rollback Failed*\\n*Worker:* ${{ matrix.worker_name }}\\n*URL:* $WORKER_URL\\n*Failed Commit:* <$COMMIT_URL|${COMMIT_SHA:0:7}>\\n*Commit Message:* $COMMIT_MSG\\n*Reason:* Health check failed and rollback could not be executed\\n*Action Required:* Manual intervention needed\"}" \
             "$SLACK_WEBHOOK_URL" || true
@@ -219,4 +218,3 @@ jobs:
           curl -X POST -H 'Content-type: application/json' \
             -d "{\"text\":\"⏭️ *Production Deployment Skipped*\\n*Worker:* ${{ matrix.worker_name }}\\n*Reason:* No changes detected in this worker\"}" \
             "$SLACK_WEBHOOK_URL" || true
-
