@@ -186,13 +186,13 @@ jobs:
       - name: Rollback deployment
         id: rollback
         if: steps.check_changes.outputs.changed == 'true' && steps.health_check.outcome == 'failure'
+        continue-on-error: true
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN_PRODUCTION }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
           workingDirectory: ${{ matrix.worker_dir }}
-          command: rollback --env prod --message 'Auto-rollback: Health check failed after deployment'
-        continue-on-error: true
+          command: rollback --env prod --message Auto-rollback-Health-check-failed
 
       - name: Send Slack notification - Deployment success
         if: steps.check_changes.outputs.changed == 'true' && steps.health_check.outcome == 'success'
