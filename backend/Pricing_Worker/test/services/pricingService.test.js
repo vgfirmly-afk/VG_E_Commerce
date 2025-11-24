@@ -44,7 +44,9 @@ describe("Pricing Service", () => {
     });
 
     it("should handle database error", async () => {
-      env.PRICING_DB.prepare().bind().first.rejects(new Error("Database error"));
+      env.PRICING_DB.prepare()
+        .bind()
+        .first.rejects(new Error("Database error"));
 
       try {
         await pricingService.getPrice("test-sku-id", env);
@@ -990,7 +992,9 @@ describe("Pricing Service", () => {
       ];
 
       env.PRICING_DB.prepare().bind().all.resolves({ results: mockPrices });
-      env.PRICING_DB.prepare().bind().first.rejects(new Error("Database error"));
+      env.PRICING_DB.prepare()
+        .bind()
+        .first.rejects(new Error("Database error"));
 
       const result = await pricingService.calculateGrandTotal(
         items,
@@ -1614,10 +1618,13 @@ describe("Pricing Service", () => {
 
       env.PRICING_DB.prepare().bind().first.onCall(0).resolves(null);
       env.PRICING_DB.prepare().bind().run.resolves({ success: true });
-      env.PRICING_DB.prepare().bind().first.onCall(1).resolves({
-        promotion_id: "promo1",
-        ...promoData,
-      });
+      env.PRICING_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          promotion_id: "promo1",
+          ...promoData,
+        });
 
       const result = await pricingService.createPromotionCodeService(
         promoData,
@@ -1641,7 +1648,11 @@ describe("Pricing Service", () => {
       env.PRICING_DB.prepare().bind().first.resolves({ code: "SAVE10" });
 
       try {
-        await pricingService.createPromotionCodeService(promoData, "user123", env);
+        await pricingService.createPromotionCodeService(
+          promoData,
+          "user123",
+          env,
+        );
         expect.fail("Should have thrown an error");
       } catch (err) {
         expect(err.message).to.include("already exists");
@@ -1671,7 +1682,11 @@ describe("Pricing Service", () => {
       env.PRICING_DB.prepare().bind().first.resolves(null);
 
       try {
-        await pricingService.deletePromotionCodeService("promo1", "user123", env);
+        await pricingService.deletePromotionCodeService(
+          "promo1",
+          "user123",
+          env,
+        );
         expect.fail("Should have thrown an error");
       } catch (err) {
         expect(err.message).to.include("not found");
@@ -1694,7 +1709,10 @@ describe("Pricing Service", () => {
         total: 1,
       };
 
-      env.PRICING_DB.prepare().bind().all.onCall(0).resolves({ results: mockResult.promotions });
+      env.PRICING_DB.prepare()
+        .bind()
+        .all.onCall(0)
+        .resolves({ results: mockResult.promotions });
 
       const result = await pricingService.listPromotionCodesService(
         { page: 1, limit: 20 },
@@ -1809,7 +1827,11 @@ describe("Pricing Service", () => {
       env.PRICING_DB.prepare().bind().first.resolves({ code: "SAVE10" });
 
       try {
-        await pricingService.createPromotionCodeService(promoData, "user123", env);
+        await pricingService.createPromotionCodeService(
+          promoData,
+          "user123",
+          env,
+        );
         expect.fail("Should have thrown an error");
       } catch (err) {
         expect(err.message).to.include("already exists");
@@ -1972,7 +1994,11 @@ describe("Pricing Service", () => {
       env.PRICING_DB.prepare().bind().first.resolves(null);
 
       try {
-        await pricingService.deletePromotionCodeService("promo1", "user123", env);
+        await pricingService.deletePromotionCodeService(
+          "promo1",
+          "user123",
+          env,
+        );
         expect.fail("Should have thrown an error");
       } catch (err) {
         expect(err.message).to.include("not found");
@@ -1980,4 +2006,3 @@ describe("Pricing Service", () => {
     });
   });
 });
-

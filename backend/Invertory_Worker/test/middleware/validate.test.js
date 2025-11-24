@@ -15,9 +15,14 @@ describe("Validate Middleware", () => {
       });
 
       const body = { quantity: 100, reason: "Restock" };
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1/adjust", body, {
-        "Content-Type": "application/json",
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1/adjust",
+        body,
+        {
+          "Content-Type": "application/json",
+        },
+      );
 
       const middleware = validate.validateBody(schema);
       const result = await middleware(request, {}, {});
@@ -31,7 +36,11 @@ describe("Validate Middleware", () => {
         quantity: Joi.number().required(),
       });
 
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1/adjust", null);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1/adjust",
+        null,
+      );
       request.json = async () => {
         throw new Error("Unexpected end of JSON input");
       };
@@ -51,9 +60,14 @@ describe("Validate Middleware", () => {
       });
 
       const body = { quantity: "not-a-number" };
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1/adjust", body, {
-        "Content-Type": "application/json",
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1/adjust",
+        body,
+        {
+          "Content-Type": "application/json",
+        },
+      );
 
       const middleware = validate.validateBody(schema);
       const result = await middleware(request, {}, {});
@@ -75,9 +89,14 @@ describe("Validate Middleware", () => {
         quantity: Joi.number().required(),
       });
 
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1/adjust", null, {
-        "Content-Type": "text/plain",
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1/adjust",
+        null,
+        {
+          "Content-Type": "text/plain",
+        },
+      );
 
       const middleware = validate.validateBody(schema);
       const result = await middleware(request, {}, {});
@@ -95,9 +114,14 @@ describe("Validate Middleware", () => {
       }).unknown(true); // Allow unknown fields but strip them
 
       const body = { quantity: 100, unknownField: "should be removed" };
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1/adjust", body, {
-        "Content-Type": "application/json",
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1/adjust",
+        body,
+        {
+          "Content-Type": "application/json",
+        },
+      );
 
       const middleware = validate.validateBody(schema);
       const result = await middleware(request, {}, {});
@@ -112,7 +136,10 @@ describe("Validate Middleware", () => {
         quantity: Joi.number().required(),
       });
 
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/sku-1");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/sku-1",
+      );
       // For GET requests, json() should not be called, but if it is, it should return {}
       request.json = async () => ({});
 
@@ -133,7 +160,10 @@ describe("Validate Middleware", () => {
         limit: Joi.number().integer().min(1).max(100).default(20),
       });
 
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/sku-1/history?page=2&limit=10");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/sku-1/history?page=2&limit=10",
+      );
 
       const middleware = validate.validateQuery(schema);
       const result = await middleware(request, {}, {});
@@ -148,7 +178,10 @@ describe("Validate Middleware", () => {
         page: Joi.number().integer().min(1).required(),
       });
 
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/sku-1/history?page=invalid");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/sku-1/history?page=invalid",
+      );
 
       const middleware = validate.validateQuery(schema);
       const result = await middleware(request, {}, {});
@@ -165,7 +198,10 @@ describe("Validate Middleware", () => {
         limit: Joi.number().integer().min(1).default(20),
       });
 
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/sku-1/history");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/sku-1/history",
+      );
 
       const middleware = validate.validateQuery(schema);
       const result = await middleware(request, {}, {});
@@ -176,4 +212,3 @@ describe("Validate Middleware", () => {
     });
   });
 });
-

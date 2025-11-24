@@ -27,9 +27,14 @@ describe("Admin Auth Middleware", () => {
       };
 
       const token = await createTestJWT(payload);
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/sku-1", null, {
-        Authorization: `Bearer ${token}`,
-      });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/sku-1",
+        null,
+        {
+          Authorization: `Bearer ${token}`,
+        },
+      );
 
       const result = await adminAuth.requireAdmin(request, env);
 
@@ -39,7 +44,10 @@ describe("Admin Auth Middleware", () => {
     });
 
     it("should reject request without Authorization header", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/sku-1");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/sku-1",
+      );
 
       const result = await adminAuth.requireAdmin(request, env);
 
@@ -49,9 +57,14 @@ describe("Admin Auth Middleware", () => {
     });
 
     it("should reject request with invalid Authorization format", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/sku-1", null, {
-        Authorization: "InvalidFormat token",
-      });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/sku-1",
+        null,
+        {
+          Authorization: "InvalidFormat token",
+        },
+      );
 
       const result = await adminAuth.requireAdmin(request, env);
 
@@ -60,9 +73,14 @@ describe("Admin Auth Middleware", () => {
     });
 
     it("should reject request with missing token", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/sku-1", null, {
-        Authorization: "Bearer ",
-      });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/sku-1",
+        null,
+        {
+          Authorization: "Bearer ",
+        },
+      );
 
       const result = await adminAuth.requireAdmin(request, env);
 
@@ -71,9 +89,14 @@ describe("Admin Auth Middleware", () => {
     });
 
     it("should reject request with invalid JWT", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/sku-1", null, {
-        Authorization: "Bearer invalid-token",
-      });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/sku-1",
+        null,
+        {
+          Authorization: "Bearer invalid-token",
+        },
+      );
 
       const result = await adminAuth.requireAdmin(request, env);
 
@@ -85,9 +108,14 @@ describe("Admin Auth Middleware", () => {
     it("should reject request when JWT_PUBLIC_KEY is not configured", async () => {
       const envWithoutKey = createMockEnv({ JWT_PUBLIC_KEY: null });
 
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/sku-1", null, {
-        Authorization: "Bearer token",
-      });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/sku-1",
+        null,
+        {
+          Authorization: "Bearer token",
+        },
+      );
 
       const result = await adminAuth.requireAdmin(request, envWithoutKey);
 
@@ -104,9 +132,14 @@ describe("Admin Auth Middleware", () => {
       };
 
       const token = await createTestJWT(payload);
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/sku-1", null, {
-        Authorization: `Bearer ${token}`,
-      });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/sku-1",
+        null,
+        {
+          Authorization: `Bearer ${token}`,
+        },
+      );
 
       const result = await adminAuth.requireAdmin(request, env);
 
@@ -123,9 +156,14 @@ describe("Admin Auth Middleware", () => {
       };
 
       const token = await createTestJWT(payload);
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/sku-1", null, {
-        Authorization: `Bearer ${token}`,
-      });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/sku-1",
+        null,
+        {
+          Authorization: `Bearer ${token}`,
+        },
+      );
 
       const result = await adminAuth.requireAdmin(request, env);
 
@@ -135,9 +173,14 @@ describe("Admin Auth Middleware", () => {
 
     it("should handle JWT verification errors", async () => {
       // Use an invalid token that will cause verification to fail
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/sku-1", null, {
-        Authorization: "Bearer invalid.token.here",
-      });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/sku-1",
+        null,
+        {
+          Authorization: "Bearer invalid.token.here",
+        },
+      );
 
       const result = await adminAuth.requireAdmin(request, env);
 
@@ -147,10 +190,15 @@ describe("Admin Auth Middleware", () => {
 
     it("should handle errors in requireAdmin catch block", async () => {
       // Create a request that will cause an error in the try block
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/sku-1", null, {
-        Authorization: "Bearer token",
-      });
-      
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/sku-1",
+        null,
+        {
+          Authorization: "Bearer token",
+        },
+      );
+
       // Mock headers.get to throw an error
       const originalGet = request.headers.get;
       request.headers.get = () => {
@@ -167,9 +215,14 @@ describe("Admin Auth Middleware", () => {
 
   describe("requireServiceOrAdmin", () => {
     it("should allow service binding request", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1", null, {
-        "X-Source": "catalog-worker-service-binding",
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1",
+        null,
+        {
+          "X-Source": "catalog-worker-service-binding",
+        },
+      );
 
       const result = await adminAuth.requireServiceOrAdmin(request, env);
 
@@ -187,9 +240,14 @@ describe("Admin Auth Middleware", () => {
       };
 
       const token = await createTestJWT(payload);
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1", null, {
-        Authorization: `Bearer ${token}`,
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1",
+        null,
+        {
+          Authorization: `Bearer ${token}`,
+        },
+      );
 
       const result = await adminAuth.requireServiceOrAdmin(request, env);
 
@@ -198,7 +256,10 @@ describe("Admin Auth Middleware", () => {
     });
 
     it("should reject non-service non-admin request", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1");
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1",
+      );
 
       const result = await adminAuth.requireServiceOrAdmin(request, env);
 
@@ -208,9 +269,14 @@ describe("Admin Auth Middleware", () => {
 
     it("should handle errors", async () => {
       // Use an invalid token that will cause verification to fail
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1", null, {
-        Authorization: "Bearer invalid.token.here",
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1",
+        null,
+        {
+          Authorization: "Bearer invalid.token.here",
+        },
+      );
 
       const result = await adminAuth.requireServiceOrAdmin(request, env);
 
@@ -220,10 +286,15 @@ describe("Admin Auth Middleware", () => {
 
     it("should handle errors in requireServiceOrAdmin catch block", async () => {
       // Create a request that will cause an error
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1", null, {
-        "X-Source": "catalog-worker-service-binding",
-      });
-      
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1",
+        null,
+        {
+          "X-Source": "catalog-worker-service-binding",
+        },
+      );
+
       // Mock headers.get to throw an error
       const originalGet = request.headers.get;
       request.headers.get = () => {
@@ -238,4 +309,3 @@ describe("Admin Auth Middleware", () => {
     });
   });
 });
-

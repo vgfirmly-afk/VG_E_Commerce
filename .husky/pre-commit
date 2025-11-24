@@ -16,7 +16,7 @@ npm --workspace backend/Catalog_worker run test
 npm --workspace backend/Cart_Worker run test
 npm --workspace backend/Checkout_Worker run test
 npm --workspace backend/Fullfilment_Worker run test
-npm --workspace backend/Inventory_Worker run test
+npm --workspace backend/Invertory_Worker run test
 npm --workspace backend/Pricing_Worker run test
 npm --workspace backend/Payment_worker run test
 
@@ -32,7 +32,7 @@ npm --workspace backend/Catalog_worker run coverage
 npm --workspace backend/Cart_Worker run coverage
 npm --workspace backend/Checkout_Worker run coverage
 npm --workspace backend/Fullfilment_Worker run coverage
-npm --workspace backend/Inventory_Worker run coverage
+npm --workspace backend/Invertory_Worker run coverage
 npm --workspace backend/Pricing_Worker run coverage
 npm --workspace backend/Payment_worker run coverage
 

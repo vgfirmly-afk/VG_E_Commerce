@@ -119,7 +119,11 @@ describe("Inventory Service", () => {
         quantity: 100,
       };
 
-      const mockStock = { ...stockData, available_quantity: 100, status: "active" };
+      const mockStock = {
+        ...stockData,
+        available_quantity: 100,
+        status: "active",
+      };
       // Mock: stock doesn't exist initially
       mockDb.prepare().bind().first.onFirstCall().resolves(null);
       // Mock: after initialization, stock exists
@@ -183,7 +187,13 @@ describe("Inventory Service", () => {
       // Mock batch operation
       mockDb.batch.resolves([]);
 
-      const stock = await service.adjustStock("sku-1", 50, "user-1", env, "Test reason");
+      const stock = await service.adjustStock(
+        "sku-1",
+        50,
+        "user-1",
+        env,
+        "Test reason",
+      );
       expect(stock).to.exist;
     });
   });
@@ -309,7 +319,10 @@ describe("Inventory Service", () => {
 
       mockDb.prepare().bind().all.resolves({ results: mockStocks });
 
-      const availability = await service.checkAvailability(["sku-1", "sku-2", "sku-3"], env);
+      const availability = await service.checkAvailability(
+        ["sku-1", "sku-2", "sku-3"],
+        env,
+      );
       expect(availability["sku-1"].in_stock).to.be.true;
       expect(availability["sku-2"].in_stock).to.be.false;
       expect(availability["sku-3"].status).to.equal("not_found");
@@ -348,7 +361,12 @@ describe("Inventory Service", () => {
       // Mock batch operation
       mockDb.batch.resolves([]);
 
-      const stock = await service.deductStockForOrder("sku-1", 10, "order-1", env);
+      const stock = await service.deductStockForOrder(
+        "sku-1",
+        10,
+        "order-1",
+        env,
+      );
       expect(stock.quantity).to.equal(90);
       expect(stock.available_quantity).to.equal(80);
     });
@@ -381,4 +399,3 @@ describe("Inventory Service", () => {
     });
   });
 });
-

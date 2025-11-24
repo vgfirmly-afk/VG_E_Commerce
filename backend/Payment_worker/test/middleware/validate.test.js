@@ -30,14 +30,20 @@ describe("Validate Middleware", () => {
       // Should return undefined to continue to next handler
       expect(result).to.be.undefined;
       expect(request.validatedBody).to.exist;
-      expect(request.validatedBody.checkout_session_id).to.equal("test-session-id");
+      expect(request.validatedBody.checkout_session_id).to.equal(
+        "test-session-id",
+      );
     });
 
     it("should return error for missing Content-Type", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/payments", {
-        checkout_session_id: "test-session-id",
-        amount: 100.0,
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/payments",
+        {
+          checkout_session_id: "test-session-id",
+          amount: 100.0,
+        },
+      );
       request.headers.delete("Content-Type");
 
       const middleware = validateBody(createPaymentSchema);
@@ -50,7 +56,11 @@ describe("Validate Middleware", () => {
     });
 
     it("should return error for invalid JSON", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/payments", null);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/payments",
+        null,
+      );
       request.headers.set("Content-Type", "application/json");
       request.json = async () => {
         throw new Error("Invalid JSON");
@@ -115,12 +125,16 @@ describe("Validate Middleware", () => {
     });
 
     it("should handle errors in try-catch block", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/payments", {
-        checkout_session_id: "test-session-id",
-        amount: 100.0,
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/payments",
+        {
+          checkout_session_id: "test-session-id",
+          amount: 100.0,
+        },
+      );
       request.headers.set("Content-Type", "application/json");
-      
+
       // Make schema.validate throw an error
       const badSchema = {
         validate: () => {

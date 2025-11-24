@@ -13,10 +13,14 @@ describe("Validate Middleware", () => {
         age: Joi.number().required(),
       });
 
-      const request = createMockRequest("POST", "https://example.com/api/v1/promotion-codes", {
-        name: "Test",
-        age: 25,
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/promotion-codes",
+        {
+          name: "Test",
+          age: 25,
+        },
+      );
 
       const middleware = validate.validateBody(schema);
       const result = await middleware(request, request.env, {});
@@ -32,10 +36,14 @@ describe("Validate Middleware", () => {
         age: Joi.number().required(),
       });
 
-      const request = createMockRequest("POST", "https://example.com/api/v1/promotion-codes", {
-        name: "Test",
-        // age is missing
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/promotion-codes",
+        {
+          name: "Test",
+          // age is missing
+        },
+      );
 
       const middleware = validate.validateBody(schema);
       const result = await middleware(request, request.env, {});
@@ -51,7 +59,11 @@ describe("Validate Middleware", () => {
         name: Joi.string().required(),
       });
 
-      const request = createMockRequest("POST", "https://example.com/api/v1/promotion-codes", null);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/promotion-codes",
+        null,
+      );
       request.json = async () => {
         throw new Error("Invalid JSON");
       };
@@ -71,7 +83,10 @@ describe("Validate Middleware", () => {
         limit: Joi.number().integer().min(1).default(20),
       });
 
-      const request = createMockRequest("GET", "https://example.com/api/v1/promotion-codes?page=1&limit=20");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/promotion-codes?page=1&limit=20",
+      );
 
       const middleware = validate.validateQuery(schema);
       const result = await middleware(request, request.env, {});
@@ -86,7 +101,10 @@ describe("Validate Middleware", () => {
         page: Joi.number().integer().min(1).required(),
       });
 
-      const request = createMockRequest("GET", "https://example.com/api/v1/promotion-codes?page=-1");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/promotion-codes?page=-1",
+      );
 
       const middleware = validate.validateQuery(schema);
       const result = await middleware(request, request.env, {});
@@ -96,4 +114,3 @@ describe("Validate Middleware", () => {
     });
   });
 });
-

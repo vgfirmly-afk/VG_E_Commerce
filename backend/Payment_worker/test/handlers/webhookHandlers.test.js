@@ -133,7 +133,7 @@ describe("Webhook Handlers", () => {
       env.PAYMENT_DB.prepare().bind().first.resolves(null);
 
       const response = await handlers.handlePayPalWebhook(request, env);
-      
+
       // In dev mode, verification always passes, so will return 200
       expect(response.status).to.equal(200);
     });

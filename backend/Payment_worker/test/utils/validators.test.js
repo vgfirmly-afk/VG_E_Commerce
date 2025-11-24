@@ -186,10 +186,11 @@ describe("Validators", () => {
 
   describe("validateCapturePayment", () => {
     it("should validate capture payment data", () => {
-      const { error, value } = validateCapturePayment({ order_id: "test-order-id" });
+      const { error, value } = validateCapturePayment({
+        order_id: "test-order-id",
+      });
       expect(error).to.be.undefined;
       expect(value).to.exist;
     });
   });
 });
-

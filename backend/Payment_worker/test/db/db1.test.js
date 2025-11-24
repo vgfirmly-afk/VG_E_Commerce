@@ -237,12 +237,7 @@ describe("DB Functions", () => {
       mockDb.prepare().bind().run.rejects(new Error("Database error"));
 
       try {
-        await db.updatePaymentStatus(
-          "test-payment-id",
-          "captured",
-          {},
-          env,
-        );
+        await db.updatePaymentStatus("test-payment-id", "captured", {}, env);
         expect.fail("Should have thrown an error");
       } catch (err) {
         expect(err.message).to.include("Database error");
@@ -259,12 +254,7 @@ describe("DB Functions", () => {
 
       mockDb.prepare().bind().run.resolves({ success: true });
 
-      await db.logPaymentEvent(
-        "test-payment-id",
-        "created",
-        eventData,
-        env,
-      );
+      await db.logPaymentEvent("test-payment-id", "created", eventData, env);
       expect(mockDb.prepare).to.have.been.called;
     });
 
@@ -283,4 +273,3 @@ describe("DB Functions", () => {
     });
   });
 });
-

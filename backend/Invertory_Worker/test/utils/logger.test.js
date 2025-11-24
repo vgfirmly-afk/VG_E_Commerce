@@ -70,7 +70,10 @@ describe("Logger Utils", () => {
 
       logger.logger("test.event", { level: "info" });
 
-      expect(mockSpan.setAttribute).to.have.been.calledWith("log.level", "info");
+      expect(mockSpan.setAttribute).to.have.been.calledWith(
+        "log.level",
+        "info",
+      );
     });
 
     it("should handle logData with message field", () => {
@@ -79,7 +82,10 @@ describe("Logger Utils", () => {
 
       logger.logger("test.event", { message: "test message" });
 
-      expect(mockSpan.setAttribute).to.have.been.calledWith("log.message", "test message");
+      expect(mockSpan.setAttribute).to.have.been.calledWith(
+        "log.message",
+        "test message",
+      );
     });
 
     it("should handle logData with event field", () => {
@@ -88,7 +94,10 @@ describe("Logger Utils", () => {
 
       logger.logger("test.event", { event: "custom.event" });
 
-      expect(mockSpan.setAttribute).to.have.been.calledWith("log.event", "custom.event");
+      expect(mockSpan.setAttribute).to.have.been.calledWith(
+        "log.event",
+        "custom.event",
+      );
     });
   });
 
@@ -102,7 +111,10 @@ describe("Logger Utils", () => {
 
       expect(mockSpan.setAttribute).to.have.been.called;
       expect(mockSpan.recordException).to.have.been.calledWith(error);
-      expect(mockSpan.setStatus).to.have.been.calledWith({ code: 2, message: "Error message" });
+      expect(mockSpan.setStatus).to.have.been.calledWith({
+        code: 2,
+        message: "Error message",
+      });
     });
 
     it("should log error with span but no error object", () => {
@@ -113,7 +125,10 @@ describe("Logger Utils", () => {
 
       expect(mockSpan.setAttribute).to.have.been.called;
       expect(mockSpan.recordException).to.not.have.been.called;
-      expect(mockSpan.setStatus).to.have.been.calledWith({ code: 2, message: "Error message" });
+      expect(mockSpan.setStatus).to.have.been.calledWith({
+        code: 2,
+        message: "Error message",
+      });
     });
 
     it("should log error without span", () => {
@@ -172,4 +187,3 @@ describe("Logger Utils", () => {
     });
   });
 });
-

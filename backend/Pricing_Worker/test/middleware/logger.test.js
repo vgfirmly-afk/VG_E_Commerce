@@ -19,7 +19,10 @@ describe("Logger Middleware", () => {
   });
 
   it("should log request and add trace headers", async () => {
-    const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+    const request = createMockRequest(
+      "GET",
+      "https://example.com/api/v1/prices/test-sku-id",
+    );
 
     const handler = withLogger(async () => {
       return new Response(JSON.stringify({ data: "test" }), {
@@ -35,7 +38,10 @@ describe("Logger Middleware", () => {
   });
 
   it("should handle request when span is null", async () => {
-    const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+    const request = createMockRequest(
+      "GET",
+      "https://example.com/api/v1/prices/test-sku-id",
+    );
 
     const handler = withLogger(async () => {
       return new Response(JSON.stringify({ data: "test" }), {
@@ -52,7 +58,10 @@ describe("Logger Middleware", () => {
   });
 
   it("should handle handler errors", async () => {
-    const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+    const request = createMockRequest(
+      "GET",
+      "https://example.com/api/v1/prices/test-sku-id",
+    );
 
     const handler = withLogger(async () => {
       throw new Error("Handler error");
@@ -64,7 +73,10 @@ describe("Logger Middleware", () => {
   });
 
   it("should handle invalid response from handler", async () => {
-    const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+    const request = createMockRequest(
+      "GET",
+      "https://example.com/api/v1/prices/test-sku-id",
+    );
 
     const handler = withLogger(async () => {
       return null;
@@ -75,7 +87,10 @@ describe("Logger Middleware", () => {
   });
 
   it("should handle response that is not a Response instance", async () => {
-    const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+    const request = createMockRequest(
+      "GET",
+      "https://example.com/api/v1/prices/test-sku-id",
+    );
 
     const handler = withLogger(async () => {
       return { status: 200, body: "test" }; // Not a Response object
@@ -87,7 +102,10 @@ describe("Logger Middleware", () => {
   });
 
   it("should handle cf-ray header when present", async () => {
-    const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+    const request = createMockRequest(
+      "GET",
+      "https://example.com/api/v1/prices/test-sku-id",
+    );
     request.headers.set("cf-ray", "test-ray-id");
 
     const handler = withLogger(async () => {
@@ -102,7 +120,10 @@ describe("Logger Middleware", () => {
   });
 
   it("should handle request.cf.colo when present", async () => {
-    const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+    const request = createMockRequest(
+      "GET",
+      "https://example.com/api/v1/prices/test-sku-id",
+    );
     request.cf = { colo: "DFW" };
 
     const handler = withLogger(async () => {
@@ -117,7 +138,10 @@ describe("Logger Middleware", () => {
   });
 
   it("should handle request without cf-ray header", async () => {
-    const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+    const request = createMockRequest(
+      "GET",
+      "https://example.com/api/v1/prices/test-sku-id",
+    );
     // No cf-ray header
 
     const handler = withLogger(async () => {
@@ -132,7 +156,10 @@ describe("Logger Middleware", () => {
   });
 
   it("should handle request without cf.colo", async () => {
-    const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+    const request = createMockRequest(
+      "GET",
+      "https://example.com/api/v1/prices/test-sku-id",
+    );
     // No cf property
 
     const handler = withLogger(async () => {
@@ -147,7 +174,10 @@ describe("Logger Middleware", () => {
   });
 
   it("should handle error when setting trace headers fails", async () => {
-    const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+    const request = createMockRequest(
+      "GET",
+      "https://example.com/api/v1/prices/test-sku-id",
+    );
 
     // Create a response that will fail when trying to clone
     const handler = withLogger(async () => {
@@ -166,7 +196,10 @@ describe("Logger Middleware", () => {
   });
 
   it("should handle null response in catch block", async () => {
-    const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+    const request = createMockRequest(
+      "GET",
+      "https://example.com/api/v1/prices/test-sku-id",
+    );
 
     // Create a handler that returns null
     const handler = withLogger(async () => {
@@ -179,4 +212,3 @@ describe("Logger Middleware", () => {
     expect(response.status).to.equal(500);
   });
 });
-

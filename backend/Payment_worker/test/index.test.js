@@ -14,4 +14,3 @@ describe("Index Handler", () => {
     expect(true).to.be.true;
   });
 });
-

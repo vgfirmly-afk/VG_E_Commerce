@@ -65,7 +65,7 @@ export function createMockEnv(overrides = {}) {
     first: firstStub,
     run: runStub,
   });
-  
+
   const prepareStub = sinon.stub().returns({
     bind: bindStub,
     all: allStub,
@@ -115,11 +115,14 @@ export function createMockRequest(
     json: async () => {
       // If body is explicitly null and method requires body, throw error to simulate empty/invalid JSON
       // But only if the test hasn't overridden json()
-      if (body === null && ["POST", "PUT", "PATCH"].includes(method.toUpperCase())) {
+      if (
+        body === null &&
+        ["POST", "PUT", "PATCH"].includes(method.toUpperCase())
+      ) {
         throw new Error("Unexpected end of JSON input");
       }
       // Return body if provided, otherwise return empty object
-      return body !== null ? (body || {}) : {};
+      return body !== null ? body || {} : {};
     },
     env: createMockEnv(),
     user: null,
@@ -209,4 +212,3 @@ function base64UrlEncode(buf) {
 }
 
 export { JWT_PRIVATE_KEY, JWT_PUBLIC_KEY };
-

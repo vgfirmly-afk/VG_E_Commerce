@@ -168,4 +168,3 @@ export function createTestJWT(payload = {}) {
 
   return `${header}.${body}.${signature}`;
 }
-

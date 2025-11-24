@@ -31,13 +31,17 @@ describe("Validators", () => {
         sale_price: 24.99,
       };
       const result = validators.validateSkuPriceUpdate(data);
-      expect(result.error).to.satisfy((err) => err === null || err === undefined);
+      expect(result.error).to.satisfy(
+        (err) => err === null || err === undefined,
+      );
     });
 
     it("should allow all fields to be optional", () => {
       const data = {};
       const result = validators.validateSkuPriceUpdate(data);
-      expect(result.error).to.satisfy((err) => err === null || err === undefined);
+      expect(result.error).to.satisfy(
+        (err) => err === null || err === undefined,
+      );
     });
 
     it("should reject negative price", () => {
@@ -170,13 +174,17 @@ describe("Validators", () => {
         discount_value: 15,
       };
       const result = validators.validatePromotionCodeUpdate(data);
-      expect(result.error).to.satisfy((err) => err === null || err === undefined);
+      expect(result.error).to.satisfy(
+        (err) => err === null || err === undefined,
+      );
     });
 
     it("should allow all fields to be optional", () => {
       const data = {};
       const result = validators.validatePromotionCodeUpdate(data);
-      expect(result.error).to.satisfy((err) => err === null || err === undefined);
+      expect(result.error).to.satisfy(
+        (err) => err === null || err === undefined,
+      );
     });
 
     it("should reject invalid status", () => {
@@ -210,4 +218,3 @@ describe("Validators", () => {
     });
   });
 });
-

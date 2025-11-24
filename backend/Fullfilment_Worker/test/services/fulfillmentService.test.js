@@ -302,28 +302,37 @@ describe("Fulfillment Service", () => {
       };
 
       const mockItems = [
-        { item_id: "item-1", order_id: "order-123", sku_id: "sku-123", product_id: null },
+        {
+          item_id: "item-1",
+          order_id: "order-123",
+          sku_id: "sku-123",
+          product_id: null,
+        },
       ];
 
       const mockStatuses = [];
 
       env.FULLFILLMENT_DB.prepare
-        .onCall(0).returns({
+        .onCall(0)
+        .returns({
           bind: sinon.stub().returns({
             first: sinon.stub().resolves(mockOrder),
           }),
         })
-        .onCall(1).returns({
+        .onCall(1)
+        .returns({
           bind: sinon.stub().returns({
             all: sinon.stub().resolves({ results: mockItems }),
           }),
         })
-        .onCall(2).returns({
+        .onCall(2)
+        .returns({
           bind: sinon.stub().returns({
             all: sinon.stub().resolves({ results: mockStatuses }),
           }),
         })
-        .onCall(3).returns({
+        .onCall(3)
+        .returns({
           bind: sinon.stub().returns({
             first: sinon.stub().resolves(null),
           }),
@@ -343,28 +352,37 @@ describe("Fulfillment Service", () => {
       };
 
       const mockItems = [
-        { item_id: "item-1", order_id: "order-123", sku_id: "sku-123", product_id: "prod-123" },
+        {
+          item_id: "item-1",
+          order_id: "order-123",
+          sku_id: "sku-123",
+          product_id: "prod-123",
+        },
       ];
 
       const mockStatuses = [];
 
       env.FULLFILLMENT_DB.prepare
-        .onCall(0).returns({
+        .onCall(0)
+        .returns({
           bind: sinon.stub().returns({
             first: sinon.stub().resolves(mockOrder),
           }),
         })
-        .onCall(1).returns({
+        .onCall(1)
+        .returns({
           bind: sinon.stub().returns({
             all: sinon.stub().resolves({ results: mockItems }),
           }),
         })
-        .onCall(2).returns({
+        .onCall(2)
+        .returns({
           bind: sinon.stub().returns({
             all: sinon.stub().resolves({ results: mockStatuses }),
           }),
         })
-        .onCall(3).returns({
+        .onCall(3)
+        .returns({
           bind: sinon.stub().returns({
             first: sinon.stub().resolves(null),
           }),
@@ -372,7 +390,7 @@ describe("Fulfillment Service", () => {
 
       // Mock CATALOG_WORKER to fail
       env.CATALOG_WORKER.fetch.resolves(
-        new Response(JSON.stringify({}), { status: 404 })
+        new Response(JSON.stringify({}), { status: 404 }),
       );
 
       const result = await service.getOrderDetails("order-123", env);

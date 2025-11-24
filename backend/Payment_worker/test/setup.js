@@ -50,9 +50,11 @@ export function createMockEnv(overrides = {}) {
       ),
     },
     FULFILLMENT_WORKER: {
-      fetch: sinon.stub().resolves(
-        new Response(JSON.stringify({ success: true }), { status: 200 }),
-      ),
+      fetch: sinon
+        .stub()
+        .resolves(
+          new Response(JSON.stringify({ success: true }), { status: 200 }),
+        ),
     },
     CATALOG_WORKER: {
       fetch: sinon.stub().resolves(
@@ -114,7 +116,7 @@ export function createMockRequest(
     // Try exact match first
     let value = originalGet(key);
     if (value !== undefined) return value;
-    
+
     // Try case-insensitive match
     const lowerKey = key.toLowerCase();
     for (const [mapKey, mapValue] of headersMap.entries()) {
@@ -122,7 +124,7 @@ export function createMockRequest(
         return mapValue;
       }
     }
-    
+
     return null;
   };
 
@@ -142,4 +144,3 @@ export function createMockSpan() {
     setStatus: sinon.stub(),
   };
 }
-

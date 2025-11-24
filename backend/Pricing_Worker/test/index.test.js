@@ -12,4 +12,3 @@ describe("Index Handler", () => {
     // The functionality is tested through router and middleware tests
   });
 });
-

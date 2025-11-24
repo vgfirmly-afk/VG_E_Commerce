@@ -127,7 +127,11 @@ describe("DB Functions", () => {
       // Mock: stock doesn't exist initially
       mockDb.prepare().bind().first.onFirstCall().resolves(null);
       // Mock: after initialization, stock exists
-      const mockStock = { ...stockData, available_quantity: 100, status: "active" };
+      const mockStock = {
+        ...stockData,
+        available_quantity: 100,
+        status: "active",
+      };
       mockDb.prepare().bind().first.onSecondCall().resolves(mockStock);
       // Mock batch operation
       mockDb.batch.resolves([]);
@@ -192,7 +196,11 @@ describe("DB Functions", () => {
       // Mock existing stock
       mockDb.prepare().bind().first.onFirstCall().resolves(existingStock);
       // Mock updated stock
-      const updatedStock = { ...existingStock, ...updates, available_quantity: 130 };
+      const updatedStock = {
+        ...existingStock,
+        ...updates,
+        available_quantity: 130,
+      };
       mockDb.prepare().bind().first.onSecondCall().resolves(updatedStock);
       // Mock batch operation
       mockDb.batch.resolves([]);
@@ -241,7 +249,11 @@ describe("DB Functions", () => {
       // Mock existing stock
       mockDb.prepare().bind().first.onFirstCall().resolves(existingStock);
       // Mock updated stock after adjustment
-      const updatedStock = { ...existingStock, quantity: 150, available_quantity: 140 };
+      const updatedStock = {
+        ...existingStock,
+        quantity: 150,
+        available_quantity: 140,
+      };
       mockDb.prepare().bind().first.onSecondCall().resolves(updatedStock);
       // Mock batch operation
       mockDb.batch.resolves([]);
@@ -262,7 +274,11 @@ describe("DB Functions", () => {
       };
 
       mockDb.prepare().bind().first.onFirstCall().resolves(existingStock);
-      const updatedStock = { ...existingStock, quantity: 50, available_quantity: 40 };
+      const updatedStock = {
+        ...existingStock,
+        quantity: 50,
+        available_quantity: 40,
+      };
       mockDb.prepare().bind().first.onSecondCall().resolves(updatedStock);
       mockDb.batch.resolves([]);
 
@@ -435,7 +451,13 @@ describe("DB Functions", () => {
       mockDb.prepare().bind().first.onThirdCall().resolves(updatedStock);
       mockDb.batch.resolves([]);
 
-      const stock = await db.releaseStock("sku-1", "reservation-1", null, "user-1", env);
+      const stock = await db.releaseStock(
+        "sku-1",
+        "reservation-1",
+        null,
+        "user-1",
+        env,
+      );
       expect(stock).to.exist;
       expect(mockDb.batch).to.have.been.called;
     });
@@ -504,7 +526,13 @@ describe("DB Functions", () => {
       mockDb.batch.resolves([]);
 
       // Release only 10 out of 20
-      const stock = await db.releaseStock("sku-1", "reservation-1", 10, "user-1", env);
+      const stock = await db.releaseStock(
+        "sku-1",
+        "reservation-1",
+        10,
+        "user-1",
+        env,
+      );
       expect(stock).to.exist;
       expect(mockDb.batch).to.have.been.called;
     });
@@ -568,4 +596,3 @@ describe("DB Functions", () => {
     });
   });
 });
-

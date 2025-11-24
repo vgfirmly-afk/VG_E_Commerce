@@ -40,7 +40,12 @@ describe("JWT Utils", () => {
         .replace(/\+/g, "-")
         .replace(/\//g, "_")
         .replace(/=/g, "");
-      const payload = btoa(JSON.stringify({ sub: "user-1", exp: Math.floor(Date.now() / 1000) + 3600 }))
+      const payload = btoa(
+        JSON.stringify({
+          sub: "user-1",
+          exp: Math.floor(Date.now() / 1000) + 3600,
+        }),
+      )
         .replace(/\+/g, "-")
         .replace(/\//g, "_")
         .replace(/=/g, "");
@@ -57,7 +62,12 @@ describe("JWT Utils", () => {
         .replace(/\+/g, "-")
         .replace(/\//g, "_")
         .replace(/=/g, "");
-      const payload = btoa(JSON.stringify({ sub: "user-1", exp: Math.floor(Date.now() / 1000) - 3600 }))
+      const payload = btoa(
+        JSON.stringify({
+          sub: "user-1",
+          exp: Math.floor(Date.now() / 1000) - 3600,
+        }),
+      )
         .replace(/\+/g, "-")
         .replace(/\//g, "_")
         .replace(/=/g, "");
@@ -89,7 +99,9 @@ describe("JWT Utils", () => {
 
       // Mock crypto.subtle.importKey to throw error
       const originalImportKey = global.crypto.subtle.importKey;
-      global.crypto.subtle.importKey = sinon.stub().rejects(new Error("Key import error"));
+      global.crypto.subtle.importKey = sinon
+        .stub()
+        .rejects(new Error("Key import error"));
 
       try {
         const result = await jwt.verifyJWT(token, env);
@@ -120,4 +132,3 @@ describe("JWT Utils", () => {
     });
   });
 });
-

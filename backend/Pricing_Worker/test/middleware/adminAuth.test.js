@@ -21,7 +21,10 @@ describe("Admin Auth Middleware", () => {
     });
 
     it("should reject request without Authorization header", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
 
       const result = await adminAuth.requireAdmin(request, request.env);
       expect(result.ok).to.be.false;
@@ -30,9 +33,14 @@ describe("Admin Auth Middleware", () => {
     });
 
     it("should reject request with invalid token format", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id", null, {
-        Authorization: "Invalid token",
-      });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+        null,
+        {
+          Authorization: "Invalid token",
+        },
+      );
 
       const result = await adminAuth.requireAdmin(request, request.env);
       expect(result.ok).to.be.false;
@@ -40,9 +48,14 @@ describe("Admin Auth Middleware", () => {
     });
 
     it("should reject request with invalid JWT", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id", null, {
-        Authorization: "Bearer invalid-token",
-      });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+        null,
+        {
+          Authorization: "Bearer invalid-token",
+        },
+      );
 
       // JWT verification will fail with invalid token
       const result = await adminAuth.requireAdmin(request, request.env);
@@ -51,9 +64,14 @@ describe("Admin Auth Middleware", () => {
     });
 
     it("should reject request when JWT_PUBLIC_KEY is missing", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id", null, {
-        Authorization: "Bearer " + createTestJWT({ role: "admin" }),
-      });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+        null,
+        {
+          Authorization: "Bearer " + createTestJWT({ role: "admin" }),
+        },
+      );
 
       // Remove JWT_PUBLIC_KEY
       delete request.env.JWT_PUBLIC_KEY;
@@ -65,9 +83,14 @@ describe("Admin Auth Middleware", () => {
     });
 
     it("should reject request with empty token after Bearer", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id", null, {
-        Authorization: "Bearer ",
-      });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+        null,
+        {
+          Authorization: "Bearer ",
+        },
+      );
 
       const result = await adminAuth.requireAdmin(request, request.env);
       expect(result.ok).to.be.false;
@@ -75,9 +98,14 @@ describe("Admin Auth Middleware", () => {
     });
 
     it("should handle error in requireAdmin", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id", null, {
-        Authorization: "Bearer token",
-      });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+        null,
+        {
+          Authorization: "Bearer token",
+        },
+      );
 
       // Make request invalid to trigger error
       request.headers = null;
@@ -88,10 +116,16 @@ describe("Admin Auth Middleware", () => {
     });
 
     it("should handle error in requireServiceOrAdmin", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.headers = null;
 
-      const result = await adminAuth.requireServiceOrAdmin(request, request.env);
+      const result = await adminAuth.requireServiceOrAdmin(
+        request,
+        request.env,
+      );
       expect(result.ok).to.be.false;
       expect(result.status).to.equal(401);
     });
@@ -101,9 +135,14 @@ describe("Admin Auth Middleware", () => {
     });
 
     it("should handle missing JWT_PUBLIC_KEY", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id", null, {
-        Authorization: "Bearer " + createTestJWT(),
-      });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+        null,
+        {
+          Authorization: "Bearer " + createTestJWT(),
+        },
+      );
 
       const envWithoutKey = { ...request.env };
       delete envWithoutKey.JWT_PUBLIC_KEY;
@@ -116,9 +155,14 @@ describe("Admin Auth Middleware", () => {
     it("should handle role from payload.roles instead of payload.role", async () => {
       // This tests the branch: const role = payload.role || payload.roles;
       // We can't easily test this without mocking JWT, but the code path exists
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id", null, {
-        Authorization: "Bearer token",
-      });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+        null,
+        {
+          Authorization: "Bearer token",
+        },
+      );
 
       // JWT verification will fail, but we test the code path
       const result = await adminAuth.requireAdmin(request, request.env);
@@ -128,9 +172,14 @@ describe("Admin Auth Middleware", () => {
     it("should handle ADMIN role (uppercase)", async () => {
       // This tests the branch: role !== "admin" && role !== "ADMIN"
       // We can't easily test this without mocking JWT, but the code path exists
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id", null, {
-        Authorization: "Bearer token",
-      });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+        null,
+        {
+          Authorization: "Bearer token",
+        },
+      );
 
       const result = await adminAuth.requireAdmin(request, request.env);
       expect(result.ok).to.be.false;
@@ -139,11 +188,19 @@ describe("Admin Auth Middleware", () => {
 
   describe("requireServiceOrAdmin", () => {
     it("should allow service binding request", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/prices/test-sku-id", null, {
-        "X-Source": "catalog-worker-service-binding",
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/prices/test-sku-id",
+        null,
+        {
+          "X-Source": "catalog-worker-service-binding",
+        },
+      );
 
-      const result = await adminAuth.requireServiceOrAdmin(request, request.env);
+      const result = await adminAuth.requireServiceOrAdmin(
+        request,
+        request.env,
+      );
       expect(result.ok).to.be.true;
       expect(result.user.userId).to.equal("catalog_worker_service");
       expect(result.user.role).to.equal("service");
@@ -154,26 +211,43 @@ describe("Admin Auth Middleware", () => {
     });
 
     it("should reject non-service and non-admin request", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
 
-      const result = await adminAuth.requireServiceOrAdmin(request, request.env);
+      const result = await adminAuth.requireServiceOrAdmin(
+        request,
+        request.env,
+      );
       expect(result.ok).to.be.false;
       expect(result.status).to.equal(401);
     });
 
     it("should handle different X-Source header values", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/prices/test-sku-id", null, {
-        "X-Source": "other-service", // Not the expected service binding
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/prices/test-sku-id",
+        null,
+        {
+          "X-Source": "other-service", // Not the expected service binding
+        },
+      );
 
-      const result = await adminAuth.requireServiceOrAdmin(request, request.env);
+      const result = await adminAuth.requireServiceOrAdmin(
+        request,
+        request.env,
+      );
       // Should require admin JWT since it's not the expected service binding
       expect(result.ok).to.be.false;
       expect(result.status).to.equal(401);
     });
 
     it("should handle missing Authorization header in requireAdmin", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       // No Authorization header
 
       const result = await adminAuth.requireAdmin(request, request.env);
@@ -182,9 +256,14 @@ describe("Admin Auth Middleware", () => {
     });
 
     it("should handle Authorization header without Bearer prefix", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id", null, {
-        Authorization: "Token abc123", // Not Bearer
-      });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+        null,
+        {
+          Authorization: "Token abc123", // Not Bearer
+        },
+      );
 
       const result = await adminAuth.requireAdmin(request, request.env);
       expect(result.ok).to.be.false;
@@ -192,4 +271,3 @@ describe("Admin Auth Middleware", () => {
     });
   });
 });
-

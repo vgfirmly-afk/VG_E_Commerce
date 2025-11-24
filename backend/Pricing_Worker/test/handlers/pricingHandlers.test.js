@@ -18,7 +18,10 @@ describe("Pricing Handlers", () => {
 
   describe("getPrice", () => {
     it("should return price with product info and stock", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       const mockPrice = {
@@ -42,7 +45,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should return 404 when price not found", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       env.PRICING_DB.prepare().bind().first.resolves(null);
@@ -55,7 +61,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should return 400 for invalid SKU ID", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/",
+      );
       request.params = { sku_id: "" };
 
       const response = await handlers.getPrice(request, env);
@@ -66,7 +75,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle missing CATALOG_WORKER binding", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       const mockPrice = {
@@ -91,7 +103,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle missing INVENTORY_WORKER binding", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       const mockPrice = {
@@ -116,7 +131,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle Catalog Worker fetch error", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       const mockPrice = {
@@ -141,7 +159,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle Inventory Worker fetch error", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       const mockPrice = {
@@ -166,18 +187,26 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle handler errors gracefully", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       // Force database error
-      env.PRICING_DB.prepare().bind().first.rejects(new Error("Database error"));
+      env.PRICING_DB.prepare()
+        .bind()
+        .first.rejects(new Error("Database error"));
 
       const response = await handlers.getPrice(request, env);
       expect(response.status).to.equal(500);
     });
 
     it("should handle product data with title field", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       const mockPrice = {
@@ -209,7 +238,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle product data with name field", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       const mockPrice = {
@@ -241,7 +273,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle SKU attributes as object", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       const mockPrice = {
@@ -278,7 +313,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle product data with skus not as array", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       const mockPrice = {
@@ -310,7 +348,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle SKU not found in product skus array", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       const mockPrice = {
@@ -342,7 +383,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle SKU with attributes as string JSON", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       const mockPrice = {
@@ -379,7 +423,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle SKU with empty attributes string", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       const mockPrice = {
@@ -418,7 +465,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle product data with neither title nor name", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       const mockPrice = {
@@ -449,7 +499,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle Catalog Worker fetch throwing error", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       const mockPrice = {
@@ -474,7 +527,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle Inventory Worker fetch throwing error", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       const mockPrice = {
@@ -499,7 +555,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle Inventory Worker returning non-OK response", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       const mockPrice = {
@@ -524,7 +583,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle Inventory Worker returning valid stock data", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       const mockPrice = {
@@ -537,7 +599,9 @@ describe("Pricing Handlers", () => {
 
       // Mock Inventory Worker to return valid stock
       env.INVENTORY_WORKER.fetch.resolves(
-        new Response(JSON.stringify({ available_quantity: 50 }), { status: 200 }),
+        new Response(JSON.stringify({ available_quantity: 50 }), {
+          status: 200,
+        }),
       );
 
       env.PRICING_DB.prepare().bind().first.onCall(0).resolves(mockPrice);
@@ -552,7 +616,10 @@ describe("Pricing Handlers", () => {
 
   describe("getProductPrices", () => {
     it("should return prices for a product", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/product/test-product-id");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/product/test-product-id",
+      );
       request.params = { product_id: "test-product-id" };
 
       const mockPrices = [
@@ -572,7 +639,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should return 400 when product ID is missing", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/product/");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/product/",
+      );
       request.params = { product_id: null };
 
       const response = await handlers.getProductPrices(request, env);
@@ -585,13 +655,17 @@ describe("Pricing Handlers", () => {
 
   describe("calculateTotal", () => {
     it("should calculate grand total", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/calculate-total", {
-        items: [
-          { sku_id: "sku1", quantity: 2 },
-          { sku_id: "sku2", quantity: 1 },
-        ],
-        currency: "USD",
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/calculate-total",
+        {
+          items: [
+            { sku_id: "sku1", quantity: 2 },
+            { sku_id: "sku2", quantity: 1 },
+          ],
+          currency: "USD",
+        },
+      );
 
       const mockPrices = [
         {
@@ -622,9 +696,13 @@ describe("Pricing Handlers", () => {
     });
 
     it("should return 400 for invalid request body", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/calculate-total", {
-        items: [],
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/calculate-total",
+        {
+          items: [],
+        },
+      );
 
       const response = await handlers.calculateTotal(request, env);
       const data = await response.json();
@@ -634,7 +712,11 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle JSON parse error in calculateTotal", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/calculate-total", null);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/calculate-total",
+        null,
+      );
       request.json = async () => {
         throw new Error("Invalid JSON");
       };
@@ -646,7 +728,10 @@ describe("Pricing Handlers", () => {
 
   describe("getHistory", () => {
     it("should return price history", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id/history?page=1&limit=20");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id/history?page=1&limit=20",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       const mockHistory = [
@@ -669,7 +754,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should return 400 for invalid SKU ID", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices//history");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices//history",
+      );
       request.params = { sku_id: "" };
 
       const response = await handlers.getHistory(request, env);
@@ -677,7 +765,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle missing query parameters", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id/history");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id/history",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       env.PRICING_DB.prepare().bind().all.resolves({ results: [] });
@@ -687,7 +778,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should return 400 for invalid query parameters", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/prices/test-sku-id/history?page=-1&limit=0");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/prices/test-sku-id/history?page=-1&limit=0",
+      );
       request.params = { sku_id: "test-sku-id" };
 
       const response = await handlers.getHistory(request, env);
@@ -697,13 +791,17 @@ describe("Pricing Handlers", () => {
 
   describe("initializePrice", () => {
     it("should initialize new price", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/prices/test-sku-id", {
-        sku_id: "test-sku-id",
-        product_id: "test-product-id",
-        sku_code: "TEST-SKU",
-        price: 29.99,
-        currency: "USD",
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/prices/test-sku-id",
+        {
+          sku_id: "test-sku-id",
+          product_id: "test-product-id",
+          sku_code: "TEST-SKU",
+          price: 29.99,
+          currency: "USD",
+        },
+      );
       request.params = { sku_id: "test-sku-id" };
       request.user = { userId: "system" };
 
@@ -725,9 +823,13 @@ describe("Pricing Handlers", () => {
     });
 
     it("should update existing price", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/prices/test-sku-id", {
-        price: 39.99,
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/prices/test-sku-id",
+        {
+          price: 39.99,
+        },
+      );
       request.params = { sku_id: "test-sku-id" };
       request.user = { userId: "system" };
 
@@ -743,16 +845,19 @@ describe("Pricing Handlers", () => {
       env.PRICING_DB.prepare().bind().first.onCall(0).resolves(existingPrice); // Exists
       env.PRICING_DB.prepare().bind().run.onCall(0).resolves({ success: true }); // UPDATE
       env.PRICING_DB.prepare().bind().run.onCall(1).resolves({ success: true }); // History INSERT
-      env.PRICING_DB.prepare().bind().first.onCall(1).resolves({
-        ...existingPrice,
-        price: 39.99,
-      }); // Get after update
+      env.PRICING_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...existingPrice,
+          price: 39.99,
+        }); // Get after update
 
       const response = await handlers.initializePrice(request, env);
-      
+
       // Response might be 200, 201, 400, or 500 depending on mock setup
       expect([200, 201, 400, 500]).to.include(response.status);
-      
+
       if (response.status === 200 || response.status === 201) {
         const data = await response.json();
         // Data might be null if update failed, or an object if successful
@@ -765,9 +870,13 @@ describe("Pricing Handlers", () => {
 
   describe("updatePrice", () => {
     it("should update SKU price", async () => {
-      const request = createMockRequest("PUT", "https://example.com/api/v1/prices/test-sku-id", {
-        price: 39.99,
-      });
+      const request = createMockRequest(
+        "PUT",
+        "https://example.com/api/v1/prices/test-sku-id",
+        {
+          price: 39.99,
+        },
+      );
       request.params = { sku_id: "test-sku-id" };
       request.user = { userId: "user123" };
 
@@ -799,9 +908,13 @@ describe("Pricing Handlers", () => {
     });
 
     it("should return 400 for invalid SKU ID", async () => {
-      const request = createMockRequest("PUT", "https://example.com/api/v1/prices/", {
-        price: 39.99,
-      });
+      const request = createMockRequest(
+        "PUT",
+        "https://example.com/api/v1/prices/",
+        {
+          price: 39.99,
+        },
+      );
       request.params = { sku_id: "" };
 
       const response = await handlers.updatePrice(request, env);
@@ -809,9 +922,13 @@ describe("Pricing Handlers", () => {
     });
 
     it("should return 400 for invalid price data", async () => {
-      const request = createMockRequest("PUT", "https://example.com/api/v1/prices/test-sku-id", {
-        price: -10, // Invalid negative price
-      });
+      const request = createMockRequest(
+        "PUT",
+        "https://example.com/api/v1/prices/test-sku-id",
+        {
+          price: -10, // Invalid negative price
+        },
+      );
       request.params = { sku_id: "test-sku-id" };
       request.user = { userId: "user123" };
 
@@ -820,7 +937,11 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle JSON parse error", async () => {
-      const request = createMockRequest("PUT", "https://example.com/api/v1/prices/test-sku-id", null);
+      const request = createMockRequest(
+        "PUT",
+        "https://example.com/api/v1/prices/test-sku-id",
+        null,
+      );
       request.params = { sku_id: "test-sku-id" };
       request.user = { userId: "user123" };
       request.json = async () => {
@@ -832,9 +953,13 @@ describe("Pricing Handlers", () => {
     });
 
     it("should use system as userId when user not provided", async () => {
-      const request = createMockRequest("PUT", "https://example.com/api/v1/prices/test-sku-id", {
-        price: 39.99,
-      });
+      const request = createMockRequest(
+        "PUT",
+        "https://example.com/api/v1/prices/test-sku-id",
+        {
+          price: 39.99,
+        },
+      );
       request.params = { sku_id: "test-sku-id" };
       request.user = null; // No user
 
@@ -849,10 +974,13 @@ describe("Pricing Handlers", () => {
       env.PRICING_DB.prepare().bind().first.onCall(0).resolves(existingPrice);
       env.PRICING_DB.prepare().bind().run.onCall(0).resolves({ success: true });
       env.PRICING_DB.prepare().bind().run.onCall(1).resolves({ success: true });
-      env.PRICING_DB.prepare().bind().first.onCall(1).resolves({
-        ...existingPrice,
-        price: 39.99,
-      });
+      env.PRICING_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...existingPrice,
+          price: 39.99,
+        });
 
       const response = await handlers.updatePrice(request, env);
       expect([200, 500]).to.include(response.status);
@@ -861,7 +989,10 @@ describe("Pricing Handlers", () => {
 
   describe("deletePrice", () => {
     it("should delete SKU price", async () => {
-      const request = createMockRequest("DELETE", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "DELETE",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
       request.user = { userId: "user123" };
 
@@ -886,7 +1017,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should return 400 for invalid SKU ID", async () => {
-      const request = createMockRequest("DELETE", "https://example.com/api/v1/prices/");
+      const request = createMockRequest(
+        "DELETE",
+        "https://example.com/api/v1/prices/",
+      );
       request.params = { sku_id: "" };
 
       const response = await handlers.deletePrice(request, env);
@@ -894,7 +1028,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should use system as userId when user not provided", async () => {
-      const request = createMockRequest("DELETE", "https://example.com/api/v1/prices/test-sku-id");
+      const request = createMockRequest(
+        "DELETE",
+        "https://example.com/api/v1/prices/test-sku-id",
+      );
       request.params = { sku_id: "test-sku-id" };
       request.user = null;
 
@@ -917,7 +1054,10 @@ describe("Pricing Handlers", () => {
 
   describe("listPromotionCodes", () => {
     it("should list promotion codes", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/promotion-codes?page=1&limit=20");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/promotion-codes?page=1&limit=20",
+      );
       request.user = { userId: "user123" };
 
       const mockResult = {
@@ -928,7 +1068,10 @@ describe("Pricing Handlers", () => {
       };
 
       // Mock: list query, then count query
-      env.PRICING_DB.prepare().bind().all.onCall(0).resolves({ results: mockResult.promotions });
+      env.PRICING_DB.prepare()
+        .bind()
+        .all.onCall(0)
+        .resolves({ results: mockResult.promotions });
       env.PRICING_DB.prepare().bind().first.onCall(0).resolves({ total: 1 });
 
       const response = await handlers.listPromotionCodes(request, env);
@@ -939,7 +1082,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle status filter in query", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/promotion-codes?page=1&limit=20&status=active");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/promotion-codes?page=1&limit=20&status=active",
+      );
       request.user = { userId: "user123" };
 
       env.PRICING_DB.prepare().bind().all.onCall(0).resolves({ results: [] });
@@ -950,7 +1096,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle missing query parameters", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/promotion-codes");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/promotion-codes",
+      );
       request.user = { userId: "user123" };
 
       env.PRICING_DB.prepare().bind().all.onCall(0).resolves({ results: [] });
@@ -961,7 +1110,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle validation error in query params", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/promotion-codes?page=-1&limit=0");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/promotion-codes?page=-1&limit=0",
+      );
       request.user = { userId: "user123" };
 
       const response = await handlers.listPromotionCodes(request, env);
@@ -969,7 +1121,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle error when listing promotion codes", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/promotion-codes?page=1&limit=20");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/promotion-codes?page=1&limit=20",
+      );
       request.user = { userId: "user123" };
 
       env.PRICING_DB.prepare().bind().all.rejects(new Error("Database error"));
@@ -981,7 +1136,10 @@ describe("Pricing Handlers", () => {
 
   describe("getPromotionCode", () => {
     it("should return promotion code by ID", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/promotion-codes/promo1");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/promotion-codes/promo1",
+      );
       request.params = { promotion_id: "promo1" };
       request.user = { userId: "user123" };
 
@@ -1001,7 +1159,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should return 404 when promotion not found", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/promotion-codes/promo1");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/promotion-codes/promo1",
+      );
       request.params = { promotion_id: "promo1" };
       request.user = { userId: "user123" };
 
@@ -1015,7 +1176,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should return 400 when promotion ID is missing", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/promotion-codes/");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/promotion-codes/",
+      );
       request.params = { promotion_id: "" };
 
       const response = await handlers.getPromotionCode(request, env);
@@ -1025,14 +1189,18 @@ describe("Pricing Handlers", () => {
 
   describe("createPromotionCode", () => {
     it("should create promotion code", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/promotion-codes", {
-        code: "SAVE10",
-        name: "Save 10%",
-        discount_type: "percentage",
-        discount_value: 10,
-        valid_from: new Date().toISOString(),
-        valid_to: new Date(Date.now() + 86400000).toISOString(),
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/promotion-codes",
+        {
+          code: "SAVE10",
+          name: "Save 10%",
+          discount_type: "percentage",
+          discount_value: 10,
+          valid_from: new Date().toISOString(),
+          valid_to: new Date(Date.now() + 86400000).toISOString(),
+        },
+      );
       request.user = { userId: "user123" };
 
       const mockPromo = {
@@ -1054,14 +1222,18 @@ describe("Pricing Handlers", () => {
     });
 
     it("should return 409 when code already exists", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/promotion-codes", {
-        code: "SAVE10",
-        name: "Save 10%",
-        discount_type: "percentage",
-        discount_value: 10,
-        valid_from: new Date().toISOString(),
-        valid_to: new Date(Date.now() + 86400000).toISOString(),
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/promotion-codes",
+        {
+          code: "SAVE10",
+          name: "Save 10%",
+          discount_type: "percentage",
+          discount_value: 10,
+          valid_from: new Date().toISOString(),
+          valid_to: new Date(Date.now() + 86400000).toISOString(),
+        },
+      );
       request.user = { userId: "user123" };
 
       // Mock: code already exists
@@ -1072,7 +1244,11 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle JSON parse error", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/promotion-codes", null);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/promotion-codes",
+        null,
+      );
       request.user = { userId: "user123" };
       request.json = async () => {
         throw new Error("Invalid JSON");
@@ -1083,10 +1259,14 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle validation error", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/promotion-codes", {
-        code: "", // Invalid empty code
-        name: "Save 10%",
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/promotion-codes",
+        {
+          code: "", // Invalid empty code
+          name: "Save 10%",
+        },
+      );
       request.user = { userId: "user123" };
 
       const response = await handlers.createPromotionCode(request, env);
@@ -1094,14 +1274,18 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle error when code already exists (409)", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/promotion-codes", {
-        code: "SAVE10",
-        name: "Save 10%",
-        discount_type: "percentage",
-        discount_value: 10,
-        valid_from: new Date().toISOString(),
-        valid_to: new Date(Date.now() + 86400000).toISOString(),
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/promotion-codes",
+        {
+          code: "SAVE10",
+          name: "Save 10%",
+          discount_type: "percentage",
+          discount_value: 10,
+          valid_from: new Date().toISOString(),
+          valid_to: new Date(Date.now() + 86400000).toISOString(),
+        },
+      );
       request.user = { userId: "user123" };
 
       // Mock: code already exists - this will throw error in service
@@ -1113,14 +1297,18 @@ describe("Pricing Handlers", () => {
     });
 
     it("should use system as userId when user not provided", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/promotion-codes", {
-        code: "SAVE10",
-        name: "Save 10%",
-        discount_type: "percentage",
-        discount_value: 10,
-        valid_from: new Date().toISOString(),
-        valid_to: new Date(Date.now() + 86400000).toISOString(),
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/promotion-codes",
+        {
+          code: "SAVE10",
+          name: "Save 10%",
+          discount_type: "percentage",
+          discount_value: 10,
+          valid_from: new Date().toISOString(),
+          valid_to: new Date(Date.now() + 86400000).toISOString(),
+        },
+      );
       request.user = null; // No user
 
       env.PRICING_DB.prepare().bind().first.onCall(0).resolves(null);
@@ -1137,9 +1325,13 @@ describe("Pricing Handlers", () => {
 
   describe("updatePromotionCode", () => {
     it("should update promotion code", async () => {
-      const request = createMockRequest("PUT", "https://example.com/api/v1/promotion-codes/promo1", {
-        name: "New Name",
-      });
+      const request = createMockRequest(
+        "PUT",
+        "https://example.com/api/v1/promotion-codes/promo1",
+        {
+          name: "New Name",
+        },
+      );
       request.params = { promotion_id: "promo1" };
       request.user = { userId: "user123" };
 
@@ -1163,9 +1355,13 @@ describe("Pricing Handlers", () => {
     });
 
     it("should return 404 when promotion not found", async () => {
-      const request = createMockRequest("PUT", "https://example.com/api/v1/promotion-codes/promo1", {
-        name: "New Name",
-      });
+      const request = createMockRequest(
+        "PUT",
+        "https://example.com/api/v1/promotion-codes/promo1",
+        {
+          name: "New Name",
+        },
+      );
       request.params = { promotion_id: "promo1" };
       request.user = { userId: "user123" };
 
@@ -1176,7 +1372,11 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle JSON parse error", async () => {
-      const request = createMockRequest("PUT", "https://example.com/api/v1/promotion-codes/promo1", null);
+      const request = createMockRequest(
+        "PUT",
+        "https://example.com/api/v1/promotion-codes/promo1",
+        null,
+      );
       request.params = { promotion_id: "promo1" };
       request.user = { userId: "user123" };
       request.json = async () => {
@@ -1188,9 +1388,13 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle validation error", async () => {
-      const request = createMockRequest("PUT", "https://example.com/api/v1/promotion-codes/promo1", {
-        discount_value: -10, // Invalid negative value
-      });
+      const request = createMockRequest(
+        "PUT",
+        "https://example.com/api/v1/promotion-codes/promo1",
+        {
+          discount_value: -10, // Invalid negative value
+        },
+      );
       request.params = { promotion_id: "promo1" };
       request.user = { userId: "user123" };
 
@@ -1202,7 +1406,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should return 400 when promotion ID is missing", async () => {
-      const request = createMockRequest("PUT", "https://example.com/api/v1/promotion-codes/");
+      const request = createMockRequest(
+        "PUT",
+        "https://example.com/api/v1/promotion-codes/",
+      );
       request.params = { promotion_id: "" };
 
       const response = await handlers.updatePromotionCode(request, env);
@@ -1210,9 +1417,13 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle error when updating promotion", async () => {
-      const request = createMockRequest("PUT", "https://example.com/api/v1/promotion-codes/promo1", {
-        name: "New Name",
-      });
+      const request = createMockRequest(
+        "PUT",
+        "https://example.com/api/v1/promotion-codes/promo1",
+        {
+          name: "New Name",
+        },
+      );
       request.params = { promotion_id: "promo1" };
       request.user = { userId: "user123" };
 
@@ -1225,19 +1436,26 @@ describe("Pricing Handlers", () => {
     });
 
     it("should use system as userId when user not provided", async () => {
-      const request = createMockRequest("PUT", "https://example.com/api/v1/promotion-codes/promo1", {
-        name: "New Name",
-      });
+      const request = createMockRequest(
+        "PUT",
+        "https://example.com/api/v1/promotion-codes/promo1",
+        {
+          name: "New Name",
+        },
+      );
       request.params = { promotion_id: "promo1" };
       request.user = null; // No user
 
       const existing = { promotion_id: "promo1", code: "SAVE10" };
       env.PRICING_DB.prepare().bind().first.onCall(0).resolves(existing);
       env.PRICING_DB.prepare().bind().run.resolves({ success: true });
-      env.PRICING_DB.prepare().bind().first.onCall(1).resolves({
-        ...existing,
-        name: "New Name",
-      });
+      env.PRICING_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...existing,
+          name: "New Name",
+        });
 
       const response = await handlers.updatePromotionCode(request, env);
       expect([200, 500]).to.include(response.status);
@@ -1246,7 +1464,10 @@ describe("Pricing Handlers", () => {
 
   describe("deletePromotionCode", () => {
     it("should delete promotion code", async () => {
-      const request = createMockRequest("DELETE", "https://example.com/api/v1/promotion-codes/promo1");
+      const request = createMockRequest(
+        "DELETE",
+        "https://example.com/api/v1/promotion-codes/promo1",
+      );
       request.params = { promotion_id: "promo1" };
       request.user = { userId: "user123" };
 
@@ -1264,7 +1485,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should return 404 when promotion not found", async () => {
-      const request = createMockRequest("DELETE", "https://example.com/api/v1/promotion-codes/promo1");
+      const request = createMockRequest(
+        "DELETE",
+        "https://example.com/api/v1/promotion-codes/promo1",
+      );
       request.params = { promotion_id: "promo1" };
       request.user = { userId: "user123" };
 
@@ -1275,7 +1499,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should return 400 for invalid promotion ID", async () => {
-      const request = createMockRequest("DELETE", "https://example.com/api/v1/promotion-codes/");
+      const request = createMockRequest(
+        "DELETE",
+        "https://example.com/api/v1/promotion-codes/",
+      );
       request.params = { promotion_id: "" };
 
       const response = await handlers.deletePromotionCode(request, env);
@@ -1283,7 +1510,10 @@ describe("Pricing Handlers", () => {
     });
 
     it("should handle error when deleting promotion", async () => {
-      const request = createMockRequest("DELETE", "https://example.com/api/v1/promotion-codes/promo1");
+      const request = createMockRequest(
+        "DELETE",
+        "https://example.com/api/v1/promotion-codes/promo1",
+      );
       request.params = { promotion_id: "promo1" };
       request.user = { userId: "user123" };
 

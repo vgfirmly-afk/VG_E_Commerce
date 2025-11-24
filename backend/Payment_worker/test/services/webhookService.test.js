@@ -109,10 +109,9 @@ describe("Webhook Service", () => {
       );
       // Mock catalog worker
       env.CATALOG_WORKER.fetch.resolves(
-        new Response(
-          JSON.stringify({ product_id: "test-product-id" }),
-          { status: 200 },
-        ),
+        new Response(JSON.stringify({ product_id: "test-product-id" }), {
+          status: 200,
+        }),
       );
       // Mock inventory and fulfillment workers
       env.INVENTORY_WORKER.fetch.resolves(
@@ -190,10 +189,13 @@ describe("Webhook Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves({
-        ...payment,
-        status: "approved",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...payment,
+          status: "approved",
+        });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
 
       const result = await webhookService.handleWebhookEvent(event, env);
@@ -239,10 +241,13 @@ describe("Webhook Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves({
-        ...payment,
-        status: "captured",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...payment,
+          status: "captured",
+        });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
 
       env.CHECKOUT_WORKER.fetch.resolves(
@@ -278,10 +283,13 @@ describe("Webhook Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves({
-        ...payment,
-        status: "cancelled",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...payment,
+          status: "cancelled",
+        });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
 
       env.CHECKOUT_WORKER.fetch.resolves(
@@ -317,10 +325,13 @@ describe("Webhook Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves({
-        ...payment,
-        status: "approved",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...payment,
+          status: "approved",
+        });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
       env.CHECKOUT_WORKER.fetch.resolves(
         new Response(JSON.stringify({}), { status: 200 }),
@@ -389,10 +400,13 @@ describe("Webhook Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves({
-        ...payment,
-        status: "created",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...payment,
+          status: "created",
+        });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
 
       const result = await webhookService.handleWebhookEvent(event, env);
@@ -432,10 +446,13 @@ describe("Webhook Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves({
-        ...payment,
-        status: "cancelled",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...payment,
+          status: "cancelled",
+        });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
       env.CHECKOUT_WORKER.fetch.resolves(
         new Response(JSON.stringify({}), { status: 200 }),
@@ -464,10 +481,13 @@ describe("Webhook Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves({
-        ...payment,
-        status: "cancelled",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...payment,
+          status: "cancelled",
+        });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
       env.CHECKOUT_WORKER.fetch.resolves(
         new Response(JSON.stringify({}), { status: 200 }),
@@ -502,10 +522,13 @@ describe("Webhook Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves({
-        ...payment,
-        status: "approved",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...payment,
+          status: "approved",
+        });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
       env.CHECKOUT_WORKER.fetch.resolves(
         new Response(JSON.stringify({}), { status: 200 }),
@@ -544,7 +567,9 @@ describe("Webhook Service", () => {
         },
       };
 
-      env.PAYMENT_DB.prepare().bind().first.rejects(new Error("Database error"));
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.rejects(new Error("Database error"));
 
       try {
         await webhookService.handleWebhookEvent(event, env);
@@ -565,7 +590,9 @@ describe("Webhook Service", () => {
         },
       };
 
-      env.PAYMENT_DB.prepare().bind().first.rejects(new Error("Database error"));
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.rejects(new Error("Database error"));
 
       try {
         await webhookService.handleWebhookEvent(event, env);
@@ -585,7 +612,9 @@ describe("Webhook Service", () => {
         },
       };
 
-      env.PAYMENT_DB.prepare().bind().first.rejects(new Error("Database error"));
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.rejects(new Error("Database error"));
 
       try {
         await webhookService.handleWebhookEvent(event, env);
@@ -605,7 +634,9 @@ describe("Webhook Service", () => {
         },
       };
 
-      env.PAYMENT_DB.prepare().bind().first.rejects(new Error("Database error"));
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.rejects(new Error("Database error"));
 
       try {
         await webhookService.handleWebhookEvent(event, env);
@@ -624,7 +655,9 @@ describe("Webhook Service", () => {
         },
       };
 
-      env.PAYMENT_DB.prepare().bind().first.rejects(new Error("Database error"));
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.rejects(new Error("Database error"));
 
       try {
         await webhookService.handleWebhookEvent(event, env);
@@ -652,10 +685,13 @@ describe("Webhook Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves({
-        ...payment,
-        status: "cancelled",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...payment,
+          status: "cancelled",
+        });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
       // Mock checkout worker to fail - this covers the .catch() branch in notifyCheckoutWorker
       env.CHECKOUT_WORKER.fetch.rejects(new Error("Network error"));
@@ -713,10 +749,13 @@ describe("Webhook Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves({
-        ...payment,
-        status: "captured",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...payment,
+          status: "captured",
+        });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
 
       const result = await webhookService.handleWebhookEvent(event, env);
@@ -767,10 +806,13 @@ describe("Webhook Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves({
-        ...payment,
-        status: "captured",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...payment,
+          status: "captured",
+        });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
       // Mock checkout worker to return non-ok response
       env.CHECKOUT_WORKER.fetch.resolves(
@@ -835,10 +877,13 @@ describe("Webhook Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves({
-        ...payment,
-        status: "captured",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...payment,
+          status: "captured",
+        });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
       env.CHECKOUT_WORKER.fetch.resolves(
         new Response(
@@ -900,10 +945,13 @@ describe("Webhook Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves({
-        ...payment,
-        status: "captured",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...payment,
+          status: "captured",
+        });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
       // Mock checkout session with empty items
       env.CHECKOUT_WORKER.fetch.resolves(
@@ -958,10 +1006,13 @@ describe("Webhook Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves({
-        ...payment,
-        status: "captured",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...payment,
+          status: "captured",
+        });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
       env.CHECKOUT_WORKER.fetch.resolves(
         new Response(
@@ -1032,10 +1083,13 @@ describe("Webhook Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves({
-        ...payment,
-        status: "captured",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...payment,
+          status: "captured",
+        });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
       env.CHECKOUT_WORKER.fetch.resolves(
         new Response(

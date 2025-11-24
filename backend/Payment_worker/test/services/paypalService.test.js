@@ -97,9 +97,9 @@ describe("PayPal Service", () => {
         ],
       };
 
-      fetchStub.onCall(1).resolves(
-        new Response(JSON.stringify(mockOrder), { status: 201 }),
-      );
+      fetchStub
+        .onCall(1)
+        .resolves(new Response(JSON.stringify(mockOrder), { status: 201 }));
 
       const orderData = {
         checkout_session_id: "test-session-id",
@@ -140,10 +140,9 @@ describe("PayPal Service", () => {
       );
 
       fetchStub.onCall(1).resolves(
-        new Response(
-          JSON.stringify({ error: "Invalid request" }),
-          { status: 400 },
-        ),
+        new Response(JSON.stringify({ error: "Invalid request" }), {
+          status: 400,
+        }),
       );
 
       try {
@@ -193,9 +192,9 @@ describe("PayPal Service", () => {
         ],
       };
 
-      fetchStub.onCall(1).resolves(
-        new Response(JSON.stringify(mockCapture), { status: 200 }),
-      );
+      fetchStub
+        .onCall(1)
+        .resolves(new Response(JSON.stringify(mockCapture), { status: 200 }));
 
       const capture = await paypalService.capturePayPalOrder(
         "test-order-id",
@@ -217,10 +216,9 @@ describe("PayPal Service", () => {
       );
 
       fetchStub.onCall(1).resolves(
-        new Response(
-          JSON.stringify({ error: "Capture failed" }),
-          { status: 400 },
-        ),
+        new Response(JSON.stringify({ error: "Capture failed" }), {
+          status: 400,
+        }),
       );
 
       const capture = await paypalService.capturePayPalOrder(
@@ -251,9 +249,9 @@ describe("PayPal Service", () => {
         status: "APPROVED",
       };
 
-      fetchStub.onCall(1).resolves(
-        new Response(JSON.stringify(mockOrder), { status: 200 }),
-      );
+      fetchStub
+        .onCall(1)
+        .resolves(new Response(JSON.stringify(mockOrder), { status: 200 }));
 
       const order = await paypalService.getPayPalOrder("test-order-id", env);
 
@@ -272,10 +270,9 @@ describe("PayPal Service", () => {
       );
 
       fetchStub.onCall(1).resolves(
-        new Response(
-          JSON.stringify({ error: "Order not found" }),
-          { status: 404 },
-        ),
+        new Response(JSON.stringify({ error: "Order not found" }), {
+          status: 404,
+        }),
       );
 
       try {

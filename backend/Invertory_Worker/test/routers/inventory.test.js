@@ -31,15 +31,25 @@ describe("Inventory Router", () => {
 
   describe("GET /api/v1/stock/:sku_id", () => {
     it("should get stock for SKU", async () => {
-      const mockStock = { sku_id: "sku-1", quantity: 100, available_quantity: 90 };
+      const mockStock = {
+        sku_id: "sku-1",
+        quantity: 100,
+        available_quantity: 90,
+      };
       const mockDb = env.INVENTORY_DB;
       mockDb.prepare().bind().first.resolves(mockStock);
 
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/sku-1", null, {}, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/sku-1",
+        null,
+        {},
+        { sku_id: "sku-1" },
+      );
       request.env = env; // Set request.env for the router
       // itty-router will set request.params when it matches the route
       const response = await router.handle(request, env, {});
-      
+
       // If router didn't match, it returns undefined, so we need to check
       if (!response) {
         throw new Error("Router did not match route");
@@ -53,11 +63,19 @@ describe("Inventory Router", () => {
 
   describe("GET /api/v1/stock/product/:product_id", () => {
     it("should get all stocks for a product", async () => {
-      const mockStocks = [{ sku_id: "sku-1", product_id: "prod-1", quantity: 100 }];
+      const mockStocks = [
+        { sku_id: "sku-1", product_id: "prod-1", quantity: 100 },
+      ];
       const mockDb = env.INVENTORY_DB;
       mockDb.prepare().bind().all.resolves({ results: mockStocks });
 
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/product/prod-1", null, {}, { product_id: "prod-1" });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/product/prod-1",
+        null,
+        {},
+        { product_id: "prod-1" },
+      );
       request.env = env;
       const response = await router.handle(request, env, {});
 
@@ -75,7 +93,13 @@ describe("Inventory Router", () => {
       historyStub.all.onFirstCall().resolves({ results: mockHistory });
       historyStub.first.onFirstCall().resolves(mockCount);
 
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/sku-1/history", null, {}, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/sku-1/history",
+        null,
+        {},
+        { sku_id: "sku-1" },
+      );
       request.env = env;
       const response = await router.handle(request, env, {});
 
@@ -86,14 +110,27 @@ describe("Inventory Router", () => {
 
   describe("POST /api/v1/check-stock", () => {
     it.skip("should check stock availability", async () => {
-      const mockStocks = [{ sku_id: "sku-1", available_quantity: 90, quantity: 100, reserved_quantity: 10, status: "active" }];
+      const mockStocks = [
+        {
+          sku_id: "sku-1",
+          available_quantity: 90,
+          quantity: 100,
+          reserved_quantity: 10,
+          status: "active",
+        },
+      ];
       const mockDb = env.INVENTORY_DB;
       mockDb.prepare().bind().all.resolves({ results: mockStocks });
 
       const body = { sku_ids: ["sku-1"] };
-      const request = createMockRequest("POST", "https://example.com/api/v1/check-stock", body, {
-        "Content-Type": "application/json",
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/check-stock",
+        body,
+        {
+          "Content-Type": "application/json",
+        },
+      );
       request.env = env; // Set request.env for the router
       const response = await router.handle(request, env, {});
 
@@ -101,16 +138,25 @@ describe("Inventory Router", () => {
     });
 
     it("should return 400 for invalid Content-Type", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/check-stock", null, {
-        "Content-Type": "text/plain",
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/check-stock",
+        null,
+        {
+          "Content-Type": "text/plain",
+        },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(400);
     });
 
     it("should return 400 for invalid JSON in check-stock", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/check-stock", null);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/check-stock",
+        null,
+      );
       request.json = async () => {
         throw new Error("Invalid JSON");
       };
@@ -121,9 +167,14 @@ describe("Inventory Router", () => {
 
     it.skip("should return 400 for invalid request data in check-stock", async () => {
       const body = { sku_ids: "not-an-array" };
-      const request = createMockRequest("POST", "https://example.com/api/v1/check-stock", body, {
-        "Content-Type": "application/json",
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/check-stock",
+        body,
+        {
+          "Content-Type": "application/json",
+        },
+      );
       request.env = env;
       const response = await router.handle(request, env, {});
 
@@ -139,7 +190,11 @@ describe("Inventory Router", () => {
       mockDb.prepare().bind().all.rejects(new Error("Database error"));
 
       const body = { sku_ids: ["sku-1"] };
-      const request = createMockRequest("POST", "https://example.com/api/v1/check-stock", body);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/check-stock",
+        body,
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(500);
@@ -149,10 +204,14 @@ describe("Inventory Router", () => {
   describe("POST /api/v1/stock/:sku_id", () => {
     it.skip("should initialize stock with service binding", async () => {
       const mockStock = { sku_id: "sku-1", quantity: 100 };
-      sinon.replace(adminAuth, "requireServiceOrAdmin", sinon.fake.resolves({
-        ok: true,
-        user: { userId: "catalog_worker_service", role: "service" },
-      }));
+      sinon.replace(
+        adminAuth,
+        "requireServiceOrAdmin",
+        sinon.fake.resolves({
+          ok: true,
+          user: { userId: "catalog_worker_service", role: "service" },
+        }),
+      );
       // Mock database for stock initialization
       const mockDb = env.INVENTORY_DB;
       mockDb.prepare().bind().first.onFirstCall().resolves(null); // Stock doesn't exist
@@ -160,9 +219,15 @@ describe("Inventory Router", () => {
       mockDb.batch.resolves([]);
 
       const body = { product_id: "prod-1", sku_code: "SKU001", quantity: 100 };
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1", body, {
-        "X-Source": "catalog-worker-service-binding",
-      }, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1",
+        body,
+        {
+          "X-Source": "catalog-worker-service-binding",
+        },
+        { sku_id: "sku-1" },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(201);
@@ -170,10 +235,14 @@ describe("Inventory Router", () => {
 
     it.skip("should initialize stock with admin JWT", async () => {
       const mockStock = { sku_id: "sku-1", quantity: 100 };
-      sinon.replace(adminAuth, "requireServiceOrAdmin", sinon.fake.resolves({
-        ok: true,
-        user: { userId: "admin-1", role: "admin" },
-      }));
+      sinon.replace(
+        adminAuth,
+        "requireServiceOrAdmin",
+        sinon.fake.resolves({
+          ok: true,
+          user: { userId: "admin-1", role: "admin" },
+        }),
+      );
       // Mock database for stock initialization
       const mockDb = env.INVENTORY_DB;
       mockDb.prepare().bind().first.onFirstCall().resolves(null); // Stock doesn't exist
@@ -182,35 +251,61 @@ describe("Inventory Router", () => {
 
       const token = createTestJWT({ role: "admin" });
       const body = { product_id: "prod-1", sku_code: "SKU001", quantity: 100 };
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1", body, {
-        Authorization: `Bearer ${token}`,
-      }, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1",
+        body,
+        {
+          Authorization: `Bearer ${token}`,
+        },
+        { sku_id: "sku-1" },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(201);
     });
 
     it.skip("should return 401 for unauthorized request", async () => {
-      sinon.replace(adminAuth, "requireServiceOrAdmin", sinon.fake.resolves({
-        ok: false,
-        error: "unauthorized",
-        message: "Unauthorized",
-        status: 401,
-      }));
+      sinon.replace(
+        adminAuth,
+        "requireServiceOrAdmin",
+        sinon.fake.resolves({
+          ok: false,
+          error: "unauthorized",
+          message: "Unauthorized",
+          status: 401,
+        }),
+      );
 
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1", {}, {}, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1",
+        {},
+        {},
+        { sku_id: "sku-1" },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(401);
     });
 
     it.skip("should handle JSON parse errors in initializeStock", async () => {
-      sinon.replace(adminAuth, "requireServiceOrAdmin", sinon.fake.resolves({
-        ok: true,
-        user: { userId: "admin-1", role: "admin" },
-      }));
+      sinon.replace(
+        adminAuth,
+        "requireServiceOrAdmin",
+        sinon.fake.resolves({
+          ok: true,
+          user: { userId: "admin-1", role: "admin" },
+        }),
+      );
 
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1", null, {}, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1",
+        null,
+        {},
+        { sku_id: "sku-1" },
+      );
       request.json = async () => {
         throw new Error("Invalid JSON");
       };
@@ -223,47 +318,83 @@ describe("Inventory Router", () => {
   describe("PUT /api/v1/stock/:sku_id", () => {
     it.skip("should update stock with admin JWT", async () => {
       const mockStock = { sku_id: "sku-1", quantity: 150 };
-      sinon.replace(adminAuth, "requireAdmin", sinon.fake.resolves({
-        ok: true,
-        user: { userId: "admin-1", role: "admin" },
-      }));
+      sinon.replace(
+        adminAuth,
+        "requireAdmin",
+        sinon.fake.resolves({
+          ok: true,
+          user: { userId: "admin-1", role: "admin" },
+        }),
+      );
       // Mock database for stock update
       const mockDb = env.INVENTORY_DB;
-      const existingStock = { sku_id: "sku-1", quantity: 100, reserved_quantity: 10, product_id: "prod-1", sku_code: "SKU001" };
+      const existingStock = {
+        sku_id: "sku-1",
+        quantity: 100,
+        reserved_quantity: 10,
+        product_id: "prod-1",
+        sku_code: "SKU001",
+      };
       mockDb.prepare().bind().first.onFirstCall().resolves(existingStock);
       mockDb.prepare().bind().first.onSecondCall().resolves(mockStock);
       mockDb.batch.resolves([]);
 
       const token = createTestJWT({ role: "admin" });
       const body = { quantity: 150 };
-      const request = createMockRequest("PUT", "https://example.com/api/v1/stock/sku-1", body, {
-        Authorization: `Bearer ${token}`,
-      }, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "PUT",
+        "https://example.com/api/v1/stock/sku-1",
+        body,
+        {
+          Authorization: `Bearer ${token}`,
+        },
+        { sku_id: "sku-1" },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(200);
     });
 
     it.skip("should return 401 for unauthorized request", async () => {
-      sinon.replace(adminAuth, "requireAdmin", sinon.fake.resolves({
-        ok: false,
-        error: "unauthorized",
-        status: 401,
-      }));
+      sinon.replace(
+        adminAuth,
+        "requireAdmin",
+        sinon.fake.resolves({
+          ok: false,
+          error: "unauthorized",
+          status: 401,
+        }),
+      );
 
-      const request = createMockRequest("PUT", "https://example.com/api/v1/stock/sku-1", {}, {}, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "PUT",
+        "https://example.com/api/v1/stock/sku-1",
+        {},
+        {},
+        { sku_id: "sku-1" },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(401);
     });
 
     it.skip("should handle JSON parse errors in updateStock", async () => {
-      sinon.replace(adminAuth, "requireAdmin", sinon.fake.resolves({
-        ok: true,
-        user: { userId: "admin-1", role: "admin" },
-      }));
+      sinon.replace(
+        adminAuth,
+        "requireAdmin",
+        sinon.fake.resolves({
+          ok: true,
+          user: { userId: "admin-1", role: "admin" },
+        }),
+      );
 
-      const request = createMockRequest("PUT", "https://example.com/api/v1/stock/sku-1", null, {}, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "PUT",
+        "https://example.com/api/v1/stock/sku-1",
+        null,
+        {},
+        { sku_id: "sku-1" },
+      );
       request.json = async () => {
         throw new Error("Invalid JSON");
       };
@@ -276,34 +407,61 @@ describe("Inventory Router", () => {
   describe("POST /api/v1/stock/:sku_id/adjust", () => {
     it.skip("should adjust stock with admin JWT", async () => {
       const mockStock = { sku_id: "sku-1", quantity: 150 };
-      sinon.replace(adminAuth, "requireAdmin", sinon.fake.resolves({
-        ok: true,
-        user: { userId: "admin-1", role: "admin" },
-      }));
+      sinon.replace(
+        adminAuth,
+        "requireAdmin",
+        sinon.fake.resolves({
+          ok: true,
+          user: { userId: "admin-1", role: "admin" },
+        }),
+      );
       // Mock database for stock adjustment
       const mockDb = env.INVENTORY_DB;
-      const existingStock = { sku_id: "sku-1", quantity: 100, reserved_quantity: 10, product_id: "prod-1", sku_code: "SKU001", status: "active" };
+      const existingStock = {
+        sku_id: "sku-1",
+        quantity: 100,
+        reserved_quantity: 10,
+        product_id: "prod-1",
+        sku_code: "SKU001",
+        status: "active",
+      };
       mockDb.prepare().bind().first.onFirstCall().resolves(existingStock);
       mockDb.prepare().bind().first.onSecondCall().resolves(mockStock);
       mockDb.batch.resolves([]);
 
       const token = createTestJWT({ role: "admin" });
       const body = { quantity: 50 };
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1/adjust", body, {
-        Authorization: `Bearer ${token}`,
-      }, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1/adjust",
+        body,
+        {
+          Authorization: `Bearer ${token}`,
+        },
+        { sku_id: "sku-1" },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(200);
     });
 
     it.skip("should handle JSON parse errors in adjustStock", async () => {
-      sinon.replace(adminAuth, "requireAdmin", sinon.fake.resolves({
-        ok: true,
-        user: { userId: "admin-1", role: "admin" },
-      }));
+      sinon.replace(
+        adminAuth,
+        "requireAdmin",
+        sinon.fake.resolves({
+          ok: true,
+          user: { userId: "admin-1", role: "admin" },
+        }),
+      );
 
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1/adjust", null, {}, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1/adjust",
+        null,
+        {},
+        { sku_id: "sku-1" },
+      );
       request.json = async () => {
         throw new Error("Invalid JSON");
       };
@@ -318,24 +476,43 @@ describe("Inventory Router", () => {
       const mockStock = { sku_id: "sku-1", reserved_quantity: 20 };
       // Mock database for stock reservation
       const mockDb = env.INVENTORY_DB;
-      const existingStock = { sku_id: "sku-1", quantity: 100, reserved_quantity: 10, available_quantity: 90, product_id: "prod-1", sku_code: "SKU001" };
+      const existingStock = {
+        sku_id: "sku-1",
+        quantity: 100,
+        reserved_quantity: 10,
+        available_quantity: 90,
+        product_id: "prod-1",
+        sku_code: "SKU001",
+      };
       mockDb.prepare().bind().first.onFirstCall().resolves(existingStock);
       mockDb.prepare().bind().first.onSecondCall().resolves(mockStock);
       mockDb.batch.resolves([]);
 
       const body = { quantity: 10, reservation_id: "reservation-1" };
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1/reserve", body, {
-        "X-User-Id": "user-1",
-      }, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1/reserve",
+        body,
+        {
+          "X-User-Id": "user-1",
+        },
+        { sku_id: "sku-1" },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(200);
     });
 
     it("should handle JSON parse errors in reserveStock", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1/reserve", null, {
-        "X-User-Id": "user-1",
-      }, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1/reserve",
+        null,
+        {
+          "X-User-Id": "user-1",
+        },
+        { sku_id: "sku-1" },
+      );
       request.json = async () => {
         throw new Error("Invalid JSON");
       };
@@ -346,16 +523,29 @@ describe("Inventory Router", () => {
 
     it.skip("should handle insufficient stock error in reserveStock", async () => {
       const mockDb = env.INVENTORY_DB;
-      const existingStock = { sku_id: "sku-1", quantity: 10, reserved_quantity: 5, available_quantity: 5, product_id: "prod-1", sku_code: "SKU001" };
+      const existingStock = {
+        sku_id: "sku-1",
+        quantity: 10,
+        reserved_quantity: 5,
+        available_quantity: 5,
+        product_id: "prod-1",
+        sku_code: "SKU001",
+      };
       mockDb.prepare().bind().first.onFirstCall().resolves(existingStock);
       mockDb.batch.resolves([]);
       // Second call to verify reservation failed
       mockDb.prepare().bind().first.onSecondCall().resolves(existingStock);
 
       const body = { quantity: 10, reservation_id: "reservation-1" };
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1/reserve", body, {
-        "X-User-Id": "user-1",
-      }, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1/reserve",
+        body,
+        {
+          "X-User-Id": "user-1",
+        },
+        { sku_id: "sku-1" },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(400);
@@ -367,8 +557,20 @@ describe("Inventory Router", () => {
       const mockStock = { sku_id: "sku-1", reserved_quantity: 10 };
       // Mock database for stock release
       const mockDb = env.INVENTORY_DB;
-      const reservation = { reservation_id: "reservation-1", sku_id: "sku-1", quantity: 10, status: "active" };
-      const existingStock = { sku_id: "sku-1", quantity: 100, reserved_quantity: 20, available_quantity: 80, product_id: "prod-1", sku_code: "SKU001" };
+      const reservation = {
+        reservation_id: "reservation-1",
+        sku_id: "sku-1",
+        quantity: 10,
+        status: "active",
+      };
+      const existingStock = {
+        sku_id: "sku-1",
+        quantity: 100,
+        reserved_quantity: 20,
+        available_quantity: 80,
+        product_id: "prod-1",
+        sku_code: "SKU001",
+      };
       const reservationStub = mockDb.prepare().bind();
       reservationStub.first.onFirstCall().resolves(reservation);
       mockDb.prepare().bind().first.onSecondCall().resolves(existingStock);
@@ -376,18 +578,30 @@ describe("Inventory Router", () => {
       mockDb.batch.resolves([]);
 
       const body = { reservation_id: "reservation-1" };
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1/release", body, {
-        "X-User-Id": "user-1",
-      }, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1/release",
+        body,
+        {
+          "X-User-Id": "user-1",
+        },
+        { sku_id: "sku-1" },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(200);
     });
 
     it("should handle JSON parse errors in releaseStock", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1/release", null, {
-        "X-User-Id": "user-1",
-      }, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1/release",
+        null,
+        {
+          "X-User-Id": "user-1",
+        },
+        { sku_id: "sku-1" },
+      );
       request.json = async () => {
         throw new Error("Invalid JSON");
       };
@@ -402,8 +616,20 @@ describe("Inventory Router", () => {
       const mockResponse = { success: true, message: "Stock deducted" };
       // Mock database for webhook handler
       const mockDb = env.INVENTORY_DB;
-      const existingStock = { sku_id: "sku-1", quantity: 100, reserved_quantity: 10, available_quantity: 90, product_id: "prod-1", sku_code: "SKU001", status: "active" };
-      const adjustedStock = { ...existingStock, quantity: 90, available_quantity: 80 };
+      const existingStock = {
+        sku_id: "sku-1",
+        quantity: 100,
+        reserved_quantity: 10,
+        available_quantity: 90,
+        product_id: "prod-1",
+        sku_code: "SKU001",
+        status: "active",
+      };
+      const adjustedStock = {
+        ...existingStock,
+        quantity: 90,
+        available_quantity: 80,
+      };
       mockDb.prepare().bind().first.onFirstCall().resolves(existingStock);
       mockDb.prepare().bind().first.onSecondCall().resolves(adjustedStock);
       mockDb.batch.resolves([]);
@@ -412,7 +638,11 @@ describe("Inventory Router", () => {
         payment_status: "captured",
         order_items: [{ sku_id: "sku-1", quantity: 10 }],
       };
-      const request = createMockRequest("POST", "https://example.com/api/v1/webhooks/payment-status", body);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/webhooks/payment-status",
+        body,
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(200);
@@ -423,7 +653,11 @@ describe("Inventory Router", () => {
         payment_status: "pending",
         order_items: [{ sku_id: "sku-1", quantity: 10 }],
       };
-      const request = createMockRequest("POST", "https://example.com/api/v1/webhooks/payment-status", body);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/webhooks/payment-status",
+        body,
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(200);
@@ -437,8 +671,12 @@ describe("Inventory Router", () => {
         payment_status: "captured",
         order_items: [{ sku_id: "sku-1", quantity: 10 }],
       };
-      const request = createMockRequest("POST", "https://example.com/api/v1/webhooks/payment-status", body);
-      
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/webhooks/payment-status",
+        body,
+      );
+
       // Mock the dynamic import to fail
       const originalImport = global.import;
       global.import = async () => {
@@ -457,7 +695,11 @@ describe("Inventory Router", () => {
   describe("POST /api/v1/stock/check (legacy endpoint)", () => {
     it("should return 301 redirect message", async () => {
       const body = { sku_ids: ["sku-1"] };
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/check", body);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/check",
+        body,
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(301);
@@ -469,9 +711,15 @@ describe("Inventory Router", () => {
   describe("POST /api/v1/stock/:sku_id with check as sku_id", () => {
     it.skip("should return 404 when sku_id is 'check'", async () => {
       const body = { product_id: "prod-1", quantity: 100 };
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/check", body, {
-        "X-Source": "catalog-worker-service-binding",
-      }, { sku_id: "check" });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/check",
+        body,
+        {
+          "X-Source": "catalog-worker-service-binding",
+        },
+        { sku_id: "check" },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(404);
@@ -482,7 +730,10 @@ describe("Inventory Router", () => {
 
   describe("404 Handler", () => {
     it("should return 404 for unknown routes", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/unknown-route");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/unknown-route",
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(404);
@@ -496,7 +747,13 @@ describe("Inventory Router", () => {
       const mockDb = env.INVENTORY_DB;
       mockDb.prepare().bind().first.rejects(new Error("Database error"));
 
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/sku-1", null, {}, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/sku-1",
+        null,
+        {},
+        { sku_id: "sku-1" },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(500);
@@ -505,30 +762,60 @@ describe("Inventory Router", () => {
     });
 
     it.skip("should handle router errors in POST /api/v1/stock/:sku_id", async () => {
-      sinon.replace(adminAuth, "requireServiceOrAdmin", sinon.fake.rejects(new Error("Auth error")));
+      sinon.replace(
+        adminAuth,
+        "requireServiceOrAdmin",
+        sinon.fake.rejects(new Error("Auth error")),
+      );
 
       const body = { product_id: "prod-1", quantity: 100 };
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1", body, {}, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1",
+        body,
+        {},
+        { sku_id: "sku-1" },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(500);
     });
 
     it.skip("should handle router errors in PUT /api/v1/stock/:sku_id", async () => {
-      sinon.replace(adminAuth, "requireAdmin", sinon.fake.rejects(new Error("Auth error")));
+      sinon.replace(
+        adminAuth,
+        "requireAdmin",
+        sinon.fake.rejects(new Error("Auth error")),
+      );
 
       const body = { quantity: 150 };
-      const request = createMockRequest("PUT", "https://example.com/api/v1/stock/sku-1", body, {}, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "PUT",
+        "https://example.com/api/v1/stock/sku-1",
+        body,
+        {},
+        { sku_id: "sku-1" },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(500);
     });
 
     it.skip("should handle router errors in POST /api/v1/stock/:sku_id/adjust", async () => {
-      sinon.replace(adminAuth, "requireAdmin", sinon.fake.rejects(new Error("Auth error")));
+      sinon.replace(
+        adminAuth,
+        "requireAdmin",
+        sinon.fake.rejects(new Error("Auth error")),
+      );
 
       const body = { quantity: 50 };
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1/adjust", body, {}, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1/adjust",
+        body,
+        {},
+        { sku_id: "sku-1" },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(500);
@@ -539,9 +826,15 @@ describe("Inventory Router", () => {
       mockDb.prepare().bind().first.rejects(new Error("Database error"));
 
       const body = { quantity: 10, reservation_id: "reservation-1" };
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1/reserve", body, {
-        "X-User-Id": "user-1",
-      }, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1/reserve",
+        body,
+        {
+          "X-User-Id": "user-1",
+        },
+        { sku_id: "sku-1" },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(500);
@@ -553,9 +846,15 @@ describe("Inventory Router", () => {
       reservationStub.first.rejects(new Error("Database error"));
 
       const body = { reservation_id: "reservation-1" };
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1/release", body, {
-        "X-User-Id": "user-1",
-      }, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1/release",
+        body,
+        {
+          "X-User-Id": "user-1",
+        },
+        { sku_id: "sku-1" },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(500);
@@ -566,7 +865,11 @@ describe("Inventory Router", () => {
         payment_status: "captured",
         order_items: [{ sku_id: "sku-1", quantity: 10 }],
       };
-      const request = createMockRequest("POST", "https://example.com/api/v1/webhooks/payment-status", body);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/webhooks/payment-status",
+        body,
+      );
       request.json = async () => {
         throw new Error("JSON parse error");
       };
@@ -580,7 +883,13 @@ describe("Inventory Router", () => {
       const mockDb = env.INVENTORY_DB;
       mockDb.prepare().bind().all.rejects(new Error("Database error"));
 
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/product/prod-1", null, {}, { product_id: "prod-1" });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/product/prod-1",
+        null,
+        {},
+        { product_id: "prod-1" },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(500);
@@ -590,7 +899,13 @@ describe("Inventory Router", () => {
       const mockDb = env.INVENTORY_DB;
       mockDb.prepare().bind().all.rejects(new Error("Database error"));
 
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/sku-1/history", null, {}, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/sku-1/history",
+        null,
+        {},
+        { sku_id: "sku-1" },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(500);
@@ -601,7 +916,11 @@ describe("Inventory Router", () => {
       mockDb.prepare().bind().all.rejects(new Error("Database error"));
 
       const body = { sku_ids: ["sku-1"] };
-      const request = createMockRequest("POST", "https://example.com/api/v1/check-stock", body);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/check-stock",
+        body,
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(500);
@@ -609,7 +928,11 @@ describe("Inventory Router", () => {
 
     it("should handle validation errors in check-stock", async () => {
       const body = { sku_ids: [] }; // Empty array should fail validation
-      const request = createMockRequest("POST", "https://example.com/api/v1/check-stock", body);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/check-stock",
+        body,
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(400);
@@ -623,7 +946,13 @@ describe("Inventory Router", () => {
       const mockDb = env.INVENTORY_DB;
       mockDb.prepare().bind().first.rejects(new Error("Database error"));
 
-      const request = createMockRequest("GET", "https://example.com/api/v1/stock/sku-1", null, {}, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/stock/sku-1",
+        null,
+        {},
+        { sku_id: "sku-1" },
+      );
       const response = await router.handle(request, env, {});
 
       // Router should handle errors and return valid Response
@@ -633,9 +962,15 @@ describe("Inventory Router", () => {
 
     it("should handle missing reservation_id in releaseStock", async () => {
       const body = {};
-      const request = createMockRequest("POST", "https://example.com/api/v1/stock/sku-1/release", body, {
-        "X-User-Id": "user-1",
-      }, { sku_id: "sku-1" });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/stock/sku-1/release",
+        body,
+        {
+          "X-User-Id": "user-1",
+        },
+        { sku_id: "sku-1" },
+      );
       const response = await router.handle(request, env, {});
 
       expect(response.status).to.equal(400);
@@ -644,7 +979,10 @@ describe("Inventory Router", () => {
 
   describe("Router wrapper safety", () => {
     it("should always return a Response object", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/unknown-route");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/unknown-route",
+      );
       const response = await router.handle(request, env, {});
 
       expect(response).to.be.instanceOf(Response);
@@ -652,4 +990,3 @@ describe("Inventory Router", () => {
     });
   });
 });
-

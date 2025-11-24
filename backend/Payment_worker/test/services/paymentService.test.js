@@ -70,7 +70,10 @@ describe("Payment Service", () => {
       });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
 
-      const payment = await paymentService.createPaymentIntent(paymentData, env);
+      const payment = await paymentService.createPaymentIntent(
+        paymentData,
+        env,
+      );
 
       expect(payment.payment_id).to.equal("test-payment-id");
       expect(payment.approval_url).to.equal("https://paypal.com/approve");
@@ -113,7 +116,10 @@ describe("Payment Service", () => {
       });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
 
-      const payment = await paymentService.createPaymentIntent(paymentData, env);
+      const payment = await paymentService.createPaymentIntent(
+        paymentData,
+        env,
+      );
 
       expect(payment.payment_id).to.exist;
       // Should use default URLs from config
@@ -134,7 +140,10 @@ describe("Payment Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.resolves(existingPayment);
 
-      const payment = await paymentService.createPaymentIntent(paymentData, env);
+      const payment = await paymentService.createPaymentIntent(
+        paymentData,
+        env,
+      );
 
       expect(payment.payment_id).to.equal("test-payment-id");
     });
@@ -153,7 +162,10 @@ describe("Payment Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.resolves(existingPayment);
 
-      const payment = await paymentService.createPaymentIntent(paymentData, env);
+      const payment = await paymentService.createPaymentIntent(
+        paymentData,
+        env,
+      );
 
       expect(payment.payment_id).to.equal("test-payment-id");
     });
@@ -173,12 +185,14 @@ describe("Payment Service", () => {
       };
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(existingPayment);
-      fetchStub.onCall(0).resolves(
-        new Response(
-          JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
-          { status: 200 },
-        ),
-      );
+      fetchStub
+        .onCall(0)
+        .resolves(
+          new Response(
+            JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
+            { status: 200 },
+          ),
+        );
       fetchStub.onCall(1).resolves(
         new Response(
           JSON.stringify({
@@ -198,7 +212,10 @@ describe("Payment Service", () => {
       });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
 
-      const payment = await paymentService.createPaymentIntent(paymentData, env);
+      const payment = await paymentService.createPaymentIntent(
+        paymentData,
+        env,
+      );
 
       expect(payment.payment_id).to.equal("new-payment-id");
     });
@@ -233,10 +250,9 @@ describe("Payment Service", () => {
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       // Mock PayPal OAuth
       fetchStub.onCall(0).resolves(
-        new Response(
-          JSON.stringify({ access_token: "test-token" }),
-          { status: 200 },
-        ),
+        new Response(JSON.stringify({ access_token: "test-token" }), {
+          status: 200,
+        }),
       );
       // Mock PayPal capture
       fetchStub.onCall(1).resolves(
@@ -269,10 +285,13 @@ describe("Payment Service", () => {
       );
       // Mock payment update
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves({
-        ...payment,
-        status: "captured",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...payment,
+          status: "captured",
+        });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
 
       const result = await paymentService.capturePayment(
@@ -327,10 +346,9 @@ describe("Payment Service", () => {
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(null);
       env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves(payment);
       fetchStub.onCall(0).resolves(
-        new Response(
-          JSON.stringify({ access_token: "test-token" }),
-          { status: 200 },
-        ),
+        new Response(JSON.stringify({ access_token: "test-token" }), {
+          status: 200,
+        }),
       );
       fetchStub.onCall(1).resolves(
         new Response(
@@ -349,10 +367,13 @@ describe("Payment Service", () => {
         ),
       );
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(2).resolves({
-        ...payment,
-        status: "captured",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(2)
+        .resolves({
+          ...payment,
+          status: "captured",
+        });
       env.PAYMENT_DB.prepare().bind().run.onCall(1).resolves({ success: true });
 
       const result = await paymentService.capturePayment(
@@ -403,10 +424,9 @@ describe("Payment Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       fetchStub.onCall(0).resolves(
-        new Response(
-          JSON.stringify({ access_token: "test-token" }),
-          { status: 200 },
-        ),
+        new Response(JSON.stringify({ access_token: "test-token" }), {
+          status: 200,
+        }),
       );
       fetchStub.onCall(1).resolves(
         new Response(
@@ -425,10 +445,13 @@ describe("Payment Service", () => {
         ),
       );
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves({
-        ...payment,
-        status: "approved",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...payment,
+          status: "approved",
+        });
 
       const result = await paymentService.getPaymentStatus(
         "test-payment-id",
@@ -447,10 +470,9 @@ describe("Payment Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       fetchStub.onCall(0).resolves(
-        new Response(
-          JSON.stringify({ access_token: "test-token" }),
-          { status: 200 },
-        ),
+        new Response(JSON.stringify({ access_token: "test-token" }), {
+          status: 200,
+        }),
       );
       fetchStub.onCall(1).resolves(
         new Response(
@@ -469,10 +491,13 @@ describe("Payment Service", () => {
         ),
       );
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves({
-        ...payment,
-        status: "captured",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...payment,
+          status: "captured",
+        });
 
       const result = await paymentService.getPaymentStatus(
         "test-payment-id",
@@ -491,10 +516,9 @@ describe("Payment Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       fetchStub.onCall(0).resolves(
-        new Response(
-          JSON.stringify({ access_token: "test-token" }),
-          { status: 200 },
-        ),
+        new Response(JSON.stringify({ access_token: "test-token" }), {
+          status: 200,
+        }),
       );
       fetchStub.onCall(1).resolves(
         new Response(
@@ -510,10 +534,13 @@ describe("Payment Service", () => {
         ),
       );
       env.PAYMENT_DB.prepare().bind().run.onCall(0).resolves({ success: true });
-      env.PAYMENT_DB.prepare().bind().first.onCall(1).resolves({
-        ...payment,
-        status: "approved",
-      });
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...payment,
+          status: "approved",
+        });
 
       const result = await paymentService.getPaymentStatus(
         "test-payment-id",
@@ -532,10 +559,9 @@ describe("Payment Service", () => {
 
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(payment);
       fetchStub.onCall(0).resolves(
-        new Response(
-          JSON.stringify({ access_token: "test-token" }),
-          { status: 200 },
-        ),
+        new Response(JSON.stringify({ access_token: "test-token" }), {
+          status: 200,
+        }),
       );
       fetchStub.onCall(1).rejects(new Error("PayPal API error"));
 
@@ -676,7 +702,12 @@ describe("Payment Service", () => {
       env.PAYMENT_DB.prepare().bind().first.resolves(null);
 
       try {
-        await paymentService.handlePayPalCallback("test-order-id", null, true, env);
+        await paymentService.handlePayPalCallback(
+          "test-order-id",
+          null,
+          true,
+          env,
+        );
         expect.fail("Should have thrown an error");
       } catch (err) {
         expect(err.message).to.include("not found");

@@ -28,12 +28,16 @@ describe("Payment Router", () => {
 
   describe("POST /api/v1/payments", () => {
     it("should handle create payment request", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/payments", {
-        checkout_session_id: "test-session-id",
-        amount: 100.0,
-        return_url: "https://example.com/success",
-        cancel_url: "https://example.com/cancel",
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/payments",
+        {
+          checkout_session_id: "test-session-id",
+          amount: 100.0,
+          return_url: "https://example.com/success",
+          cancel_url: "https://example.com/cancel",
+        },
+      );
       request.env = env;
       request.validatedBody = request.body;
 
@@ -44,17 +48,23 @@ describe("Payment Router", () => {
     });
 
     it("should handle errors in create payment route", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/payments", {
-        checkout_session_id: "test-session-id",
-        amount: 100.0,
-        return_url: "https://example.com/success",
-        cancel_url: "https://example.com/cancel",
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/payments",
+        {
+          checkout_session_id: "test-session-id",
+          amount: 100.0,
+          return_url: "https://example.com/success",
+          cancel_url: "https://example.com/cancel",
+        },
+      );
       request.env = env;
       request.validatedBody = request.body;
-      
+
       // Mock handler to throw error
-      const originalHandler = await import("../../src/handlers/paymentHandlers.js");
+      const originalHandler = await import(
+        "../../src/handlers/paymentHandlers.js"
+      );
       request.validatedBody = null; // This will cause an error
 
       const response = await router.handle(request, env, {});
@@ -161,7 +171,10 @@ describe("Payment Router", () => {
 
   describe("Fallback route", () => {
     it("should return 404 for unknown routes", async () => {
-      const request = createMockRequest("GET", "https://example.com/unknown-route");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/unknown-route",
+      );
       request.env = env;
 
       const response = await router.handle(request, env, {});
@@ -172,4 +185,3 @@ describe("Payment Router", () => {
     });
   });
 });
-

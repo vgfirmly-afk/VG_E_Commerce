@@ -25,8 +25,12 @@ describe("Tracing Utils", () => {
       const config = resolveConfig(env);
 
       expect(config.service.name).to.equal("Custom_Service");
-      expect(config.exporter.headers["x-honeycomb-team"]).to.equal("custom-key");
-      expect(config.exporter.headers["x-honeycomb-dataset"]).to.equal("custom-dataset");
+      expect(config.exporter.headers["x-honeycomb-team"]).to.equal(
+        "custom-key",
+      );
+      expect(config.exporter.headers["x-honeycomb-dataset"]).to.equal(
+        "custom-dataset",
+      );
     });
 
     it("should handle undefined env", () => {
@@ -37,4 +41,3 @@ describe("Tracing Utils", () => {
     });
   });
 });
-

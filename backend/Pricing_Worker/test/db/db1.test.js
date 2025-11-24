@@ -26,10 +26,7 @@ describe("DB Functions", () => {
         currency: "USD",
         status: "active",
       };
-      mockDb
-        .prepare()
-        .bind()
-        .first.resolves(mockPrice);
+      mockDb.prepare().bind().first.resolves(mockPrice);
 
       const price = await db.getSkuPrice("test-sku-id", env);
       expect(price).to.deep.equal(mockPrice);
@@ -158,10 +155,14 @@ describe("DB Functions", () => {
       // Mock price history INSERT
       mockDb.prepare().bind().run.onCall(1).resolves({ success: true });
       // Mock getSkuPrice (updated price)
-      mockDb.prepare().bind().first.onCall(1).resolves({
-        ...currentPrice,
-        price: 39.99,
-      });
+      mockDb
+        .prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...currentPrice,
+          price: 39.99,
+        });
 
       const updated = await db.updateSkuPrice(
         "test-sku-id",
@@ -186,10 +187,14 @@ describe("DB Functions", () => {
       mockDb.prepare().bind().first.onCall(0).resolves(currentPrice);
       mockDb.prepare().bind().run.onCall(0).resolves({ success: true });
       mockDb.prepare().bind().run.onCall(1).resolves({ success: true });
-      mockDb.prepare().bind().first.onCall(1).resolves({
-        ...currentPrice,
-        currency: "EUR",
-      });
+      mockDb
+        .prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...currentPrice,
+          currency: "EUR",
+        });
 
       const updated = await db.updateSkuPrice(
         "test-sku-id",
@@ -215,10 +220,14 @@ describe("DB Functions", () => {
       mockDb.prepare().bind().first.onCall(0).resolves(currentPrice);
       mockDb.prepare().bind().run.onCall(0).resolves({ success: true });
       mockDb.prepare().bind().run.onCall(1).resolves({ success: true });
-      mockDb.prepare().bind().first.onCall(1).resolves({
-        ...currentPrice,
-        sale_price: null,
-      });
+      mockDb
+        .prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...currentPrice,
+          sale_price: null,
+        });
 
       const updated = await db.updateSkuPrice(
         "test-sku-id",
@@ -348,7 +357,11 @@ describe("DB Functions", () => {
     it("should handle res?.results being undefined", async () => {
       mockDb.prepare().bind().all.resolves(null); // No results property
 
-      const history = await db.getPriceHistory("test-sku-id", { page: 1, limit: 20 }, env);
+      const history = await db.getPriceHistory(
+        "test-sku-id",
+        { page: 1, limit: 20 },
+        env,
+      );
       expect(history).to.be.an("array");
       expect(history.length).to.equal(0);
     });
@@ -412,10 +425,7 @@ describe("DB Functions", () => {
       mockDb.prepare().bind().all.onCall(0).resolves({ results: mockPromos });
       mockDb.prepare().bind().first.onCall(0).resolves({ total: 2 });
 
-      const result = await db.listPromotionCodes(
-        { page: 1, limit: 20 },
-        env,
-      );
+      const result = await db.listPromotionCodes({ page: 1, limit: 20 }, env);
       expect(result.promotions).to.deep.equal(mockPromos);
       expect(result.total).to.equal(2);
     });
@@ -478,10 +488,14 @@ describe("DB Functions", () => {
       // Mock INSERT
       mockDb.prepare().bind().run.onCall(0).resolves({ success: true });
       // Mock getPromotionCodeById (return created)
-      mockDb.prepare().bind().first.onCall(1).resolves({
-        promotion_id: "promo1",
-        ...promoData,
-      });
+      mockDb
+        .prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          promotion_id: "promo1",
+          ...promoData,
+        });
 
       const promo = await db.createPromotionCode(promoData, "user123", env);
       expect(promo).to.exist;
@@ -500,10 +514,14 @@ describe("DB Functions", () => {
 
       mockDb.prepare().bind().first.onCall(0).resolves(null);
       mockDb.prepare().bind().run.onCall(0).resolves({ success: true });
-      mockDb.prepare().bind().first.onCall(1).resolves({
-        promotion_id: "promo1",
-        ...promoData,
-      });
+      mockDb
+        .prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          promotion_id: "promo1",
+          ...promoData,
+        });
 
       const promo = await db.createPromotionCode(promoData, "user123", env);
       expect(promo).to.exist;
@@ -522,10 +540,14 @@ describe("DB Functions", () => {
 
       mockDb.prepare().bind().first.onCall(0).resolves(null);
       mockDb.prepare().bind().run.onCall(0).resolves({ success: true });
-      mockDb.prepare().bind().first.onCall(1).resolves({
-        promotion_id: "promo1",
-        ...promoData,
-      });
+      mockDb
+        .prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          promotion_id: "promo1",
+          ...promoData,
+        });
 
       const promo = await db.createPromotionCode(promoData, "user123", env);
       expect(promo).to.exist;
@@ -567,10 +589,14 @@ describe("DB Functions", () => {
       // Mock UPDATE
       mockDb.prepare().bind().run.onCall(0).resolves({ success: true });
       // Mock getPromotionCodeById (return updated)
-      mockDb.prepare().bind().first.onCall(1).resolves({
-        ...existing,
-        ...updates,
-      });
+      mockDb
+        .prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...existing,
+          ...updates,
+        });
 
       const updated = await db.updatePromotionCode(
         "promo1",
@@ -591,10 +617,14 @@ describe("DB Functions", () => {
 
       mockDb.prepare().bind().first.onCall(0).resolves(existing);
       mockDb.prepare().bind().run.onCall(0).resolves({ success: true });
-      mockDb.prepare().bind().first.onCall(1).resolves({
-        ...existing,
-        ...updates,
-      });
+      mockDb
+        .prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...existing,
+          ...updates,
+        });
 
       const updated = await db.updatePromotionCode(
         "promo1",
@@ -615,10 +645,14 @@ describe("DB Functions", () => {
 
       mockDb.prepare().bind().first.onCall(0).resolves(existing);
       mockDb.prepare().bind().run.onCall(0).resolves({ success: true });
-      mockDb.prepare().bind().first.onCall(1).resolves({
-        ...existing,
-        ...updates,
-      });
+      mockDb
+        .prepare()
+        .bind()
+        .first.onCall(1)
+        .resolves({
+          ...existing,
+          ...updates,
+        });
 
       const updated = await db.updatePromotionCode(
         "promo1",
@@ -741,4 +775,3 @@ describe("DB Functions", () => {
     });
   });
 });
-

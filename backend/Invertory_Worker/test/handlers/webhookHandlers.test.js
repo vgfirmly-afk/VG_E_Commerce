@@ -57,7 +57,11 @@ describe("Webhook Handlers", () => {
         ],
       };
 
-      const request = createMockRequest("POST", "https://example.com/api/v1/webhooks/payment-status", body);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/webhooks/payment-status",
+        body,
+      );
       const response = await handlers.handlePaymentStatusWebhook(request, env);
       const data = await response.json();
 
@@ -81,7 +85,11 @@ describe("Webhook Handlers", () => {
         ],
       };
 
-      const request = createMockRequest("POST", "https://example.com/api/v1/webhooks/payment-status", body);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/webhooks/payment-status",
+        body,
+      );
       const response = await handlers.handlePaymentStatusWebhook(request, env);
       const data = await response.json();
 
@@ -100,7 +108,11 @@ describe("Webhook Handlers", () => {
         available_quantity: 90,
         status: "active",
       };
-      const adjustedStock1 = { ...existingStock1, quantity: 90, available_quantity: 80 };
+      const adjustedStock1 = {
+        ...existingStock1,
+        quantity: 90,
+        available_quantity: 80,
+      };
 
       const existingStock2 = {
         sku_id: "sku-2",
@@ -111,7 +123,11 @@ describe("Webhook Handlers", () => {
         available_quantity: 80,
         status: "active",
       };
-      const adjustedStock2 = { ...existingStock2, quantity: 80, available_quantity: 70 };
+      const adjustedStock2 = {
+        ...existingStock2,
+        quantity: 80,
+        available_quantity: 70,
+      };
 
       const mockDb = env.INVENTORY_DB;
       // Setup mocks for multiple calls - use the shared first stub
@@ -135,7 +151,11 @@ describe("Webhook Handlers", () => {
         ],
       };
 
-      const request = createMockRequest("POST", "https://example.com/api/v1/webhooks/payment-status", body);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/webhooks/payment-status",
+        body,
+      );
       const response = await handlers.handlePaymentStatusWebhook(request, env);
       const data = await response.json();
 
@@ -155,7 +175,11 @@ describe("Webhook Handlers", () => {
         available_quantity: 90,
         status: "active",
       };
-      const adjustedStock1 = { ...existingStock1, quantity: 90, available_quantity: 80 };
+      const adjustedStock1 = {
+        ...existingStock1,
+        quantity: 90,
+        available_quantity: 80,
+      };
 
       const existingStock2 = {
         sku_id: "sku-2",
@@ -186,7 +210,11 @@ describe("Webhook Handlers", () => {
         ],
       };
 
-      const request = createMockRequest("POST", "https://example.com/api/v1/webhooks/payment-status", body);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/webhooks/payment-status",
+        body,
+      );
       const response = await handlers.handlePaymentStatusWebhook(request, env);
       const data = await response.json();
 
@@ -217,7 +245,11 @@ describe("Webhook Handlers", () => {
         available_quantity: 90,
         status: "active",
       };
-      const adjustedStock = { ...existingStock, quantity: 90, available_quantity: 80 };
+      const adjustedStock = {
+        ...existingStock,
+        quantity: 90,
+        available_quantity: 80,
+      };
 
       const mockDb = env.INVENTORY_DB;
       // First call: getSkuStock in deductStockForOrder
@@ -228,7 +260,11 @@ describe("Webhook Handlers", () => {
       mockDb.prepare().bind().first.onThirdCall().resolves(adjustedStock);
       mockDb.batch.resolves([]);
 
-      const request = createMockRequest("POST", "https://example.com/api/v1/webhooks/payment-status", body);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/webhooks/payment-status",
+        body,
+      );
       const response = await handlers.handlePaymentStatusWebhook(request, env);
       const data = await response.json();
 
@@ -237,7 +273,11 @@ describe("Webhook Handlers", () => {
     });
 
     it("should return 400 for invalid JSON", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/webhooks/payment-status", null);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/webhooks/payment-status",
+        null,
+      );
       request.json = async () => {
         throw new Error("Invalid JSON");
       };
@@ -254,7 +294,11 @@ describe("Webhook Handlers", () => {
         order_items: [{ sku_id: "sku-1", quantity: 10 }],
       };
 
-      const request = createMockRequest("POST", "https://example.com/api/v1/webhooks/payment-status", body);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/webhooks/payment-status",
+        body,
+      );
       const response = await handlers.handlePaymentStatusWebhook(request, env);
       const data = await response.json();
 
@@ -267,7 +311,11 @@ describe("Webhook Handlers", () => {
         payment_status: "captured",
       };
 
-      const request = createMockRequest("POST", "https://example.com/api/v1/webhooks/payment-status", body);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/webhooks/payment-status",
+        body,
+      );
       const response = await handlers.handlePaymentStatusWebhook(request, env);
       const data = await response.json();
 
@@ -286,7 +334,11 @@ describe("Webhook Handlers", () => {
       const firstStub = mockDb.prepare().bind().first;
       firstStub.rejects(new Error("Unexpected error"));
 
-      const request = createMockRequest("POST", "https://example.com/api/v1/webhooks/payment-status", body);
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/webhooks/payment-status",
+        body,
+      );
       const response = await handlers.handlePaymentStatusWebhook(request, env);
       const data = await response.json();
 
@@ -300,4 +352,3 @@ describe("Webhook Handlers", () => {
     });
   });
 });
-

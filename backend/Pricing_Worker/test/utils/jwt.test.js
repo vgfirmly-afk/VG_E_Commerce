@@ -43,7 +43,12 @@ describe("JWT Utils", () => {
     it("should return null when signature verification fails", async () => {
       // Create a token with invalid signature
       const header = btoa(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-      const payload = btoa(JSON.stringify({ sub: "user123", exp: Math.floor(Date.now() / 1000) + 3600 }));
+      const payload = btoa(
+        JSON.stringify({
+          sub: "user123",
+          exp: Math.floor(Date.now() / 1000) + 3600,
+        }),
+      );
       const signature = "invalid-signature";
       const token = `${header}.${payload}.${signature}`;
 
@@ -54,7 +59,12 @@ describe("JWT Utils", () => {
     it("should return null when token is expired", async () => {
       // Create an expired token
       const header = btoa(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-      const payload = btoa(JSON.stringify({ sub: "user123", exp: Math.floor(Date.now() / 1000) - 3600 }));
+      const payload = btoa(
+        JSON.stringify({
+          sub: "user123",
+          exp: Math.floor(Date.now() / 1000) - 3600,
+        }),
+      );
       const signature = "signature";
       const token = `${header}.${payload}.${signature}`;
 
@@ -64,7 +74,12 @@ describe("JWT Utils", () => {
 
     it("should handle invalid base64 in signature", async () => {
       const header = btoa(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-      const payload = btoa(JSON.stringify({ sub: "user123", exp: Math.floor(Date.now() / 1000) + 3600 }));
+      const payload = btoa(
+        JSON.stringify({
+          sub: "user123",
+          exp: Math.floor(Date.now() / 1000) + 3600,
+        }),
+      );
       const signature = "invalid-base64!!!";
       const token = `${header}.${payload}.${signature}`;
 
@@ -89,7 +104,12 @@ describe("JWT Utils", () => {
       };
 
       const header = btoa(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-      const payload = btoa(JSON.stringify({ sub: "user123", exp: Math.floor(Date.now() / 1000) + 3600 }));
+      const payload = btoa(
+        JSON.stringify({
+          sub: "user123",
+          exp: Math.floor(Date.now() / 1000) + 3600,
+        }),
+      );
       const signature = "signature";
       const token = `${header}.${payload}.${signature}`;
 
@@ -98,4 +118,3 @@ describe("JWT Utils", () => {
     });
   });
 });
-

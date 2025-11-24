@@ -43,13 +43,17 @@ describe("Logger Utils", () => {
       // logError doesn't call console.error (commented out in source)
       // It only adds to span, so we just verify it doesn't throw
       const error = new Error("Test error");
-      expect(() => logger.logError("Error occurred", error, { context: "test" })).to.not.throw();
+      expect(() =>
+        logger.logError("Error occurred", error, { context: "test" }),
+      ).to.not.throw();
     });
 
     it("should handle null error", () => {
       // logError doesn't call console.error (commented out in source)
       // It only adds to span, so we just verify it doesn't throw
-      expect(() => logger.logError("Error occurred", null, { context: "test" })).to.not.throw();
+      expect(() =>
+        logger.logError("Error occurred", null, { context: "test" }),
+      ).to.not.throw();
     });
   });
 
@@ -57,7 +61,9 @@ describe("Logger Utils", () => {
     it("should log warning", () => {
       // logWarn doesn't call console.warn (commented out in source)
       // It only adds to span, so we just verify it doesn't throw
-      expect(() => logger.logWarn("Warning message", { context: "test" })).to.not.throw();
+      expect(() =>
+        logger.logWarn("Warning message", { context: "test" }),
+      ).to.not.throw();
     });
   });
 
@@ -65,7 +71,9 @@ describe("Logger Utils", () => {
     it("should log info message", () => {
       // logInfo doesn't call console.log (commented out in source)
       // It only adds to span, so we just verify it doesn't throw
-      expect(() => logger.logInfo("Info message", { context: "test" })).to.not.throw();
+      expect(() =>
+        logger.logInfo("Info message", { context: "test" }),
+      ).to.not.throw();
     });
   });
 
@@ -75,7 +83,7 @@ describe("Logger Utils", () => {
         setAttribute: sinon.stub(),
         addEvent: sinon.stub(),
       };
-      
+
       // Test addLogToSpan indirectly through logger with null span
       // This tests the branch where span is null
       expect(() => logger.logger("test.event", {})).to.not.throw();
@@ -97,7 +105,9 @@ describe("Logger Utils", () => {
 
     it("should handle logError without span", () => {
       // This tests the branch where span is null in logError
-      expect(() => logger.logError("Error message", new Error("Test"))).to.not.throw();
+      expect(() =>
+        logger.logError("Error message", new Error("Test")),
+      ).to.not.throw();
     });
 
     it("should handle logWarn with null span", () => {
@@ -120,4 +130,3 @@ describe("Logger Utils", () => {
     });
   });
 });
-

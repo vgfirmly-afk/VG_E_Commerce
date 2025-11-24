@@ -19,24 +19,30 @@ describe("Payment Handlers", () => {
 
   describe("createPayment", () => {
     it("should create payment intent successfully", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/payments", {
-        checkout_session_id: "test-session-id",
-        amount: 100.0,
-        return_url: "https://example.com/success",
-        cancel_url: "https://example.com/cancel",
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/payments",
+        {
+          checkout_session_id: "test-session-id",
+          amount: 100.0,
+          return_url: "https://example.com/success",
+          cancel_url: "https://example.com/cancel",
+        },
+      );
       request.validatedBody = request.body;
 
       // Mock database - no existing payment
       env.PAYMENT_DB.prepare().bind().first.onCall(0).resolves(null);
       // Mock PayPal OAuth
       const fetchStub = sinon.stub(global, "fetch");
-      fetchStub.onCall(0).resolves(
-        new Response(
-          JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
-          { status: 200 },
-        ),
-      );
+      fetchStub
+        .onCall(0)
+        .resolves(
+          new Response(
+            JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
+            { status: 200 },
+          ),
+        );
       // Mock PayPal order creation
       fetchStub.onCall(1).resolves(
         new Response(
@@ -68,14 +74,20 @@ describe("Payment Handlers", () => {
     });
 
     it("should handle service errors", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/payments", {
-        checkout_session_id: "test-session-id",
-        amount: 100.0,
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/payments",
+        {
+          checkout_session_id: "test-session-id",
+          amount: 100.0,
+        },
+      );
       request.validatedBody = request.body;
 
       // Mock database error - this will cause service to throw
-      env.PAYMENT_DB.prepare().bind().first.rejects(new Error("Database error"));
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.rejects(new Error("Database error"));
 
       const response = await handlers.createPayment(request, env);
       const data = await response.json();
@@ -86,19 +98,22 @@ describe("Payment Handlers", () => {
     });
 
     it("should handle not found errors", async () => {
-      const request = createMockRequest("POST", "https://example.com/api/v1/payments", {
-        checkout_session_id: "test-session-id",
-        amount: 100.0,
-      });
+      const request = createMockRequest(
+        "POST",
+        "https://example.com/api/v1/payments",
+        {
+          checkout_session_id: "test-session-id",
+          amount: 100.0,
+        },
+      );
       request.validatedBody = request.body;
 
       env.PAYMENT_DB.prepare().bind().first.resolves(null);
       const fetchStub = sinon.stub(global, "fetch");
       fetchStub.onCall(0).resolves(
-        new Response(
-          JSON.stringify({ access_token: "test-token" }),
-          { status: 200 },
-        ),
+        new Response(JSON.stringify({ access_token: "test-token" }), {
+          status: 200,
+        }),
       );
       fetchStub.onCall(1).rejects(new Error("Payment not found"));
 
@@ -128,10 +143,9 @@ describe("Payment Handlers", () => {
       // Mock PayPal OAuth
       const fetchStub = sinon.stub(global, "fetch");
       fetchStub.onCall(0).resolves(
-        new Response(
-          JSON.stringify({ access_token: "test-token" }),
-          { status: 200 },
-        ),
+        new Response(JSON.stringify({ access_token: "test-token" }), {
+          status: 200,
+        }),
       );
       // Mock PayPal capture
       fetchStub.onCall(1).resolves(
@@ -151,7 +165,10 @@ describe("Payment Handlers", () => {
                 },
               },
             ],
-            payer: { email_address: "test@example.com", name: { given_name: "Test", surname: "User" } },
+            payer: {
+              email_address: "test@example.com",
+              name: { given_name: "Test", surname: "User" },
+            },
           }),
           { status: 200 },
         ),
@@ -207,7 +224,9 @@ describe("Payment Handlers", () => {
       request.params = { payment_id: "test-payment-id" };
       request.validatedBody = request.body;
 
-      env.PAYMENT_DB.prepare().bind().first.rejects(new Error("Payment not found"));
+      env.PAYMENT_DB.prepare()
+        .bind()
+        .first.rejects(new Error("Payment not found"));
 
       const response = await handlers.capturePayment(request, env);
       expect(response.status).to.equal(404);
@@ -254,7 +273,10 @@ describe("Payment Handlers", () => {
     });
 
     it("should return 400 for invalid payment ID", async () => {
-      const request = createMockRequest("GET", "https://example.com/api/v1/payments/");
+      const request = createMockRequest(
+        "GET",
+        "https://example.com/api/v1/payments/",
+      );
       request.params = { payment_id: "" };
 
       const response = await handlers.getPayment(request, env);
