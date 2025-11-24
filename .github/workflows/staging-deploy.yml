@@ -49,10 +49,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: ${{ github.event_name == 'pull_request' && 0 || 2 }}
+          fetch-depth: 2
 
       - name: Check if worker changed
-        id: check_changes 
+        id: check_changes
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
@@ -61,9 +61,20 @@ jobs:
           fi
           
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR ${{ github.event.pull_request.base.sha }} ${{ github.sha }} 2>/dev/null || echo "")
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.sha }}"
+            echo "PR: Comparing $BASE_SHA..$HEAD_SHA"
+            CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" 2>/dev/null || echo "")
           else
-            CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || echo "")
+            # For push events, compare HEAD~1 to HEAD (only current commit)
+            echo "Push: Comparing HEAD~1..HEAD"
+            CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR HEAD~1 HEAD 2>/dev/null || echo "")
+          fi
+          
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "✗ ${{ matrix.worker_name }} - no files changed - skipping"
+            exit 0
           fi
           
           WORKER_CHANGED=$(echo "$CHANGED_FILES" | grep -v "/coverage/\|/node_modules/" | grep "^${{ matrix.worker_dir }}/" || echo "")
@@ -71,9 +82,11 @@ jobs:
           if [ -n "$WORKER_CHANGED" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
             echo "✓ ${{ matrix.worker_name }} has changes - will deploy"
+            echo "Changed files:"
+            echo "$WORKER_CHANGED" | head -5
           else
             echo "changed=false" >> $GITHUB_OUTPUT
-            echo "✗ ${{ matrix.worker_name }} - no changes - skipping"
+            echo "✗ ${{ matrix.worker_name }} - no changes in this worker - skipping"
           fi
 
       - name: Set up Node.js
