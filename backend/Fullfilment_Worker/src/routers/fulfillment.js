@@ -5,12 +5,12 @@ import * as fulfillmentHandlers from "../handlers/fulfillmentHandlers.js";
 const router = Router();
 
 // Health check
-router.get("/_/health", async (request, env, ctx) => {
-  return new Response(JSON.stringify({ ok: true }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
-});
+// router.get("/_/health", async (request, env, ctx) => {
+//   return new Response(JSON.stringify({ ok: true }), {
+//     status: 200,
+//     headers: { "Content-Type": "application/json" },
+//   });
+// });
 
 
 // Webhook endpoint for fulfillment creation (called by Payment/Checkout Worker)

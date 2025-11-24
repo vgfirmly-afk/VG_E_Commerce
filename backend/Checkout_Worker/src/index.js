@@ -27,7 +27,7 @@ async function baseFetch(request, env, ctx) {
         { status: 500, headers: { "Content-Type": "application/json" } },
       );
     }
-
+   
     return response;
   } catch (err) {
     console.error("baseFetch error:", err);
