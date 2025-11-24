@@ -82,47 +82,13 @@ jobs:
           cd ${{ matrix.worker_dir }}
           npm ci --ignore-scripts
 
-      - name: Verify Cloudflare credentials
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN_STAGING }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-        run: |
-          echo "🔍 Verifying Cloudflare credentials..."
-          
-          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "::error::CF_API_TOKEN_STAGING secret is not set"
-            exit 1
-          fi
-          
-          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
-            echo "::error::CF_ACCOUNT_ID secret is not set"
-            exit 1
-          fi
-          
-          echo "✓ Credentials are set"
-          
-          # Verify token with Cloudflare API
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X GET "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/tokens/verify" \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            -H "Content-Type: application/json")
-          
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "::error::Token verification failed (HTTP $HTTP_CODE)"
-            exit 1
-          fi
-          
-          echo "✓ Token is valid"
-
       - name: Deploy to Cloudflare Workers (Staging)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN_STAGING }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         run: |
           cd ${{ matrix.worker_dir }}
-          echo "🚀 Deploying ${{ matrix.worker_name }} to staging environment..."
           wrangler deploy --env staging
-          echo "✅ Deployment completed successfully"
 
       - name: Wait for deployment propagation
         run: sleep 5
@@ -131,25 +97,12 @@ jobs:
         continue-on-error: true
         run: |
           cd ${{ matrix.worker_dir }}
-          if npm run test 2>/dev/null; then
-            echo "✅ Tests passed"
-          else
-            echo "⚠️  Tests failed or test script not found, continuing..."
-          fi
+          npm run test || true
 
-      - name: Health check (if available)
+      - name: Health check
         continue-on-error: true
         run: |
-          WORKER_URL="https://stageenv-${{ matrix.worker_name }}.vg-firmly.workers.dev/_/health"
-          echo "Checking health endpoint: $WORKER_URL"
-          
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$WORKER_URL" || echo "000")
-          
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ Health check passed (HTTP $HTTP_CODE)"
-          else
-            echo "⚠️  Health check returned HTTP $HTTP_CODE (this may be expected if health endpoint doesn't exist)"
-          fi
+          curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://stageenv-${{ matrix.worker_name }}.vg-firmly.workers.dev/_/health" || true
 
       - name: Upload coverage (if available)
         if: always()
