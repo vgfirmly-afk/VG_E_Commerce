@@ -25,7 +25,7 @@
           <div class="fl pad1y space-right2">
             <span class="strong">100% </span>
             <span class="quiet">Statements</span>
-            <span class="fraction">68/68</span>
+            <span class="fraction">75/75</span>
           </div>
 
           <div class="fl pad1y space-right2">
@@ -43,7 +43,7 @@
           <div class="fl pad1y space-right2">
             <span class="strong">100% </span>
             <span class="quiet">Lines</span>
-            <span class="fraction">68/68</span>
+            <span class="fraction">75/75</span>
           </div>
         </div>
         <p class="quiet">
@@ -128,13 +128,20 @@
 <a name='L67'></a><a href='#L67'>67</a>
 <a name='L68'></a><a href='#L68'>68</a>
 <a name='L69'></a><a href='#L69'>69</a>
-<a name='L70'></a><a href='#L70'>70</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
@@ -159,6 +166,12 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
@@ -196,7 +209,6 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// middleware/cors.js
 // CORS middleware to allow all origins
 &nbsp;
@@ -205,16 +217,17 @@
  */
 export function handleCORS(request) {
   // Allow all origins - use the Origin header if present, otherwise allow all
-  const origin = request.headers.get('Origin') || '*';
-  
+  const origin = request.headers.get("Origin") || "*";
+&nbsp;
   return new Response(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Origin': origin,
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-User-Id, X-Session-Id, X-Source, Accept',
-      'Access-Control-Allow-Credentials': origin !== '*' ? 'true' : 'false',
-      'Access-Control-Max-Age': '86400', // 24 hours
+      "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+      "Access-Control-Allow-Headers":
+        "Content-Type, Authorization, X-User-Id, X-Session-Id, X-Source, Accept",
+      "Access-Control-Allow-Credentials": origin !== "*" ? "true" : "false",
+      "Access-Control-Max-Age": "86400", // 24 hours
     },
   });
 }
@@ -226,20 +239,26 @@ export function addCORSHeaders(request, response) {
   if (!response || !(response instanceof Response)) {
     return response;
   }
-  
+&nbsp;
   // Allow all origins - use the Origin header if present, otherwise allow all
-  const origin = request.headers.get('Origin') || '*';
+  const origin = request.headers.get("Origin") || "*";
   const headers = new Headers(response.headers);
-  
-  headers.set('Access-Control-Allow-Origin', origin);
-  headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Id, X-Session-Id, X-Source, Accept');
+&nbsp;
+  headers.set("Access-Control-Allow-Origin", origin);
+  headers.set(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+  );
+  headers.set(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-User-Id, X-Session-Id, X-Source, Accept",
+  );
   // Only set credentials if we have a specific origin (not '*')
-  if (origin !== '*') {
-    headers.set('Access-Control-Allow-Credentials', 'true');
+  if (origin !== "*") {
+    headers.set("Access-Control-Allow-Credentials", "true");
   }
-  headers.set('Access-Control-Max-Age', '86400');
-  
+  headers.set("Access-Control-Max-Age", "86400");
+&nbsp;
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
@@ -254,18 +273,17 @@ export function addCORSHeaders(request, response) {
 export function withCORS(handler) {
   return async function (request, env, ctx) {
     // Handle CORS preflight requests
-    if (request.method === 'OPTIONS') {
+    if (request.method === "OPTIONS") {
       return handleCORS(request);
     }
-    
+&nbsp;
     // Call the original handler
     const response = await handler(request, env, ctx);
-    
+&nbsp;
     // Add CORS headers to the response
     return addCORSHeaders(request, response);
   };
 }
-&nbsp;
 &nbsp;</pre></td></tr></table></pre>
 
       <div class="push"></div>
@@ -280,7 +298,7 @@ export function withCORS(handler) {
         rel="noopener noreferrer"
         >istanbul</a
       >
-      at 2025-11-23T19:00:54.478Z
+      at 2025-11-24T13:33:39.849Z
     </div>
     <script src="../prettify.js"></script>
     <script>
