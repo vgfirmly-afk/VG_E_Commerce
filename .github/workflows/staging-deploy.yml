@@ -2,23 +2,11 @@ name: Deploy to Staging
 
 on:
   push:
-    branches:
-      - Features/cd5
-      - features/cd5
-      - main
-      - develop
-    paths:
-      - 'backend/**'
-      - '.github/workflows/staging-deploy.yml'
+    branches: [Features/cd5, features/cd5, main, develop]
+    paths: ['backend/**', '.github/workflows/staging-deploy.yml']
   pull_request:
-    branches:
-      - Features/cd5
-      - features/cd5
-      - main
-      - develop
-    paths:
-      - 'backend/**'
-      - '.github/workflows/staging-deploy.yml'
+    branches: [Features/cd5, features/cd5, main, develop]
+    paths: ['backend/**', '.github/workflows/staging-deploy.yml']
   workflow_dispatch:
 
 env:
@@ -34,7 +22,6 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     timeout-minutes: 30
-    
     strategy:
       fail-fast: false
       matrix:
@@ -64,50 +51,27 @@ jobs:
 
       - name: Check if worker changed
         id: check_changes
-        run: | 
-          CHANGED=false
-          WORKER_DIR="${{ matrix.worker_dir }}"
-          
+        run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            CHANGED=true
-          elif [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE_SHA="${{ github.event.pull_request.base.sha }}"
-            HEAD_SHA="${{ github.sha }}"
-            CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" 2>/dev/null || echo "")
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✓ Manual trigger - deploying ${{ matrix.worker_name }}"
+            exit 0
+          fi
+          
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR ${{ github.event.pull_request.base.sha }} ${{ github.sha }} 2>/dev/null || echo "")
           else
-            BEFORE_SHA="${{ github.event.before }}"
-            AFTER_SHA="${{ github.sha }}"
-            
-            if [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
-              CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BEFORE_SHA" "$AFTER_SHA" 2>/dev/null || echo "")
-            else
-              CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR HEAD~1 HEAD 2>/dev/null || echo "")
-            fi
+            CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || echo "")
           fi
           
-          # Check if any backend files changed (exclude .github, coverage, and node_modules)
-          BACKEND_CHANGED=$(echo "$CHANGED_FILES" | grep -E "^backend/" | grep -v "^\.github/" | grep -v "/coverage/" | grep -v "/node_modules/" || echo "")
+          WORKER_CHANGED=$(echo "$CHANGED_FILES" | grep -v "/coverage/\|/node_modules/" | grep "^${{ matrix.worker_dir }}/" || echo "")
           
-          # Only check worker if backend files actually changed
-          if [ -n "$BACKEND_CHANGED" ]; then
-            # Check if files in this specific worker directory changed (exclude coverage and node_modules)
-            # Escape the directory path and use exact prefix match
-            WORKER_PATTERN="^$(echo "$WORKER_DIR" | sed 's/[.[\*^$()+?{|]/\\&/g')/"
-            WORKER_CHANGED=$(echo "$CHANGED_FILES" | grep -E "$WORKER_PATTERN" | grep -v "/coverage/" | grep -v "/node_modules/" || echo "")
-            
-            if [ -n "$WORKER_CHANGED" ]; then
-              CHANGED=true
-            fi
-          fi
-          
-          if [ "$CHANGED" = "true" ]; then
+          if [ -n "$WORKER_CHANGED" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
             echo "✓ ${{ matrix.worker_name }} has changes - will deploy"
-            echo "Changed files in $WORKER_DIR:"
-            echo "$WORKER_CHANGED" | sed 's/^/  - /'
           else
             echo "changed=false" >> $GITHUB_OUTPUT
-            echo "✗ ${{ matrix.worker_name }} has no changes - skipping"
+            echo "✗ ${{ matrix.worker_name }} - no changes - skipping"
           fi
 
       - name: Set up Node.js
@@ -117,52 +81,29 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Install Wrangler CLI
-        if: steps.check_changes.outputs.changed == 'true'
-        run: npm install -g wrangler@${{ env.WRANGLER_VERSION }}
-
-      - name: Install root dependencies (skip scripts)
+      - name: Install dependencies and deploy
         if: steps.check_changes.outputs.changed == 'true'
         env:
           HUSKY: 0
-        run: |
-          npm ci --ignore-scripts || echo "Root dependencies install skipped or failed"
-
-      - name: Install worker dependencies
-        if: steps.check_changes.outputs.changed == 'true'
-        env:
-          HUSKY: 0
-        run: |
-          cd ${{ matrix.worker_dir }}
-          npm ci --ignore-scripts
-
-      - name: Deploy to Cloudflare Workers (Staging)
-        if: steps.check_changes.outputs.changed == 'true'
-        env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN_STAGING }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         run: |
+          npm install -g wrangler@${{ env.WRANGLER_VERSION }}
+          npm ci --ignore-scripts || true
           cd ${{ matrix.worker_dir }}
+          npm ci --ignore-scripts
           wrangler deploy --env staging
 
-      - name: Wait for deployment propagation
-        if: steps.check_changes.outputs.changed == 'true'
-        run: sleep 5
-
-      - name: Run tests
+      - name: Run tests and health check
         if: steps.check_changes.outputs.changed == 'true'
         continue-on-error: true
         run: |
           cd ${{ matrix.worker_dir }}
           npm run test || true
-
-      - name: Health check
-        if: steps.check_changes.outputs.changed == 'true'
-        continue-on-error: true
-        run: |
+          sleep 5
           curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://stageenv-${{ matrix.worker_name }}.vg-firmly.workers.dev/_/health" || true
 
-      - name: Upload coverage (if available)
+      - name: Upload coverage
         if: steps.check_changes.outputs.changed == 'true'
         uses: actions/upload-artifact@v4
         continue-on-error: true
@@ -170,5 +111,3 @@ jobs:
           name: coverage-${{ matrix.worker_name }}
           path: ${{ matrix.worker_dir }}/coverage
           retention-days: 7
-
- 
