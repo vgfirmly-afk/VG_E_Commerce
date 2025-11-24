@@ -14,6 +14,8 @@ router.get(
     }),
 );
 
+
+
 // auth endpoints
 router.post("/api/v1/auth/register", async (request, env, ctx) =>
   authHandlers.register(request, request.env || env, ctx),
