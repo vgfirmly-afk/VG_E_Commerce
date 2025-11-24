@@ -60,7 +60,7 @@ jobs:
         run: npm install -g wrangler@^4
 
       - name: Publish to staging
-        working-directory: ${{ matrix.dir }} 
+        working-directory: ${{ matrix.dir }}
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN_STAGING }}
         run: |
