@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 jobs:
-  staging-matrix:
+  staging-matrix: 
     name: Publish & test ${{ matrix.prod_name }}
     runs-on: ubuntu-latest
     strategy:
