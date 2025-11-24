@@ -12,7 +12,7 @@ env:
 
 permissions:
   contents: read
-  
+
 jobs:
   deploy-staging:
     name: Deploy ${{ matrix.worker_name }} to Staging
