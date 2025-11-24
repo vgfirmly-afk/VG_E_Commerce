@@ -66,30 +66,36 @@ jobs:
         id: check_changes
         run: |
           CHANGED=false
+          WORKER_DIR="${{ matrix.worker_dir }}"
           
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             CHANGED=true
           elif [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE_SHA="${{ github.event.pull_request.base.sha }}"
             HEAD_SHA="${{ github.sha }}"
-            CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" 2>/dev/null || echo "")
+            CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" 2>/dev/null || echo "")
           else
             BEFORE_SHA="${{ github.event.before }}"
             AFTER_SHA="${{ github.sha }}"
             
             if [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
-              CHANGED_FILES=$(git diff --name-only "$BEFORE_SHA" "$AFTER_SHA" 2>/dev/null || echo "")
+              CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BEFORE_SHA" "$AFTER_SHA" 2>/dev/null || echo "")
             else
-              CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+              CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR HEAD~1 HEAD 2>/dev/null || echo "")
             fi
           fi
           
-          # Check if any backend files changed (exclude workflow file)
+          # Check if any backend files changed (exclude .github and workflow files)
           BACKEND_CHANGED=$(echo "$CHANGED_FILES" | grep -E "^backend/" | grep -v "^\.github/" || echo "")
           
           # Only check worker if backend files actually changed
           if [ -n "$BACKEND_CHANGED" ]; then
-            if echo "$CHANGED_FILES" | grep -q "^${{ matrix.worker_dir }}/"; then
+            # Check if files in this specific worker directory changed
+            # Escape the directory path and use exact prefix match
+            WORKER_PATTERN="^$(echo "$WORKER_DIR" | sed 's/[.[\*^$()+?{|]/\\&/g')/"
+            WORKER_CHANGED=$(echo "$CHANGED_FILES" | grep -E "$WORKER_PATTERN" || echo "")
+            
+            if [ -n "$WORKER_CHANGED" ]; then
               CHANGED=true
             fi
           fi
@@ -97,6 +103,8 @@ jobs:
           if [ "$CHANGED" = "true" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
             echo "✓ ${{ matrix.worker_name }} has changes - will deploy"
+            echo "Changed files in $WORKER_DIR:"
+            echo "$WORKER_CHANGED" | sed 's/^/  - /'
           else
             echo "changed=false" >> $GITHUB_OUTPUT
             echo "✗ ${{ matrix.worker_name }} has no changes - skipping"
