@@ -2,21 +2,21 @@
   "title": "sample 11x",
   "description": "Rechargeable beard trimmer with stainless-steel blades, adjustable length settings, and up to 90 minutes of cordless use. Designed for clean, precise grooming and easy maintenance.",
   "short_description": "Rechargeable precision beard trimmer",
-  
+
   "brand": "TrimX",
   "manufacturer": "TrimX Grooming Solutions",
   "category": "Beauty & Personal Care",
   "subcategory": "Men's Grooming",
-  
+
   "status": "active",
   "visibility": "public",
   "featured": 0,
   "new_arrival": 0,
   "best_seller": 0,
   "on_sale": 0,
-  
+
   "product_type": "simple",
-  
+
   "metadata": {
     "identifiers": {
       "mpn": "TX-BT500",
@@ -34,7 +34,7 @@
     "categories": ["Beauty & Personal Care", "Men's Grooming", "Electronics"],
     "default_sku": null
   },
-  
+
   "attributes": {
     "dimensions": {
       "weight": 210,
@@ -59,7 +59,7 @@
     "season": "All Season",
     "country_of_origin": "China"
   },
-  
+
   "inventory": {
     "stock_status": "in_stock",
     "stock_quantity": 160,
@@ -71,14 +71,14 @@
     "min_order_quantity": 1,
     "max_order_quantity": 10
   },
-  
+
   "policies": {
     "warranty_period": "2 years",
     "warranty_type": "Manufacturer Warranty",
     "return_policy": "30 days return policy",
     "purchase_note": "Includes charging cable and cleaning brush"
   },
-  
+
   "seo": {
     "meta_title": "TrimX Beard Trimmer - Professional Grooming Tool",
     "meta_description": "Professional rechargeable beard trimmer with 90-minute battery life. Perfect for precise grooming.",
@@ -86,7 +86,7 @@
     "permalink": "/products/trimx-beard-trimmer",
     "canonical_url": "https://example.com/products/trimx-beard-trimmer"
   },
-  
+
   "stats": {
     "rating_average": 4.5,
     "rating_count": 120,
@@ -99,7 +99,7 @@
     "total_sales": 450,
     "average_rating": 4.5
   },
-  
+
   "flags": {
     "product_type": "simple",
     "virtual_product": 0,
@@ -116,7 +116,7 @@
     "purchase_only": 0,
     "catalog_visibility": "visible"
   },
-  
+
   "relationships": {
     "parent_id": null,
     "menu_order": 0,
@@ -127,7 +127,7 @@
     "accessories": [],
     "replacement_parts": []
   },
-  
+
   "media": {
     "image_url": "https://example.com/images/trimx-trimmer.jpg",
     "image_alt": "TrimX Beard Trimmer",
@@ -155,7 +155,7 @@
     "download_limit": null,
     "download_expiry": null
   },
-  
+
   "variants": {
     "product_attributes": {
       "color": ["Grey", "Black", "Silver"],
@@ -168,7 +168,7 @@
     "variation_data": {},
     "variant_data": {}
   },
-  
+
   "extended_data": {
     "custom_fields": {},
     "social_data": {
@@ -223,16 +223,8 @@
       "Cordless operation",
       "Easy to clean"
     ],
-    "benefits": [
-      "Precise trimming",
-      "Long battery life",
-      "Easy maintenance"
-    ],
-    "use_cases": [
-      "Beard trimming",
-      "Mustache grooming",
-      "Neckline trimming"
-    ],
+    "benefits": ["Precise trimming", "Long battery life", "Easy maintenance"],
+    "use_cases": ["Beard trimming", "Mustache grooming", "Neckline trimming"],
     "compatibility": [],
     "requirements": [],
     "included_items": [
@@ -257,14 +249,14 @@
     "date_on_sale_from": null,
     "date_on_sale_to": null
   },
-  
+
   "skus": [
     {
       "price": 21.99,
       "currency": "USD",
       "sale_price": 17.99,
       "compare_at_price": 24.99,
-      "cost_price": 12.00,
+      "cost_price": 12.0,
       "stock_quantity": 160,
       "attributes": {
         "color": "Grey",
@@ -276,7 +268,7 @@
       "currency": "USD",
       "sale_price": 17.99,
       "compare_at_price": 24.99,
-      "cost_price": 12.00,
+      "cost_price": 12.0,
       "stock_quantity": 80,
       "attributes": {
         "color": "Black",
@@ -285,4 +277,3 @@
     }
   ]
 }
-

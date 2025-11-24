@@ -1,5 +1,5 @@
 // utils/logger.js
-import { trace, context } from '@opentelemetry/api';
+import { trace, context } from "@opentelemetry/api";
 
 // Store logs array per span (using WeakMap to avoid memory leaks)
 const spanLogs = new WeakMap();
@@ -10,29 +10,29 @@ const spanLogs = new WeakMap();
  */
 function addLogToSpan(span, logData) {
   if (!span) return;
-  
+
   // Get or create logs array for this span
   let logs = spanLogs.get(span);
   if (!logs) {
     logs = [];
     spanLogs.set(span, logs);
   }
-  
+
   // Add new log to array
   logs.push(logData);
-  
+
   // Store all logs as JSON array in span attribute
   // This will appear as a "log" field in Honeycomb traces with all logs
   const logsJson = JSON.stringify(logs);
-  span.setAttribute('log', logsJson);
-  
+  span.setAttribute("log", logsJson);
+
   // Also add the latest log's individual fields for better querying
-  if (logData.level) span.setAttribute('log.level', logData.level);
-  if (logData.message) span.setAttribute('log.message', logData.message);
-  if (logData.event) span.setAttribute('log.event', logData.event);
-  
+  if (logData.level) span.setAttribute("log.level", logData.level);
+  if (logData.message) span.setAttribute("log.message", logData.message);
+  if (logData.event) span.setAttribute("log.event", logData.event);
+
   // Add as event as well for timeline view
-  span.addEvent(logData.event || logData.message || 'log', {
+  span.addEvent(logData.event || logData.message || "log", {
     ...logData,
     timestamp: Date.now(),
   });
@@ -56,7 +56,7 @@ export function logger(event, meta = {}) {
   const logData = {
     ts: new Date().toISOString(),
     event,
-    level: 'info',
+    level: "info",
     ...safeMeta,
   };
 
@@ -75,13 +75,15 @@ export function logError(message, error = null, meta = {}) {
 
   const errorData = {
     ts: new Date().toISOString(),
-    level: 'error',
+    level: "error",
     message,
-    error: error ? {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-    } : null,
+    error: error
+      ? {
+          message: error.message,
+          stack: error.stack,
+          name: error.name,
+        }
+      : null,
     ...meta,
   };
 
@@ -104,12 +106,12 @@ export function logError(message, error = null, meta = {}) {
  */
 export function logWarn(message, meta = {}) {
   const span = trace.getSpan(context.active());
-  const traceId = span ? span.spanContext().traceId : 'none';
-  const spanId = span ? span.spanContext().spanId : 'none';
+  const traceId = span ? span.spanContext().traceId : "none";
+  const spanId = span ? span.spanContext().spanId : "none";
 
   const warnData = {
     ts: new Date().toISOString(),
-    level: 'warn',
+    level: "warn",
     message,
     ...meta,
     trace_id: traceId,
@@ -127,12 +129,12 @@ export function logWarn(message, meta = {}) {
  */
 export function logInfo(message, meta = {}) {
   const span = trace.getSpan(context.active());
-  const traceId = span ? span.spanContext().traceId : 'none';
-  const spanId = span ? span.spanContext().spanId : 'none';
+  const traceId = span ? span.spanContext().traceId : "none";
+  const spanId = span ? span.spanContext().spanId : "none";
 
   const infoData = {
     ts: new Date().toISOString(),
-    level: 'info',
+    level: "info",
     message,
     ...meta,
     trace_id: traceId,
@@ -144,4 +146,3 @@ export function logInfo(message, meta = {}) {
 
   // console.log(JSON.stringify(infoData));
 }
-

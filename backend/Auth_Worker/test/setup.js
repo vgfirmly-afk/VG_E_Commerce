@@ -1,8 +1,8 @@
 // test/setup.js
 // Global test setup and utilities
-import chai from 'chai';
-import sinon from 'sinon';
-import sinonChai from 'sinon-chai';
+import chai from "chai";
+import sinon from "sinon";
+import sinonChai from "sinon-chai";
 
 // Use sinon-chai for better assertions BEFORE extracting expect
 chai.use(sinonChai);
@@ -11,11 +11,7 @@ const { expect } = chai;
 
 // import { JWT_PRIVATE_KEY, JWT_PUBLIC_KEY, PII_ENCRYPTION_KEY } from '.env.test';
 
-
-
-
-
-const JWT_PRIVATE_KEY=`-----BEGIN PRIVATE KEY-----
+const JWT_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCeuaKvP5MXJ3zw
 efdc7YjQXlnka26PIpLI3SSoPdN7CZSHM1yt2tBRgoFzOqRgIqBANr+Q/gTDuC0M
 MYFuV10PoPbpDtMCM+4wKCs2ioQXbh0rVj8YgqFo8ir+METbJ26PX41zQUJ+nh0e
@@ -44,9 +40,7 @@ xbpXaK1uGfUNNUm7kwEJ1vJO2XYlGmzLIG/mE64c+uhgDT4/Ox37fK+fcQRt7Qw0
 zPKA/7OUTTigj+B9HmGyuR7I
 -----END PRIVATE KEY-----`;
 
-
-
-const JWT_PUBLIC_KEY=`-----BEGIN PUBLIC KEY-----
+const JWT_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnrmirz+TFyd88Hn3XO2I
 0F5Z5GtujyKSyN0kqD3TewmUhzNcrdrQUYKBczqkYCKgQDa/kP4Ew7gtDDGBbldd
 D6D26Q7TAjPuMCgrNoqEF24dK1Y/GIKhaPIq/jBE2yduj1+Nc0FCfp4dHusoR5oa
@@ -56,13 +50,7 @@ PWH/UDUY5r7CbfojIv88so7KiZZ8Uf+jVE9JQRhEJlZJp3qzP3ONqAJKflWyegz1
 awIDAQAB
 -----END PUBLIC KEY-----`;
 
-
-
-
-const PII_ENCRYPTION_KEY=`8CjUgdcnn2YG4sxY7aX/q9vyyx4eHRyIzZ+vLgVmKYg=`;
-
-
-
+const PII_ENCRYPTION_KEY = `8CjUgdcnn2YG4sxY7aX/q9vyyx4eHRyIzZ+vLgVmKYg=`;
 
 // Make chai and sinon available globally
 global.expect = expect;
@@ -86,25 +74,32 @@ export function createMockEnv(overrides = {}) {
       put: sinon.stub().resolves(),
       delete: sinon.stub().resolves(),
     },
-    PEPPER: 'test-pepper',
-    PEPPER_SECRET: 'test-pepper',
+    PEPPER: "test-pepper",
+    PEPPER_SECRET: "test-pepper",
     PII_ENCRYPTION_KEY: PII_ENCRYPTION_KEY, // base64 32-byte key
     // JWT Keys - Replace with your actual keys from generate_keys.js
     JWT_PRIVATE_KEY: JWT_PRIVATE_KEY,
     JWT_PUBLIC_KEY: JWT_PUBLIC_KEY,
-    JWT_ISSUER: 'test-issuer',
-    JWT_AUDIENCE: 'test-audience',
+    JWT_ISSUER: "test-issuer",
+    JWT_AUDIENCE: "test-audience",
     ...overrides,
   };
 }
 
 // Helper to create mock request
-export function createMockRequest(method = 'GET', url = 'https://example.com/api/v1/auth/me', body = null, headers = {}) {
-  const headersMap = new Map(Object.entries({
-    'Content-Type': 'application/json',
-    ...headers,
-  }));
-  
+export function createMockRequest(
+  method = "GET",
+  url = "https://example.com/api/v1/auth/me",
+  body = null,
+  headers = {},
+) {
+  const headersMap = new Map(
+    Object.entries({
+      "Content-Type": "application/json",
+      ...headers,
+    }),
+  );
+
   const request = {
     method,
     url,
@@ -112,14 +107,14 @@ export function createMockRequest(method = 'GET', url = 'https://example.com/api
     json: async () => body || {},
     env: createMockEnv(),
   };
-  
+
   // Add get method for headers Map (overrides Map.get to return null if not found)
   const originalGet = headersMap.get.bind(headersMap);
   request.headers.get = (key) => {
     const value = originalGet(key);
     return value !== undefined ? value : null;
   };
-  
+
   return request;
 }
 
@@ -127,8 +122,8 @@ export function createMockRequest(method = 'GET', url = 'https://example.com/api
 export function createMockSpan() {
   return {
     spanContext: sinon.stub().returns({
-      traceId: 'test-trace-id',
-      spanId: 'test-span-id',
+      traceId: "test-trace-id",
+      spanId: "test-span-id",
     }),
     addEvent: sinon.stub(),
     setAttribute: sinon.stub(),

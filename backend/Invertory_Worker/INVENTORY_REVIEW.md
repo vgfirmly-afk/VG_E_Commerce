@@ -26,7 +26,9 @@ The Inventory Worker is responsible for managing SKU stock quantities, reservati
 ## Database Schema
 
 ### 1. `sku_stock` Table
+
 Stores current stock information for each SKU:
+
 - `sku_id` (PRIMARY KEY)
 - `product_id`
 - `sku_code`
@@ -38,7 +40,9 @@ Stores current stock information for each SKU:
 - Timestamps and audit fields
 
 ### 2. `stock_history` Table
+
 Audit trail of all stock changes:
+
 - `history_id` (PRIMARY KEY)
 - `sku_id` (FOREIGN KEY)
 - `change_type` - 'create', 'update', 'adjust', 'reserve', 'release', 'purchase'
@@ -50,7 +54,9 @@ Audit trail of all stock changes:
 - `changed_by` / `changed_at`
 
 ### 3. `stock_reservations` Table
+
 Tracks reserved stock for carts/checkout:
+
 - `reservation_id` (PRIMARY KEY)
 - `sku_id` (FOREIGN KEY)
 - `quantity` - Reserved quantity
@@ -63,9 +69,11 @@ Tracks reserved stock for carts/checkout:
 ### Public Endpoints (No Authentication)
 
 #### 1. GET `/api/v1/stock/:sku_id`
+
 Get current stock for a single SKU.
 
 **Response:**
+
 ```json
 {
   "sku_id": "sku-123",
@@ -82,9 +90,11 @@ Get current stock for a single SKU.
 ```
 
 #### 2. GET `/api/v1/stock/:sku_id/history?page=1&limit=20`
+
 Get stock history for a SKU with pagination.
 
 **Response:**
+
 ```json
 {
   "history": [
@@ -109,9 +119,11 @@ Get stock history for a SKU with pagination.
 ```
 
 #### 3. POST `/api/v1/stock/check`
+
 Check stock availability for multiple SKUs.
 
 **Request:**
+
 ```json
 {
   "sku_ids": ["sku-123", "sku-456", "sku-789"]
@@ -119,6 +131,7 @@ Check stock availability for multiple SKUs.
 ```
 
 **Response:**
+
 ```json
 {
   "availability": {
@@ -145,11 +158,14 @@ Check stock availability for multiple SKUs.
 ### Admin Endpoints (JWT Required)
 
 #### 4. POST `/api/v1/stock/:sku_id`
+
 Initialize stock for a new SKU.
+
 - **Service Binding**: Allowed (from Catalog Worker)
 - **Admin JWT**: Allowed
 
 **Request:**
+
 ```json
 {
   "product_id": "prod-123",
@@ -161,9 +177,11 @@ Initialize stock for a new SKU.
 ```
 
 #### 5. PUT `/api/v1/stock/:sku_id`
+
 Update stock (admin only - JWT required).
 
 **Request:**
+
 ```json
 {
   "quantity": 150,
@@ -175,11 +193,14 @@ Update stock (admin only - JWT required).
 ```
 
 #### 6. POST `/api/v1/stock/:sku_id/adjust`
+
 Adjust stock quantity (increase or decrease).
+
 - Positive quantity = increase
 - Negative quantity = decrease
 
 **Request:**
+
 ```json
 {
   "quantity": -10,
@@ -191,9 +212,11 @@ Adjust stock quantity (increase or decrease).
 ### User/Service Endpoints (For Cart Operations)
 
 #### 7. POST `/api/v1/stock/:sku_id/reserve`
+
 Reserve stock for cart/checkout.
 
 **Request:**
+
 ```json
 {
   "quantity": 2,
@@ -203,6 +226,7 @@ Reserve stock for cart/checkout.
 ```
 
 **Response:**
+
 ```json
 {
   "sku_id": "sku-123",
@@ -214,9 +238,11 @@ Reserve stock for cart/checkout.
 ```
 
 #### 8. POST `/api/v1/stock/:sku_id/release`
+
 Release reserved stock (when cart abandoned or purchase fails).
 
 **Request:**
+
 ```json
 {
   "reservation_id": "cart-reservation-123",
@@ -233,9 +259,9 @@ All stock operations use ACID transactions via `env.INVENTORY_DB.batch()`:
 ```javascript
 await env.INVENTORY_DB.batch([
   // Update stock
-  env.INVENTORY_DB.prepare('UPDATE sku_stock ...'),
+  env.INVENTORY_DB.prepare("UPDATE sku_stock ..."),
   // Create history
-  env.INVENTORY_DB.prepare('INSERT INTO stock_history ...')
+  env.INVENTORY_DB.prepare("INSERT INTO stock_history ..."),
 ]);
 ```
 
@@ -245,7 +271,7 @@ Prevents race conditions when multiple users purchase simultaneously:
 
 ```javascript
 // Only update if quantity hasn't changed
-UPDATE sku_stock 
+UPDATE sku_stock
 SET quantity = ?, available_quantity = ?
 WHERE sku_id = ? AND quantity = ?  // Optimistic lock
 ```
@@ -253,6 +279,7 @@ WHERE sku_id = ? AND quantity = ?  // Optimistic lock
 ### 3. Stock Reservation System
 
 **Flow:**
+
 1. User adds item to cart → `POST /stock/:sku_id/reserve`
 2. Stock is reserved (available_quantity decreases)
 3. User completes purchase → `POST /stock/:sku_id/adjust` (negative quantity)
@@ -260,6 +287,7 @@ WHERE sku_id = ? AND quantity = ?  // Optimistic lock
 5. If cart abandoned → `POST /stock/:sku_id/release`
 
 **Benefits:**
+
 - Prevents overselling
 - Tracks cart items
 - Supports expiration (expires_at)
@@ -277,6 +305,7 @@ User B: RESERVE 1 → Fails (Insufficient available stock)
 ```
 
 The `reserveStock` function uses:
+
 - Transaction with optimistic locking
 - WHERE clause: `available_quantity >= ?`
 - Post-update verification
@@ -284,6 +313,7 @@ The `reserveStock` function uses:
 ### 5. Stock History Tracking
 
 Every change is logged:
+
 - **create**: Initial stock creation
 - **update**: Admin stock update
 - **adjust**: Quantity adjustment (purchase/restock)
@@ -352,17 +382,20 @@ T5      ADJUST -1                 -                         qty: 0, reserved: 0,
 ## Authentication
 
 ### Service Binding (Only for Initial Stock Creation)
+
 - **Endpoint**: `POST /api/v1/stock/:sku_id`
 - **Header**: `X-Source: catalog-worker-service-binding`
 - **Purpose**: Allow Catalog Worker to initialize stock when SKU is created
 
 ### JWT Authentication (For All Other Admin Endpoints)
+
 - **Endpoints**: PUT, POST /adjust
 - **Header**: `Authorization: Bearer <JWT_TOKEN>`
 - **Requirement**: User must have `role: 'admin'` in JWT payload
 - **Config**: Requires `JWT_PUBLIC_KEY` secret
 
 ### User Operations (Reserve/Release)
+
 - **Endpoints**: POST /reserve, POST /release
 - **Header**: `X-User-Id: <user_id>` (optional)
 - **Purpose**: For cart operations
@@ -370,6 +403,7 @@ T5      ADJUST -1                 -                         qty: 0, reserved: 0,
 ## Error Handling
 
 All endpoints have try-catch blocks:
+
 - Validation errors → 400 Bad Request
 - Not found → 404 Not Found
 - Insufficient stock → 400 Bad Request (with specific message)
@@ -379,6 +413,7 @@ All endpoints have try-catch blocks:
 ## Validation
 
 All requests are validated using Joi schemas:
+
 - SKU ID validation
 - Quantity validation (must be integer, >= 0)
 - Reservation ID validation
@@ -394,6 +429,7 @@ All requests are validated using Joi schemas:
 ## Testing Scenarios
 
 ### Test 1: Concurrent Reservations
+
 ```bash
 # Terminal 1
 curl -X POST /api/v1/stock/sku-123/reserve \
@@ -407,6 +443,7 @@ curl -X POST /api/v1/stock/sku-123/reserve \
 ```
 
 ### Test 2: Stock Adjustment
+
 ```bash
 # Increase stock
 curl -X POST /api/v1/stock/sku-123/adjust \
@@ -422,6 +459,7 @@ curl -X POST /api/v1/stock/sku-123/adjust \
 ## Summary
 
 ✅ **Complete Features:**
+
 - Stock initialization
 - Stock updates
 - Stock adjustments (increase/decrease)
@@ -435,15 +473,16 @@ curl -X POST /api/v1/stock/sku-123/adjust \
 - Input validation
 
 ✅ **Security:**
+
 - Service binding for initial stock creation only
 - JWT authentication for admin operations
 - Proper authorization checks
 
 ✅ **Data Integrity:**
+
 - ACID transactions
 - Optimistic locking
 - Audit trail (stock_history)
 - Reservation tracking
 
 The Inventory Worker is production-ready with proper atomic transactions, error handling, and authentication!
-

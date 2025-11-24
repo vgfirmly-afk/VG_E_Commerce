@@ -3,6 +3,7 @@
 ## Security Changes
 
 ### ✅ httpOnly Cookies Implementation
+
 - **Removed**: localStorage storage for access tokens and refresh tokens
 - **Removed**: localStorage storage for user data
 - **Added**: httpOnly cookie support for authentication
@@ -34,15 +35,15 @@ All API functions now use `credentials: 'include'`:
 
 ```javascript
 async function fetchWithCredentials(url, options = {}) {
-	return fetch(url, {
-		...options,
-		credentials: 'include', // Sends cookies automatically
-		headers: {
-			'Content-Type': 'application/json',
-			'Accept': 'application/json',
-			...options.headers
-		}
-	});
+  return fetch(url, {
+    ...options,
+    credentials: "include", // Sends cookies automatically
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...options.headers,
+    },
+  });
 }
 ```
 
@@ -57,6 +58,7 @@ async function fetchWithCredentials(url, options = {}) {
 ## UI Improvements
 
 ### ✅ Smooth Animations
+
 - Fade-in animations for page loads
 - Slide-up animations for modals and cards
 - Hover effects with smooth transitions
@@ -64,6 +66,7 @@ async function fetchWithCredentials(url, options = {}) {
 - Button press animations (scale effects)
 
 ### ✅ Enhanced Styling
+
 - Gradient text for logo and headings
 - Improved card shadows with hover effects
 - Better color scheme with consistent blue theme
@@ -71,6 +74,7 @@ async function fetchWithCredentials(url, options = {}) {
 - Professional modal design with backdrop blur
 
 ### ✅ Better UX
+
 - Loading states with animated spinners
 - Success messages with slide-up animation
 - Error messages with better styling
@@ -143,4 +147,3 @@ If you're updating from the previous version:
 ✅ **Clean**: No manual token management in frontend
 ✅ **Smooth**: Better UI/UX with animations
 ✅ **Modern**: Professional look and feel
-

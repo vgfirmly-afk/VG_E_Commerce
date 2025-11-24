@@ -3,6 +3,7 @@
 ## Common Error: `INSTRUMENT_DECLINED`
 
 ### Error Description
+
 ```
 "INSTRUMENT_DECLINED": "The instrument presented was either declined by the processor or bank, or it can't be used for this payment."
 ```
@@ -30,6 +31,7 @@ Instead of using credit cards, use PayPal Sandbox test accounts:
    - Business Account: `merchant@business.example.com` (password: your test password)
 
 **Benefits**:
+
 - More reliable than test credit cards
 - Better simulates real PayPal payments
 - No card decline issues
@@ -39,12 +41,14 @@ Instead of using credit cards, use PayPal Sandbox test accounts:
 If you must use credit cards, use PayPal's approved test cards:
 
 **Successful Test Cards**:
+
 - Card Number: `4032035495732383`
 - Expiry: Any future date (e.g., `12/2025`)
 - CVV: Any 3 digits (e.g., `123`)
 - Name: Any name
 
 **Other Test Cards** (from PayPal documentation):
+
 - `4032035495732383` - Visa (Always approved)
 - `5424000000000015` - Mastercard (Always approved)
 - `4000000000000002` - Visa (Always declined - use to test failures)
@@ -120,6 +124,7 @@ created → approved → captured ✅
 ### Debug Information
 
 When debugging, check:
+
 1. **Payment Events Table**: See all events for the payment
 2. **Payment Metadata**: Contains PayPal error details
 3. **PayPal Debug ID**: Use `debug_id` to check PayPal's logs
@@ -139,4 +144,3 @@ When debugging, check:
 - PayPal Orders API: https://developer.paypal.com/docs/api/orders/v2/
 - PayPal Sandbox Testing: https://developer.paypal.com/docs/api-basics/sandbox/
 - Error Reference: https://developer.paypal.com/api/rest/reference/orders/v2/errors/
-

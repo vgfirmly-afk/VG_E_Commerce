@@ -3,6 +3,7 @@
 ## Problem
 
 The backend is **NOT setting httpOnly cookies** yet. This means:
+
 - Tokens are only returned in login response body
 - Tokens are not persisted across page refreshes
 - User gets logged out on page refresh
@@ -40,6 +41,7 @@ I've updated the frontend to **temporarily store tokens in localStorage** until 
 ### This is a TEMPORARY solution!
 
 **Why?**
+
 - Storing tokens in localStorage is less secure than httpOnly cookies
 - localStorage is accessible to JavaScript (XSS risk)
 - httpOnly cookies are the proper security solution
@@ -72,11 +74,13 @@ Once backend sets httpOnly cookies:
 ## Current Status
 
 ✅ **Working Now:**
+
 - Login persists across page refresh
 - Tokens stored in localStorage (temporary)
 - User stays logged in
 
 ⚠️ **Security Note:**
+
 - Tokens in localStorage (less secure)
 - Should migrate to httpOnly cookies when backend is ready
 
@@ -85,6 +89,7 @@ Once backend sets httpOnly cookies:
 To properly implement httpOnly cookies, backend needs:
 
 1. **Login endpoint** - Set `Set-Cookie` headers:
+
    ```javascript
    'Set-Cookie': [
      `accessToken=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900`,
@@ -93,12 +98,12 @@ To properly implement httpOnly cookies, backend needs:
    ```
 
 2. **/me endpoint** - Read token from cookie:
+
    ```javascript
-   const cookies = parseCookies(request.headers.get('Cookie'));
+   const cookies = parseCookies(request.headers.get("Cookie"));
    const token = cookies.accessToken || getTokenFromAuthHeader(request);
    ```
 
 3. **Refresh endpoint** - Read refreshToken from cookie
 
 See `BACKEND_REQUIREMENTS.md` for full implementation details.
-

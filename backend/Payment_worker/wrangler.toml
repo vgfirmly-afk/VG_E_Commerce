@@ -5,7 +5,6 @@ compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 #preview_urls = true
 
-
 # Do not store private keys in vars for production. Use `wrangler secret put`.
 [vars]
 HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
@@ -55,6 +54,102 @@ service = "w2-catalog-worker"
 #[[r2_buckets]]
 #binding = "CA_IMG_BUCKET"
 #bucket_name = "catalog-img-bucket"
+
+# --------------------------
+# staging environment
+# --------------------------
+[env.staging]
+name = "stageenv-w2-payment-worker"
+
+[env.staging.vars]
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+SERVICE_NAME = "Payment_Worker_Service"
+
+[[env.staging.d1_databases]]
+binding = "PAYMENT_DB"
+database_name = "payment_db"
+database_id = "7d7799f2-2bd4-4f52-a7ce-ffe72ddc262b"
+
+[[env.staging.services]]
+binding = "CHECKOUT_WORKER"
+service = "stageenv-w2-checkout-worker"
+
+[[env.staging.services]]
+binding = "INVENTORY_WORKER"
+service = "stageenv-w2-inventory-worker"
+
+[[env.staging.services]]
+binding = "FULFILLMENT_WORKER"
+service = "stageenv-w2-fullfillment-worker"
+
+[[env.staging.services]]
+binding = "CATALOG_WORKER"
+service = "stageenv-w2-catalog-worker"
+
+# --------------------------
+# dev environment
+# --------------------------
+[env.dev]
+name = "devenv-w2-payment-worker"
+
+[env.dev.vars]
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+SERVICE_NAME = "Payment_Worker_Service"
+
+[[env.dev.d1_databases]]
+binding = "PAYMENT_DB"
+database_name = "payment_db"
+database_id = "7d7799f2-2bd4-4f52-a7ce-ffe72ddc262b"
+
+[[env.dev.services]]
+binding = "CHECKOUT_WORKER"
+service = "devenv-w2-checkout-worker"
+
+[[env.dev.services]]
+binding = "INVENTORY_WORKER"
+service = "devenv-w2-inventory-worker"
+
+[[env.dev.services]]
+binding = "FULFILLMENT_WORKER"
+service = "devenv-w2-fullfillment-worker"
+
+[[env.dev.services]]
+binding = "CATALOG_WORKER"
+service = "devenv-w2-catalog-worker"
+
+# --------------------------
+# prod environment
+# --------------------------
+[env.prod]
+name = "w2-payment-worker"
+
+[env.prod.vars]
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+SERVICE_NAME = "Payment_Worker_Service"
+
+[[env.prod.d1_databases]]
+binding = "PAYMENT_DB"
+database_name = "payment_db"
+database_id = "7d7799f2-2bd4-4f52-a7ce-ffe72ddc262b"
+
+[[env.prod.services]]
+binding = "CHECKOUT_WORKER"
+service = "w2-checkout-worker"
+
+[[env.prod.services]]
+binding = "INVENTORY_WORKER"
+service = "w2-inventory-worker"
+
+[[env.prod.services]]
+binding = "FULFILLMENT_WORKER"
+service = "w2-fullfillment-worker"
+
+[[env.prod.services]]
+binding = "CATALOG_WORKER"
+service = "w2-catalog-worker"
 
 
 

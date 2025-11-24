@@ -14,18 +14,21 @@
 ES modules cannot be stubbed directly with Sinon. For handlers and services tests that need to stub ES modules, we have two options:
 
 ### Option 1: Use `sinon.replace` (Recommended)
+
 Instead of `sinon.stub(module, 'function')`, use:
+
 ```javascript
-import * as authService from '../../src/services/authService.js';
-sinon.replace(authService, 'register', sinon.fake.resolves({ ok: true }));
+import * as authService from "../../src/services/authService.js";
+sinon.replace(authService, "register", sinon.fake.resolves({ ok: true }));
 ```
 
 ### Option 2: Refactor to test behavior, not implementation
+
 Test the actual behavior with mocked dependencies (database, etc.) rather than stubbing the service functions.
 
 ## Rate Limit Config Issue:
 
 The rate limit middleware uses `config.js` imports, not env vars. The test should either:
+
 1. Mock the config module
 2. Test with the actual config values (60 seconds, 10 requests)
-

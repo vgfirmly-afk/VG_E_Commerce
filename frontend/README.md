@@ -15,11 +15,13 @@ SvelteKit frontend application for the VG E-Commerce microservices backend.
 ## Setup
 
 1. Install dependencies:
+
 ```bash
 npm install
 ```
 
 2. Create a `.env` file with your backend URLs:
+
 ```env
 VITE_AUTH_BASE_URL=https://w2-auth-worker.vg-firmly.workers.dev
 VITE_CATALOG_BASE_URL=https://w2-catalog-worker.vg-firmly.workers.dev
@@ -33,16 +35,19 @@ VITE_FRONTEND_BASE_URL=http://localhost:5173
 ```
 
 3. Run development server:
+
 ```bash
 npm run dev
 ```
 
 4. Build for production:
+
 ```bash
 npm run build
 ```
 
 5. Preview production build:
+
 ```bash
 npm run preview
 ```
@@ -61,4 +66,3 @@ npm run preview
 - **Tailwind CSS 3** - Utility-first CSS framework
 - **Vite** - Build tool and dev server
 - **PayPal SDK** - Payment processing
-

@@ -2,7 +2,7 @@
 // Trace-aware console.log/error/warn replacements
 // These functions automatically attach logs to OpenTelemetry traces
 
-import { trace, context } from '@opentelemetry/api';
+import { trace, context } from "@opentelemetry/api";
 
 /**
  * Gets the current trace context
@@ -10,12 +10,12 @@ import { trace, context } from '@opentelemetry/api';
 function getTraceContext() {
   const span = trace.getSpan(context.active());
   if (!span) {
-    return { traceId: 'none', spanId: 'none' };
+    return { traceId: "none", spanId: "none" };
   }
   const spanContext = span.spanContext();
   return {
-    traceId: spanContext.traceId || 'none',
-    spanId: spanContext.spanId || 'none',
+    traceId: spanContext.traceId || "none",
+    spanId: spanContext.spanId || "none",
   };
 }
 
@@ -38,14 +38,14 @@ function addLogToSpan(level, message, meta = {}) {
  */
 export function traceLog(...args) {
   const { traceId, spanId } = getTraceContext();
-  
+
   // Format the log message
-  const message = args.map(arg => 
-    typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
-  ).join(' ');
+  const message = args
+    .map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : String(arg)))
+    .join(" ");
 
   // Add to span
-  addLogToSpan('log', message);
+  addLogToSpan("log", message);
 
   // Output to console with trace context
   console.log(`[trace:${traceId.substring(0, 16)}...]`, ...args);
@@ -57,19 +57,19 @@ export function traceLog(...args) {
 export function traceError(...args) {
   const { traceId, spanId } = getTraceContext();
   const span = trace.getSpan(context.active());
-  
+
   // Format the error message
-  const message = args.map(arg => 
-    typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
-  ).join(' ');
+  const message = args
+    .map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : String(arg)))
+    .join(" ");
 
   // Record exception if it's an Error object
-  const errorObj = args.find(arg => arg instanceof Error);
+  const errorObj = args.find((arg) => arg instanceof Error);
   if (span && errorObj) {
     span.recordException(errorObj);
     span.setStatus({ code: 2, message: errorObj.message || message });
   } else if (span) {
-    addLogToSpan('error', message);
+    addLogToSpan("error", message);
     span.setStatus({ code: 2, message });
   }
 
@@ -82,12 +82,12 @@ export function traceError(...args) {
  */
 export function traceWarn(...args) {
   const { traceId, spanId } = getTraceContext();
-  
-  const message = args.map(arg => 
-    typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
-  ).join(' ');
 
-  addLogToSpan('warn', message);
+  const message = args
+    .map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : String(arg)))
+    .join(" ");
+
+  addLogToSpan("warn", message);
 
   console.warn(`[trace:${traceId.substring(0, 16)}...]`, ...args);
 }
@@ -97,13 +97,12 @@ export function traceWarn(...args) {
  */
 export function traceInfo(...args) {
   const { traceId, spanId } = getTraceContext();
-  
-  const message = args.map(arg => 
-    typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
-  ).join(' ');
 
-  addLogToSpan('info', message);
+  const message = args
+    .map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : String(arg)))
+    .join(" ");
+
+  addLogToSpan("info", message);
 
   console.log(`[trace:${traceId.substring(0, 16)}...]`, ...args);
 }
-

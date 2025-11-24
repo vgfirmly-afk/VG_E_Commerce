@@ -7,12 +7,14 @@ The Catalog Worker needs to verify JWT tokens from the Auth Worker. Both workers
 ### Steps:
 
 1. **Generate JWT Keys** (if not already done):
+
    ```bash
    cd Auth_Worker
    node generate_keys.js
    ```
 
 2. **Set JWT_PRIVATE_KEY in Auth Worker**:
+
    ```bash
    cd Auth_Worker
    wrangler secret put JWT_PRIVATE_KEY
@@ -36,10 +38,11 @@ The Catalog Worker needs to verify JWT tokens from the Auth Worker. Both workers
 ## Database Setup
 
 1. **Apply migrations**:
+
    ```bash
    # Local database
    wrangler d1 execute catalog_db --local --file=./migrations/001-init.sql
-   
+
    # Remote database
    wrangler d1 execute catalog_db --remote --file=./migrations/001-init.sql
    ```
@@ -47,7 +50,7 @@ The Catalog Worker needs to verify JWT tokens from the Auth Worker. Both workers
 ## Testing
 
 Use the Postman collection to test:
+
 1. First, login via Auth Worker to get tokens
 2. Tokens are automatically saved to collection variables
 3. Use admin endpoints - tokens are automatically added to requests
-

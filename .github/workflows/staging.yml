@@ -1,0 +1,100 @@
+name: PR → Simple Staging (matrix)
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+env:
+  NODE_VERSION: 20
+  # domain root for worker.dev
+  WF_DOMAIN_ROOT: "vg-firmly.workers.dev"
+  # health path used by your workers
+  HEALTH_PATH: "/_/health"
+  # sleep seconds after publish to allow propagation
+  PUBLISH_SLEEP_SECONDS: 5
+
+permissions:
+  contents: read
+
+jobs:
+  staging-matrix:
+    name: Publish & test ${{ matrix.prod_name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Define all workers here. prod_name is the production worker name (no env prefix).
+        include:
+          - dir: backend/Auth_Worker
+            prod_name: w2-auth-worker
+          - dir: backend/Catalog_worker
+            prod_name: w2-catalog-worker
+          - dir: backend/Cart_Worker
+            prod_name: w2-cart-worker
+          - dir: backend/Pricing_Worker
+            prod_name: w2-pricing-worker
+          - dir: backend/Invertory_Worker
+            prod_name: w2-inventory-worker
+          - dir: backend/Payment_worker
+            prod_name: w2-payment-worker
+          - dir: backend/Checkout_Worker
+            prod_name: w2-checkout-worker
+          - dir: backend/Fullfilment_Worker
+            prod_name: w2-fullfillment-worker
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install wrangler
+        run: npm install -g wrangler@^4
+
+      - name: Publish to staging
+        working-directory: ${{ matrix.dir }} 
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN_STAGING }}
+        run: |
+          # publish using env.staging config in wrangler.toml
+          wrangler publish --env staging
+
+      - name: Wait for staging propagation
+        run: sleep ${{ env.PUBLISH_SLEEP_SECONDS }}
+
+      - name: Run unit tests (workspace)
+        run: npm --workspace "${{ matrix.dir }}" run test
+
+      - name: Run coverage (workspace)
+        run: npm --workspace "${{ matrix.dir }}" run coverage
+
+      - name: Health check staging URL
+        # constructs: https://stageenv-<prod_name>.vg-firmly.workers.dev/_/health
+        run: |
+          URL="https://stageenv-${{ matrix.prod_name }}.${{ env.WF_DOMAIN_ROOT }}${{ env.HEALTH_PATH }}"
+          echo "Checking $URL"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$URL" || echo "000")
+          echo "HTTP $HTTP_CODE"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Health check failed: $HTTP_CODE"
+            exit 1
+          fi
+          echo "Health OK"
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.prod_name }}
+          path: |
+            ${{ matrix.dir }}/coverage
+            coverage
+            ./coverage

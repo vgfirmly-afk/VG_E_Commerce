@@ -1,11 +1,13 @@
 # Pricing Worker Setup Guide
 
 ## Overview
+
 The Pricing Worker is a microservice responsible for managing SKU pricing, maintaining price history, and calculating totals. It communicates with the Catalog Worker via HTTP when SKUs are created.
 
 ## Setup Steps
 
 ### 1. Install Dependencies
+
 ```bash
 npm install
 ```
@@ -13,11 +15,13 @@ npm install
 ### 2. Database Setup
 
 #### Create Local Database
+
 ```bash
 wrangler d1 create pricing_db
 ```
 
 #### Apply Migrations
+
 ```bash
 # Local database
 wrangler d1 execute pricing_db --local --file=./migrations/001-init.sql
@@ -35,6 +39,7 @@ Update `wrangler.toml` with your database ID if different from the default.
 The following environment variables can be set in `wrangler.toml` or as secrets:
 
 #### Required for Inter-Worker Communication:
+
 - `CATALOG_WORKER_URL` - Whitelisted Catalog Worker URL (e.g., `https://w2-catalog-worker.vg-firmly.workers.dev`)
   - Set in `wrangler.toml` under `[vars]`
   - The Pricing Worker will only accept requests from this whitelisted URL
@@ -44,6 +49,7 @@ The following environment variables can be set in `wrangler.toml` or as secrets:
   - Example: `wrangler secret put PRICING_SERVICE_TOKEN` (you'll be prompted to enter the token)
 
 #### Optional:
+
 - `HONEYCOMB_API_KEY` - For OpenTelemetry tracing
 - `HONEYCOMB_DATASET` - Honeycomb dataset name
 - `PRICING_WORKER_URL` - Self-reference URL (set in Catalog Worker for inter-worker calls)
@@ -52,6 +58,7 @@ The following environment variables can be set in `wrangler.toml` or as secrets:
 ### 5. Security: Whitelisting Catalog Worker
 
 The Pricing Worker implements security through:
+
 1. **URL Whitelisting**: Only accepts requests from `CATALOG_WORKER_URL`
    - Validates `X-Source` header sent by Catalog Worker
    - Falls back to `Origin` or `Referer` headers
@@ -70,13 +77,14 @@ cd Pricing_Worker
 wrangler secret put PRICING_SERVICE_TOKEN
 # Enter your token when prompted
 
-# In Catalog Worker directory  
+# In Catalog Worker directory
 cd Catalog_worker
 wrangler secret put PRICING_SERVICE_TOKEN
 # Enter the SAME token when prompted
 ```
 
 ### 7. Start Development Server
+
 ```bash
 npm start
 # Or
@@ -103,6 +111,7 @@ The Pricing Worker will run on port 8788 by default.
 ## Database Schema
 
 ### sku_prices
+
 - `sku_id` (PRIMARY KEY)
 - `product_id`
 - `sku_code`
@@ -116,6 +125,7 @@ The Pricing Worker will run on port 8788 by default.
 - Timestamps and audit fields
 
 ### price_history
+
 - `history_id` (PRIMARY KEY)
 - `sku_id` (FOREIGN KEY)
 - Price fields (same as sku_prices)
@@ -124,6 +134,7 @@ The Pricing Worker will run on port 8788 by default.
 - `changed_by`, `changed_at`
 
 ### promotion_codes
+
 - `promotion_id` (PRIMARY KEY)
 - `code` (UNIQUE)
 - Discount configuration
@@ -133,6 +144,7 @@ The Pricing Worker will run on port 8788 by default.
 ## Inter-Worker Communication
 
 When the Catalog Worker creates a SKU, it automatically calls the Pricing Worker to initialize the price:
+
 - Endpoint: `POST /api/v1/prices/:sku_id`
 - Default price: 0.00
 - Default currency: USD
@@ -140,6 +152,7 @@ When the Catalog Worker creates a SKU, it automatically calls the Pricing Worker
 ## Calculate Total Endpoint
 
 Example request:
+
 ```json
 POST /api/v1/calculate-total
 {
@@ -153,6 +166,7 @@ POST /api/v1/calculate-total
 ```
 
 Response:
+
 ```json
 {
   "items": [
@@ -179,4 +193,3 @@ Response:
   "currency": "USD"
 }
 ```
-

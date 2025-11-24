@@ -1,17 +1,19 @@
 // utils/validators.js
-import Joi from 'joi';
+import Joi from "joi";
 
 // Address schema
 export const addressSchema = Joi.object({
   full_name: Joi.string().min(1).max(200).required(),
   phone: Joi.string().min(10).max(20).required(),
-  email: Joi.string().email({ tlds: { allow: false } }).optional(), // Disable TLD validation to avoid nodejs_compat issues
+  email: Joi.string()
+    .email({ tlds: { allow: false } })
+    .optional(), // Disable TLD validation to avoid nodejs_compat issues
   address_line1: Joi.string().min(1).max(500).required(),
   address_line2: Joi.string().max(500).optional(),
   city: Joi.string().min(1).max(100).required(),
   state: Joi.string().min(1).max(100).required(),
   postal_code: Joi.string().min(5).max(10).required(),
-  country: Joi.string().length(2).default('IN'),
+  country: Joi.string().length(2).default("IN"),
   is_default: Joi.boolean().default(false),
 });
 
@@ -35,23 +37,38 @@ export const createCheckoutSessionSchema = Joi.object({
 
 // Validation functions
 export function validateAddress(data) {
-  return addressSchema.validate(data, { abortEarly: false, stripUnknown: true });
+  return addressSchema.validate(data, {
+    abortEarly: false,
+    stripUnknown: true,
+  });
 }
 
 export function validateSetDeliveryAddress(data) {
-  return setDeliveryAddressSchema.validate(data, { abortEarly: false, stripUnknown: true });
+  return setDeliveryAddressSchema.validate(data, {
+    abortEarly: false,
+    stripUnknown: true,
+  });
 }
 
 export function validateSetBillingAddress(data) {
-  return setBillingAddressSchema.validate(data, { abortEarly: false, stripUnknown: true });
+  return setBillingAddressSchema.validate(data, {
+    abortEarly: false,
+    stripUnknown: true,
+  });
 }
 
 export function validateSelectShippingMethod(data) {
-  return selectShippingMethodSchema.validate(data, { abortEarly: false, stripUnknown: true });
+  return selectShippingMethodSchema.validate(data, {
+    abortEarly: false,
+    stripUnknown: true,
+  });
 }
 
 export function validateCreateCheckoutSession(data) {
-  return createCheckoutSessionSchema.validate(data, { abortEarly: false, stripUnknown: true });
+  return createCheckoutSessionSchema.validate(data, {
+    abortEarly: false,
+    stripUnknown: true,
+  });
 }
 
 export function validateSessionId(sessionId) {
@@ -67,8 +84,8 @@ export const shippingMethodSchema = Joi.object({
   name: Joi.string().min(1).max(200).required(),
   description: Joi.string().max(500).optional(),
   carrier: Joi.string().min(1).max(100).required(),
-  base_cost: Joi.number().min(0).default(0.00),
-  cost_per_kg: Joi.number().min(0).default(0.00),
+  base_cost: Joi.number().min(0).default(0.0),
+  cost_per_kg: Joi.number().min(0).default(0.0),
   min_delivery_days: Joi.number().integer().min(1).max(30).default(3),
   max_delivery_days: Joi.number().integer().min(1).max(30).default(7),
   is_active: Joi.boolean().default(true),
@@ -91,14 +108,19 @@ export const shippingMethodIdSchema = Joi.string().min(1).max(100).required();
 
 // Validation functions for shipping methods
 export function validateShippingMethod(data) {
-  return shippingMethodSchema.validate(data, { abortEarly: false, stripUnknown: true });
+  return shippingMethodSchema.validate(data, {
+    abortEarly: false,
+    stripUnknown: true,
+  });
 }
 
 export function validateShippingMethodUpdate(data) {
-  return shippingMethodUpdateSchema.validate(data, { abortEarly: false, stripUnknown: true });
+  return shippingMethodUpdateSchema.validate(data, {
+    abortEarly: false,
+    stripUnknown: true,
+  });
 }
 
 export function validateShippingMethodId(methodId) {
   return shippingMethodIdSchema.validate(methodId);
 }
-

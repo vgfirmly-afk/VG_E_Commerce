@@ -889,12 +889,12 @@
             {
               "name": "1. Initialize Stock",
               "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 201\", function () {",
-                  "    pm.response.to.have.status(201);",
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 201\", function () {",
+                      "    pm.response.to.have.status(201);",
                       "});",
                       "",
                       "if (pm.response.code === 201) {",
@@ -903,25 +903,25 @@
                       "    pm.collectionVariables.set('productId', response.product_id);",
                       "    console.log('Stock initialized:', response);",
                       "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
                     "key": "Authorization",
                     "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
                   "raw": "{\n  \"product_id\": \"prod-{{$randomUUID}}\",\n  \"sku_code\": \"SKU-TEST-{{$randomInt}}\",\n  \"quantity\": 100,\n  \"low_stock_threshold\": 10,\n  \"reason\": \"Integration test\"\n}"
                 },
                 "url": {
@@ -962,18 +962,18 @@
               "request": {
                 "method": "GET",
                 "header": [],
-            "url": {
-              "raw": "{{inventoryBaseUrl}}/api/v1/stock/:sku_id",
-              "host": ["{{inventoryBaseUrl}}"],
-              "path": ["api", "v1", "stock", ":sku_id"],
-              "variable": [
-                {
-                  "key": "sku_id",
-                  "value": "{{skuId}}"
+                "url": {
+                  "raw": "{{inventoryBaseUrl}}/api/v1/stock/:sku_id",
+                  "host": ["{{inventoryBaseUrl}}"],
+                  "path": ["api", "v1", "stock", ":sku_id"],
+                  "variable": [
+                    {
+                      "key": "sku_id",
+                      "value": "{{skuId}}"
+                    }
+                  ]
                 }
-              ]
-            }
-          }
+              }
             },
             {
               "name": "3. Reserve Stock",
@@ -1339,4 +1339,3 @@
     }
   ]
 }
-

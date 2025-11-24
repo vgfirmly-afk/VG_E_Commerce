@@ -1,5 +1,5 @@
 // config.js
-export const ACCESS_TOKEN_EXPIRY = '15m';
+export const ACCESS_TOKEN_EXPIRY = "15m";
 export const REFRESH_TOKEN_DAYS = 30;
 export const RATE_LIMIT_WINDOW_SECONDS = 60;
 export const RATE_LIMIT_MAX_REQUESTS = 10;

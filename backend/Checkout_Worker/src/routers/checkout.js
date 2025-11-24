@@ -1,99 +1,107 @@
 // routers/checkout.js
-import { Router } from 'itty-router';
-import * as checkoutHandlers from '../handlers/checkoutHandlers.js';
-import { validateBody } from '../middleware/validate.js';
+import { Router } from "itty-router";
+import * as checkoutHandlers from "../handlers/checkoutHandlers.js";
+import { validateBody } from "../middleware/validate.js";
 import {
   validateCreateCheckoutSession,
   validateSetDeliveryAddress,
   validateSetBillingAddress,
   validateSelectShippingMethod,
   validateShippingMethod,
-  validateShippingMethodUpdate
-} from '../utils/validators.js';
+  validateShippingMethodUpdate,
+} from "../utils/validators.js";
 
 const router = Router();
 
 // Health check
-router.get('/_/health', async (request, env, ctx) => {
-  return new Response(JSON.stringify({ ok: true }), { 
-    status: 200, 
-    headers: { 'Content-Type': 'application/json' } 
+router.get("/_/health", async (request, env, ctx) => {
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
   });
 });
 
 // Create checkout session
-router.post('/api/v1/checkout/sessions',
-  async (request, env, ctx) => {
-    try {
-      const contentType = request.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        return new Response(
-          JSON.stringify({ 
-            error: 'validation_error', 
-            message: 'Content-Type must be application/json'
-          }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-
-      let body;
-      try {
-        body = await request.json();
-      } catch (parseErr) {
-        return new Response(
-          JSON.stringify({ 
-            error: 'validation_error', 
-            message: 'Invalid JSON in request body' 
-          }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const { error, value } = validateCreateCheckoutSession(body);
-      if (error) {
-        return new Response(
-          JSON.stringify({
-            error: 'validation_error',
-            message: 'Invalid request data',
-            details: error.details.map(d => ({
-              path: d.path.join('.'),
-              message: d.message,
-              type: d.type
-            }))
-          }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-
-      request.validatedBody = value;
-      return await checkoutHandlers.createSession(request, request.env || env);
-    } catch (err) {
-      console.error('[Checkout Router] Error in POST /api/v1/checkout/sessions:', err);
+router.post("/api/v1/checkout/sessions", async (request, env, ctx) => {
+  try {
+    const contentType = request.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
       return new Response(
-        JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: "validation_error",
+          message: "Content-Type must be application/json",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
-  }
-);
 
-// Get checkout session
-router.get('/api/v1/checkout/sessions/:session_id', async (request, env, ctx) => {
-  return checkoutHandlers.getSession(request, request.env || env);
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseErr) {
+      return new Response(
+        JSON.stringify({
+          error: "validation_error",
+          message: "Invalid JSON in request body",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    const { error, value } = validateCreateCheckoutSession(body);
+    if (error) {
+      return new Response(
+        JSON.stringify({
+          error: "validation_error",
+          message: "Invalid request data",
+          details: error.details.map((d) => ({
+            path: d.path.join("."),
+            message: d.message,
+            type: d.type,
+          })),
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    request.validatedBody = value;
+    return await checkoutHandlers.createSession(request, request.env || env);
+  } catch (err) {
+    console.error(
+      "[Checkout Router] Error in POST /api/v1/checkout/sessions:",
+      err,
+    );
+    return new Response(
+      JSON.stringify({
+        error: "internal_error",
+        message: err?.message ?? String(err),
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
 });
 
+// Get checkout session
+router.get(
+  "/api/v1/checkout/sessions/:session_id",
+  async (request, env, ctx) => {
+    return checkoutHandlers.getSession(request, request.env || env);
+  },
+);
+
 // Set delivery address
-router.post('/api/v1/checkout/sessions/:session_id/delivery-address',
+router.post(
+  "/api/v1/checkout/sessions/:session_id/delivery-address",
   async (request, env, ctx) => {
     try {
-      const contentType = request.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
+      const contentType = request.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
         return new Response(
-          JSON.stringify({ 
-            error: 'validation_error', 
-            message: 'Content-Type must be application/json'
+          JSON.stringify({
+            error: "validation_error",
+            message: "Content-Type must be application/json",
           }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
+          { status: 400, headers: { "Content-Type": "application/json" } },
         );
       }
 
@@ -102,11 +110,11 @@ router.post('/api/v1/checkout/sessions/:session_id/delivery-address',
         body = await request.json();
       } catch (parseErr) {
         return new Response(
-          JSON.stringify({ 
-            error: 'validation_error', 
-            message: 'Invalid JSON in request body' 
+          JSON.stringify({
+            error: "validation_error",
+            message: "Invalid JSON in request body",
           }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
+          { status: 400, headers: { "Content-Type": "application/json" } },
         );
       }
 
@@ -114,42 +122,52 @@ router.post('/api/v1/checkout/sessions/:session_id/delivery-address',
       if (error) {
         return new Response(
           JSON.stringify({
-            error: 'validation_error',
-            message: 'Invalid request data',
-            details: error.details.map(d => ({
-              path: d.path.join('.'),
+            error: "validation_error",
+            message: "Invalid request data",
+            details: error.details.map((d) => ({
+              path: d.path.join("."),
               message: d.message,
-              type: d.type
-            }))
+              type: d.type,
+            })),
           }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
+          { status: 400, headers: { "Content-Type": "application/json" } },
         );
       }
 
       request.validatedBody = value;
-      return await checkoutHandlers.setDeliveryAddress(request, request.env || env);
+      return await checkoutHandlers.setDeliveryAddress(
+        request,
+        request.env || env,
+      );
     } catch (err) {
-      console.error('[Checkout Router] Error in POST /api/v1/checkout/sessions/:session_id/delivery-address:', err);
+      console.error(
+        "[Checkout Router] Error in POST /api/v1/checkout/sessions/:session_id/delivery-address:",
+        err,
+      );
       return new Response(
-        JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: "internal_error",
+          message: err?.message ?? String(err),
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
       );
     }
-  }
+  },
 );
 
 // Set billing address
-router.post('/api/v1/checkout/sessions/:session_id/billing-address',
+router.post(
+  "/api/v1/checkout/sessions/:session_id/billing-address",
   async (request, env, ctx) => {
     try {
-      const contentType = request.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
+      const contentType = request.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
         return new Response(
-          JSON.stringify({ 
-            error: 'validation_error', 
-            message: 'Content-Type must be application/json'
+          JSON.stringify({
+            error: "validation_error",
+            message: "Content-Type must be application/json",
           }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
+          { status: 400, headers: { "Content-Type": "application/json" } },
         );
       }
 
@@ -158,11 +176,11 @@ router.post('/api/v1/checkout/sessions/:session_id/billing-address',
         body = await request.json();
       } catch (parseErr) {
         return new Response(
-          JSON.stringify({ 
-            error: 'validation_error', 
-            message: 'Invalid JSON in request body' 
+          JSON.stringify({
+            error: "validation_error",
+            message: "Invalid JSON in request body",
           }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
+          { status: 400, headers: { "Content-Type": "application/json" } },
         );
       }
 
@@ -170,47 +188,60 @@ router.post('/api/v1/checkout/sessions/:session_id/billing-address',
       if (error) {
         return new Response(
           JSON.stringify({
-            error: 'validation_error',
-            message: 'Invalid request data',
-            details: error.details.map(d => ({
-              path: d.path.join('.'),
+            error: "validation_error",
+            message: "Invalid request data",
+            details: error.details.map((d) => ({
+              path: d.path.join("."),
               message: d.message,
-              type: d.type
-            }))
+              type: d.type,
+            })),
           }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
+          { status: 400, headers: { "Content-Type": "application/json" } },
         );
       }
 
       request.validatedBody = value;
-      return await checkoutHandlers.setBillingAddress(request, request.env || env);
+      return await checkoutHandlers.setBillingAddress(
+        request,
+        request.env || env,
+      );
     } catch (err) {
-      console.error('[Checkout Router] Error in POST /api/v1/checkout/sessions/:session_id/billing-address:', err);
+      console.error(
+        "[Checkout Router] Error in POST /api/v1/checkout/sessions/:session_id/billing-address:",
+        err,
+      );
       return new Response(
-        JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: "internal_error",
+          message: err?.message ?? String(err),
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
       );
     }
-  }
+  },
 );
 
 // Get available shipping methods
-router.get('/api/v1/checkout/sessions/:session_id/shipping-methods', async (request, env, ctx) => {
-  return checkoutHandlers.getShippingMethods(request, request.env || env);
-});
+router.get(
+  "/api/v1/checkout/sessions/:session_id/shipping-methods",
+  async (request, env, ctx) => {
+    return checkoutHandlers.getShippingMethods(request, request.env || env);
+  },
+);
 
 // Select shipping method
-router.post('/api/v1/checkout/sessions/:session_id/shipping-method',
+router.post(
+  "/api/v1/checkout/sessions/:session_id/shipping-method",
   async (request, env, ctx) => {
     try {
-      const contentType = request.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
+      const contentType = request.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
         return new Response(
-          JSON.stringify({ 
-            error: 'validation_error', 
-            message: 'Content-Type must be application/json'
+          JSON.stringify({
+            error: "validation_error",
+            message: "Content-Type must be application/json",
           }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
+          { status: 400, headers: { "Content-Type": "application/json" } },
         );
       }
 
@@ -219,11 +250,11 @@ router.post('/api/v1/checkout/sessions/:session_id/shipping-method',
         body = await request.json();
       } catch (parseErr) {
         return new Response(
-          JSON.stringify({ 
-            error: 'validation_error', 
-            message: 'Invalid JSON in request body' 
+          JSON.stringify({
+            error: "validation_error",
+            message: "Invalid JSON in request body",
           }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
+          { status: 400, headers: { "Content-Type": "application/json" } },
         );
       }
 
@@ -231,115 +262,138 @@ router.post('/api/v1/checkout/sessions/:session_id/shipping-method',
       if (error) {
         return new Response(
           JSON.stringify({
-            error: 'validation_error',
-            message: 'Invalid request data',
-            details: error.details.map(d => ({
-              path: d.path.join('.'),
+            error: "validation_error",
+            message: "Invalid request data",
+            details: error.details.map((d) => ({
+              path: d.path.join("."),
               message: d.message,
-              type: d.type
-            }))
+              type: d.type,
+            })),
           }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
+          { status: 400, headers: { "Content-Type": "application/json" } },
         );
       }
 
       request.validatedBody = value;
-      return await checkoutHandlers.selectShippingMethod(request, request.env || env);
+      return await checkoutHandlers.selectShippingMethod(
+        request,
+        request.env || env,
+      );
     } catch (err) {
-      console.error('[Checkout Router] Error in POST /api/v1/checkout/sessions/:session_id/shipping-method:', err);
+      console.error(
+        "[Checkout Router] Error in POST /api/v1/checkout/sessions/:session_id/shipping-method:",
+        err,
+      );
       return new Response(
-        JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: "internal_error",
+          message: err?.message ?? String(err),
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
       );
     }
-  }
+  },
 );
 
 // Get checkout summary
-router.get('/api/v1/checkout/sessions/:session_id/summary', async (request, env, ctx) => {
-  return checkoutHandlers.getSummary(request, request.env || env);
-});
+router.get(
+  "/api/v1/checkout/sessions/:session_id/summary",
+  async (request, env, ctx) => {
+    return checkoutHandlers.getSummary(request, request.env || env);
+  },
+);
 
 // ==================== Admin Shipping Method Routes ====================
 
 // Create shipping method (admin)
-router.post('/api/v1/admin/shipping-methods',
-  async (request, env, ctx) => {
-    try {
-      const contentType = request.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        return new Response(
-          JSON.stringify({ 
-            error: 'validation_error', 
-            message: 'Content-Type must be application/json'
-          }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-
-      let body;
-      try {
-        body = await request.json();
-      } catch (parseErr) {
-        return new Response(
-          JSON.stringify({ 
-            error: 'validation_error', 
-            message: 'Invalid JSON in request body' 
-          }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const { error, value } = validateShippingMethod(body);
-      if (error) {
-        return new Response(
-          JSON.stringify({
-            error: 'validation_error',
-            message: 'Invalid request data',
-            details: error.details.map(d => ({
-              path: d.path.join('.'),
-              message: d.message,
-              type: d.type
-            }))
-          }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-
-      request.validatedBody = value;
-      return await checkoutHandlers.createShippingMethod(request, request.env || env);
-    } catch (err) {
-      console.error('[Checkout Router] Error in POST /api/v1/admin/shipping-methods:', err);
+router.post("/api/v1/admin/shipping-methods", async (request, env, ctx) => {
+  try {
+    const contentType = request.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
       return new Response(
-        JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: "validation_error",
+          message: "Content-Type must be application/json",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
+
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseErr) {
+      return new Response(
+        JSON.stringify({
+          error: "validation_error",
+          message: "Invalid JSON in request body",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    const { error, value } = validateShippingMethod(body);
+    if (error) {
+      return new Response(
+        JSON.stringify({
+          error: "validation_error",
+          message: "Invalid request data",
+          details: error.details.map((d) => ({
+            path: d.path.join("."),
+            message: d.message,
+            type: d.type,
+          })),
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    request.validatedBody = value;
+    return await checkoutHandlers.createShippingMethod(
+      request,
+      request.env || env,
+    );
+  } catch (err) {
+    console.error(
+      "[Checkout Router] Error in POST /api/v1/admin/shipping-methods:",
+      err,
+    );
+    return new Response(
+      JSON.stringify({
+        error: "internal_error",
+        message: err?.message ?? String(err),
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
   }
-);
+});
 
 // Get all shipping methods (admin)
-router.get('/api/v1/admin/shipping-methods', async (request, env, ctx) => {
+router.get("/api/v1/admin/shipping-methods", async (request, env, ctx) => {
   return checkoutHandlers.getAllShippingMethods(request, request.env || env);
 });
 
 // Get shipping method by ID (admin)
-router.get('/api/v1/admin/shipping-methods/:method_id', async (request, env, ctx) => {
-  return checkoutHandlers.getShippingMethodById(request, request.env || env);
-});
+router.get(
+  "/api/v1/admin/shipping-methods/:method_id",
+  async (request, env, ctx) => {
+    return checkoutHandlers.getShippingMethodById(request, request.env || env);
+  },
+);
 
 // Update shipping method (admin)
-router.put('/api/v1/admin/shipping-methods/:method_id',
+router.put(
+  "/api/v1/admin/shipping-methods/:method_id",
   async (request, env, ctx) => {
     try {
-      const contentType = request.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
+      const contentType = request.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
         return new Response(
-          JSON.stringify({ 
-            error: 'validation_error', 
-            message: 'Content-Type must be application/json'
+          JSON.stringify({
+            error: "validation_error",
+            message: "Content-Type must be application/json",
           }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
+          { status: 400, headers: { "Content-Type": "application/json" } },
         );
       }
 
@@ -348,11 +402,11 @@ router.put('/api/v1/admin/shipping-methods/:method_id',
         body = await request.json();
       } catch (parseErr) {
         return new Response(
-          JSON.stringify({ 
-            error: 'validation_error', 
-            message: 'Invalid JSON in request body' 
+          JSON.stringify({
+            error: "validation_error",
+            message: "Invalid JSON in request body",
           }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
+          { status: 400, headers: { "Content-Type": "application/json" } },
         );
       }
 
@@ -360,61 +414,79 @@ router.put('/api/v1/admin/shipping-methods/:method_id',
       if (error) {
         return new Response(
           JSON.stringify({
-            error: 'validation_error',
-            message: 'Invalid request data',
-            details: error.details.map(d => ({
-              path: d.path.join('.'),
+            error: "validation_error",
+            message: "Invalid request data",
+            details: error.details.map((d) => ({
+              path: d.path.join("."),
               message: d.message,
-              type: d.type
-            }))
+              type: d.type,
+            })),
           }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
+          { status: 400, headers: { "Content-Type": "application/json" } },
         );
       }
 
       request.validatedBody = value;
-      return await checkoutHandlers.updateShippingMethod(request, request.env || env);
+      return await checkoutHandlers.updateShippingMethod(
+        request,
+        request.env || env,
+      );
     } catch (err) {
-      console.error('[Checkout Router] Error in PUT /api/v1/admin/shipping-methods/:method_id:', err);
+      console.error(
+        "[Checkout Router] Error in PUT /api/v1/admin/shipping-methods/:method_id:",
+        err,
+      );
       return new Response(
-        JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: "internal_error",
+          message: err?.message ?? String(err),
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
       );
     }
-  }
+  },
 );
 
 // Delete shipping method (admin)
-router.delete('/api/v1/admin/shipping-methods/:method_id', async (request, env, ctx) => {
-  return checkoutHandlers.deleteShippingMethod(request, request.env || env);
-});
-
-// Webhook endpoint for payment status updates (called by Payment Worker)
-router.post('/api/v1/webhooks/payment-status',
+router.delete(
+  "/api/v1/admin/shipping-methods/:method_id",
   async (request, env, ctx) => {
-    try {
-      const webhookHandlers = await import('../handlers/webhookHandlers.js');
-      return webhookHandlers.handlePaymentStatusWebhook(request, request.env || env);
-    } catch (err) {
-      console.error('[Checkout Router] Error in POST /api/v1/webhooks/payment-status:', err);
-      return new Response(
-        JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-  }
+    return checkoutHandlers.deleteShippingMethod(request, request.env || env);
+  },
 );
 
+// Webhook endpoint for payment status updates (called by Payment Worker)
+router.post("/api/v1/webhooks/payment-status", async (request, env, ctx) => {
+  try {
+    const webhookHandlers = await import("../handlers/webhookHandlers.js");
+    return webhookHandlers.handlePaymentStatusWebhook(
+      request,
+      request.env || env,
+    );
+  } catch (err) {
+    console.error(
+      "[Checkout Router] Error in POST /api/v1/webhooks/payment-status:",
+      err,
+    );
+    return new Response(
+      JSON.stringify({
+        error: "internal_error",
+        message: err?.message ?? String(err),
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
+});
+
 // Fallback route
-router.all('*', async (request) => {
+router.all("*", async (request) => {
   return new Response(
-    JSON.stringify({ 
-      error: 'not_found', 
-      message: `Route not found: ${request.method} ${new URL(request.url).pathname}` 
+    JSON.stringify({
+      error: "not_found",
+      message: `Route not found: ${request.method} ${new URL(request.url).pathname}`,
     }),
-    { status: 404, headers: { 'Content-Type': 'application/json' } }
+    { status: 404, headers: { "Content-Type": "application/json" } },
   );
 });
 
 export default router;
-

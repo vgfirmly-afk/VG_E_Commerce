@@ -1,11 +1,11 @@
 // src/index.js
-import { instrument } from '@microlabs/otel-cf-workers';
-import { resolveConfig } from './utils/tracing.js';
+import { instrument } from "@microlabs/otel-cf-workers";
+import { resolveConfig } from "./utils/tracing.js";
 
-import router from './routers/auth.js';
-import withLogger from './middleware/logger.js'; // expects the wrapper version
-import { checkRateLimit, addRateLimitHeaders } from './middleware/rateLimit.js';
-import { withCORS } from './middleware/cors.js';
+import router from "./routers/auth.js";
+import withLogger from "./middleware/logger.js"; // expects the wrapper version
+import { checkRateLimit, addRateLimitHeaders } from "./middleware/rateLimit.js";
+import { withCORS } from "./middleware/cors.js";
 
 // base fetch handler that delegates to your itty-router
 async function baseFetch(request, env, ctx) {
@@ -21,17 +21,20 @@ async function baseFetch(request, env, ctx) {
 
     // delegate to itty-router
     const response = await router.handle(request, env, ctx);
-    
+
     // Add rate limit headers to successful responses
     if (response && response instanceof Response) {
       addRateLimitHeaders(response, request);
     }
-    
+
     return response;
   } catch (err) {
     return new Response(
-      JSON.stringify({ error: 'internal_error', message: err?.message ?? String(err) }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({
+        error: "internal_error",
+        message: err?.message ?? String(err),
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }
 }

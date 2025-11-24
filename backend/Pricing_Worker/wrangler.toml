@@ -3,15 +3,13 @@ main = "src/index.js"
 compatibility_date = "2025-11-15"
 compatibility_flags = ["nodejs_compat"]
 
-
 # Do not store private keys in vars for production. Use `wrangler secret put`.
 [vars]
 HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
 HONEYCOMB_DATASET = "Week_Two_Main_Project"
 PRICING_WORKER_URL = "https://w2-pricing-worker.vg-firmly.workers.dev"
 # Catalog Worker URL for whitelisting inter-worker requests
-CATALOG_WORKER_URL = "https://w2-catalog-worker.vg-firmly.workers.dev" 
-
+CATALOG_WORKER_URL = "https://w2-catalog-worker.vg-firmly.workers.dev"
 
 #PRICING_SERVICE_TOKEN = `VPzxLDdSpE0EfyX/h9HnRxTQ2rIegJC/ilXw74dY1YE=`
 
@@ -48,6 +46,81 @@ service = "w2-catalog-worker"
 
 # Service binding to Inventory Worker (for direct Worker-to-Worker communication)
 [[services]]
+binding = "INVENTORY_WORKER"
+service = "w2-inventory-worker"
+
+# --------------------------
+# staging environment
+# --------------------------
+[env.staging]
+name = "stageenv-w2-pricing-worker"
+
+[env.staging.vars]
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+PRICING_WORKER_URL = "https://stageenv-w2-pricing-worker.vg-firmly.workers.dev"
+CATALOG_WORKER_URL = "https://stageenv-w2-catalog-worker.vg-firmly.workers.dev"
+
+[[env.staging.d1_databases]]
+binding = "PRICING_DB"
+database_name = "pricing_db"
+database_id = "9a88aa6b-0b44-4a67-a710-2340aac6765e"
+
+[[env.staging.services]]
+binding = "CATALOG_WORKER"
+service = "stageenv-w2-catalog-worker"
+
+[[env.staging.services]]
+binding = "INVENTORY_WORKER"
+service = "stageenv-w2-inventory-worker"
+
+# --------------------------
+# dev environment
+# --------------------------
+[env.dev]
+name = "devenv-w2-pricing-worker"
+
+[env.dev.vars]
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+PRICING_WORKER_URL = "http://localhost:49861"
+CATALOG_WORKER_URL = "http://localhost:8787"
+
+[[env.dev.d1_databases]]
+binding = "PRICING_DB"
+database_name = "pricing_db"
+database_id = "9a88aa6b-0b44-4a67-a710-2340aac6765e"
+
+[[env.dev.services]]
+binding = "CATALOG_WORKER"
+service = "devenv-w2-catalog-worker"
+
+[[env.dev.services]]
+binding = "INVENTORY_WORKER"
+service = "devenv-w2-inventory-worker"
+
+# --------------------------
+# prod environment
+# --------------------------
+[env.prod]
+name = "w2-pricing-worker"
+
+[env.prod.vars]
+HONEYCOMB_API_KEY = "hcaik_01ka4fnfh58axt6bp5df489adwdrerncqa3hqbk39dxxrvaa1vp62cgkse"
+HONEYCOMB_DATASET = "Week_Two_Main_Project"
+PRICING_WORKER_URL = "https://w2-pricing-worker.vg-firmly.workers.dev"
+CATALOG_WORKER_URL = "https://w2-catalog-worker.vg-firmly.workers.dev"
+
+[[env.prod.d1_databases]]
+binding = "PRICING_DB"
+database_name = "pricing_db"
+database_id = "9a88aa6b-0b44-4a67-a710-2340aac6765e"
+
+[[env.prod.services]]
+binding = "CATALOG_WORKER"
+service = "w2-catalog-worker"
+
+[[env.prod.services]]
 binding = "INVENTORY_WORKER"
 service = "w2-inventory-worker"
 

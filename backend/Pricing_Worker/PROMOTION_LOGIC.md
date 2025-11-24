@@ -82,6 +82,7 @@ The promotion code system in Pricing Worker allows you to apply discounts to car
 ## Promotion Code Fields
 
 ### Required Fields
+
 - **code**: Unique promotion code (e.g., "SAVE20", "FLAT10")
 - **name**: Display name (e.g., "20% Off Sale")
 - **discount_type**: Either `"percentage"` or `"fixed_amount"`
@@ -92,6 +93,7 @@ The promotion code system in Pricing Worker allows you to apply discounts to car
 - **valid_to**: End date (ISO format)
 
 ### Optional Fields
+
 - **min_purchase_amount**: Minimum cart total required (e.g., `50.00`)
 - **max_discount_amount**: Maximum discount cap for percentage (e.g., `100.00`)
 - **usage_limit**: Maximum number of times code can be used (NULL = unlimited)
@@ -103,14 +105,15 @@ The promotion code system in Pricing Worker allows you to apply discounts to car
 ### Example 1: Percentage Discount (20% Off)
 
 **Promotion Code:**
+
 ```json
 {
   "code": "SAVE20",
   "name": "20% Off Sale",
   "discount_type": "percentage",
   "discount_value": 20,
-  "min_purchase_amount": 50.00,
-  "max_discount_amount": 100.00,
+  "min_purchase_amount": 50.0,
+  "max_discount_amount": 100.0,
   "valid_from": "2024-01-01T00:00:00Z",
   "valid_to": "2024-12-31T23:59:59Z",
   "usage_limit": 1000
@@ -118,16 +121,16 @@ The promotion code system in Pricing Worker allows you to apply discounts to car
 ```
 
 **Cart:**
+
 ```json
 {
-  "items": [
-    { "sku_id": "sku-123", "quantity": 2 }
-  ],
+  "items": [{ "sku_id": "sku-123", "quantity": 2 }],
   "promotion_code": "SAVE20"
 }
 ```
 
 **Calculation:**
+
 1. Subtotal: $100.00 (2 × $50.00)
 2. Check: Subtotal ($100) >= min_purchase ($50) ✓
 3. Discount: ($100 × 20) / 100 = $20.00
@@ -137,29 +140,30 @@ The promotion code system in Pricing Worker allows you to apply discounts to car
 ### Example 2: Fixed Amount Discount ($10 Off)
 
 **Promotion Code:**
+
 ```json
 {
   "code": "FLAT10",
   "name": "$10 Off",
   "discount_type": "fixed_amount",
-  "discount_value": 10.00,
-  "min_purchase_amount": 25.00,
+  "discount_value": 10.0,
+  "min_purchase_amount": 25.0,
   "valid_from": "2024-01-01T00:00:00Z",
   "valid_to": "2024-12-31T23:59:59Z"
 }
 ```
 
 **Cart:**
+
 ```json
 {
-  "items": [
-    { "sku_id": "sku-456", "quantity": 1 }
-  ],
+  "items": [{ "sku_id": "sku-456", "quantity": 1 }],
   "promotion_code": "FLAT10"
 }
 ```
 
 **Calculation:**
+
 1. Subtotal: $30.00
 2. Check: Subtotal ($30) >= min_purchase ($25) ✓
 3. Discount: $10.00 (fixed)
@@ -169,6 +173,7 @@ The promotion code system in Pricing Worker allows you to apply discounts to car
 ### Example 3: SKU-Specific Promotion
 
 **Promotion Code:**
+
 ```json
 {
   "code": "SPECIAL50",
@@ -182,17 +187,19 @@ The promotion code system in Pricing Worker allows you to apply discounts to car
 ```
 
 **Cart:**
+
 ```json
 {
   "items": [
-    { "sku_id": "sku-123", "quantity": 1 },  // ✓ In applicable_skus
-    { "sku_id": "sku-456", "quantity": 1 }    // ✗ Not in applicable_skus
+    { "sku_id": "sku-123", "quantity": 1 }, // ✓ In applicable_skus
+    { "sku_id": "sku-456", "quantity": 1 } // ✗ Not in applicable_skus
   ],
   "promotion_code": "SPECIAL50"
 }
 ```
 
 **Calculation:**
+
 1. Subtotal: $100.00 ($50 + $50)
 2. Check: Cart contains sku-123 (in applicable_skus) ✓
 3. Discount: ($100 × 50) / 100 = $50.00
@@ -203,29 +210,35 @@ The promotion code system in Pricing Worker allows you to apply discounts to car
 ## Validation Rules
 
 ### 1. Code Must Be Active
+
 - `status = 'active'`
 - `valid_from <= current_time <= valid_to`
 
 ### 2. SKU Applicability
+
 - If `applicable_skus` is `NULL` → applies to all SKUs
 - If `applicable_skus` is an array → at least one SKU in cart must be in the array
 
 ### 3. Minimum Purchase
+
 - If `min_purchase_amount` is set → cart subtotal must be >= this amount
 - If not met, promotion is not applied
 
 ### 4. Usage Limit
+
 - If `usage_limit` is set → `usage_count` must be < `usage_limit`
 - If limit reached, promotion is not applied
 - Usage count is incremented AFTER successful application
 
 ### 5. Discount Caps
+
 - **Percentage discounts**: Can be capped with `max_discount_amount`
 - **Fixed amount**: Automatically capped at subtotal (can't discount more than total)
 
 ## API Endpoints
 
 ### Calculate Total with Promotion
+
 ```http
 POST /api/v1/calculate-total
 Content-Type: application/json
@@ -240,6 +253,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "items": [
@@ -247,22 +261,22 @@ Content-Type: application/json
       "sku_id": "sku-123",
       "sku_code": "SKU-123",
       "quantity": 2,
-      "unit_price": 50.00,
-      "original_price": 50.00,
+      "unit_price": 50.0,
+      "original_price": 50.0,
       "sale_price": null,
-      "item_total": 100.00,
+      "item_total": 100.0,
       "currency": "USD"
     }
   ],
-  "subtotal": 100.00,
-  "discount": 20.00,
+  "subtotal": 100.0,
+  "discount": 20.0,
   "promotion": {
     "code": "SAVE20",
     "name": "20% Off Sale",
     "discount_type": "percentage",
     "discount_value": 20
   },
-  "total": 80.00,
+  "total": 80.0,
   "currency": "USD"
 }
 ```
@@ -310,4 +324,3 @@ CREATE TABLE promotion_codes (
 - **Get**: `GET /api/v1/promotion-codes/:promotion_id` (admin only)
 - **Update**: `PUT /api/v1/promotion-codes/:promotion_id` (admin only)
 - **Delete**: `DELETE /api/v1/promotion-codes/:promotion_id` (admin only - soft delete)
-

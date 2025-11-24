@@ -13,25 +13,25 @@
  */
 export function setCookie(name, value, days = 30, options = {}) {
   const {
-    path = '/',
-    domain = '',
-    secure = window.location.protocol === 'https:',
-    sameSite = 'Strict'
+    path = "/",
+    domain = "",
+    secure = window.location.protocol === "https:",
+    sameSite = "Strict",
   } = options;
 
   const expires = new Date();
   expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
 
   let cookieString = `${name}=${encodeURIComponent(value)}; expires=${expires.toUTCString()}; path=${path}`;
-  
+
   if (domain) {
     cookieString += `; domain=${domain}`;
   }
-  
+
   if (secure) {
     cookieString += `; secure`;
   }
-  
+
   if (sameSite) {
     cookieString += `; samesite=${sameSite}`;
   }
@@ -45,12 +45,12 @@ export function setCookie(name, value, days = 30, options = {}) {
  * @returns {string|null} - Cookie value or null if not found
  */
 export function getCookie(name) {
-  const nameEQ = name + '=';
-  const cookies = document.cookie.split(';');
-  
+  const nameEQ = name + "=";
+  const cookies = document.cookie.split(";");
+
   for (let i = 0; i < cookies.length; i++) {
     let cookie = cookies[i];
-    while (cookie.charAt(0) === ' ') {
+    while (cookie.charAt(0) === " ") {
       cookie = cookie.substring(1, cookie.length);
     }
     if (cookie.indexOf(nameEQ) === 0) {
@@ -66,14 +66,14 @@ export function getCookie(name) {
  * @param {object} options - Options (path, domain)
  */
 export function deleteCookie(name, options = {}) {
-  const { path = '/', domain = '' } = options;
-  
+  const { path = "/", domain = "" } = options;
+
   let cookieString = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=${path}`;
-  
+
   if (domain) {
     cookieString += `; domain=${domain}`;
   }
-  
+
   document.cookie = cookieString;
 }
 
@@ -83,15 +83,14 @@ export function deleteCookie(name, options = {}) {
  */
 export function getAllCookies() {
   const cookies = {};
-  if (document.cookie && document.cookie !== '') {
-    const split = document.cookie.split(';');
+  if (document.cookie && document.cookie !== "") {
+    const split = document.cookie.split(";");
     for (let i = 0; i < split.length; i++) {
-      const nameValue = split[i].split('=');
+      const nameValue = split[i].split("=");
       const name = nameValue[0].trim();
-      const value = decodeURIComponent(nameValue[1] || '');
+      const value = decodeURIComponent(nameValue[1] || "");
       cookies[name] = value;
     }
   }
   return cookies;
 }
-
