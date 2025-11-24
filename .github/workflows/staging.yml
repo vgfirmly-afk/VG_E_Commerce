@@ -88,8 +88,17 @@ jobs:
         run: |
           echo "Deploying ${{ github.repository }}:${{ github.sha }} -> staging for ${{ matrix.prod_name }}"
           echo "Working directory: ${{ matrix.dir }}"
+          # Verify token is accessible (without exposing it)
+          if [ -n "${{ secrets.CF_API_TOKEN_STAGING }}" ]; then
+            echo "✓ Token is accessible (length: $(echo -n '${{ secrets.CF_API_TOKEN_STAGING }}' | wc -c))"
+          else
+            echo "::error::Token is empty or not accessible"
+            exit 1
+          fi
 
       - name: Deploy to staging using Wrangler Action
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN_STAGING }}
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN_STAGING }}
