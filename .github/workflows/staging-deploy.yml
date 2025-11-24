@@ -83,10 +83,18 @@ jobs:
       - name: Install Wrangler CLI
         run: npm install -g wrangler@${{ env.WRANGLER_VERSION }}
 
-      - name: Install dependencies
+      - name: Install root dependencies (skip scripts)
+        env:
+          HUSKY: 0
+        run: |
+          npm ci --ignore-scripts || echo "Root dependencies install skipped or failed"
+
+      - name: Install worker dependencies
+        env:
+          HUSKY: 0
         run: |
           cd ${{ matrix.worker_dir }}
-          npm ci
+          npm ci --ignore-scripts
 
       - name: Verify Cloudflare credentials
         env:
