@@ -1,1 +1,19 @@
-{"parent":null,"pid":51689,"argv":["/Users/vg/.nvm/versions/node/v24.11.1/bin/node","/Users/vg/Projects/Week_2/01_Main_project/backend/Auth_Worker/node_modules/.bin/mocha","test/**/*.test.js","--timeout","10000"],"execArgv":[],"cwd":"/Users/vg/Projects/Week_2/01_Main_project/backend/Auth_Worker","time":1763297769601,"ppid":51688,"coverageFilename":"/Users/vg/Projects/Week_2/01_Main_project/backend/Auth_Worker/.nyc_output/39f9ff23-7a8f-4701-b07c-e2e6117b8ae8.json","externalId":"","uuid":"39f9ff23-7a8f-4701-b07c-e2e6117b8ae8","files":[]}
+{
+  "parent": null,
+  "pid": 51689,
+  "argv": [
+    "/Users/vg/.nvm/versions/node/v24.11.1/bin/node",
+    "/Users/vg/Projects/Week_2/01_Main_project/backend/Auth_Worker/node_modules/.bin/mocha",
+    "test/**/*.test.js",
+    "--timeout",
+    "10000"
+  ],
+  "execArgv": [],
+  "cwd": "/Users/vg/Projects/Week_2/01_Main_project/backend/Auth_Worker",
+  "time": 1763297769601,
+  "ppid": 51688,
+  "coverageFilename": "/Users/vg/Projects/Week_2/01_Main_project/backend/Auth_Worker/.nyc_output/39f9ff23-7a8f-4701-b07c-e2e6117b8ae8.json",
+  "externalId": "",
+  "uuid": "39f9ff23-7a8f-4701-b07c-e2e6117b8ae8",
+  "files": []
+}

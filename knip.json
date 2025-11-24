@@ -1,0 +1,80 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignore": [
+    "scripts/check-tests-percentage.js",
+    "src/db.js",
+
+    "backend/Auth_Worker/generate_keys.js",
+    "backend/Auth_Worker/src/middleware/authMiddleware.js",
+    "backend/Auth_Worker/vitest.config.js",
+    "backend/Catalog_worker/generate_keys.js",
+    "backend/Catalog_worker/src/middleware/authMiddleware.js",
+    "backend/Catalog_worker/src/middleware/authRequired.js",
+    "backend/Catalog_worker/src/middleware/validate.js",
+    "backend/Catalog_worker/vitest.config.js",
+    "backend/CORS_MIDDLEWARE.js",
+    "backend/Fullfilment_Worker/config.js",
+    "backend/Invertory_Worker/config.js",
+    "backend/Pricing_Worker/config.js",
+    "backend/Pricing_Worker/src/middleware/validate.js",
+    "**/inventoryService.js",
+    "**/paypalService.js",
+    "**/pricingService.js",
+    "**/config.js",
+    "**/migrations/**",
+    "**/middleware/**",
+    "**/db/**",
+
+    "frontend/postcss.config.js",
+    "frontend/svelte.config.js",
+    "frontend/tailwind.config.js",
+    "frontend/vite.config.js",
+    "frontend/src/routes/+layout.js",
+
+    "frontend/src/lib/api/auth.js",
+    "frontend/src/lib/api/cart.js",
+    "frontend/src/lib/api/catalog.js",
+    "frontend/src/lib/api/checkout.js",
+    "frontend/src/lib/api/inventory.js",
+    "frontend/src/lib/api/payment.js",
+    "frontend/src/lib/api/pricing.js",
+    "frontend/src/lib/config.js",
+    "frontend/src/lib/stores/auth.js",
+    "frontend/src/lib/stores/cart.js",
+
+    "backend/*/test/**",
+    "frontend/*/test/**",
+    "backend/*/tests/**",
+    "frontend/*/tests/**",
+
+    "**/node_modules/**",
+    "**/coverage/**",
+    "frontend/.svelte-kit/**",
+    "frontend/build/**",
+    "**/.wrangler/**",
+    "backend/*/.wrangler/**",
+    "**/.Temp/**",
+    "**/dist/**",
+    "**/test/**",
+    "**/utils/**",
+    "**/*.d.ts"
+  ],
+
+  "ignoreDependencies": [
+    "wrangler",
+    "c8",
+    "@istanbuljs/nyc-config-babel",
+    "nyc",
+    "joi",
+    "itty-router",
+
+    "chai",
+    "sinon",
+    "sinon-chai",
+
+    "@commitlint/cli",
+    "@commitlint/config-conventional"
+  ],
+
+  "ignoreBinaries": ["wrangler", "c8", "report"]
+}

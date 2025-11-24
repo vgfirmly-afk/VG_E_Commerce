@@ -1,5 +1,5 @@
 // services/inventoryService.js
-import { logger, logError } from '../utils/logger.js';
+import { logger, logError } from "../utils/logger.js";
 import {
   getSkuStock,
   getSkuStocks,
@@ -9,8 +9,8 @@ import {
   adjustStockQuantity,
   reserveStock,
   releaseStock,
-  getStockHistory
-} from '../db/db1.js';
+  getStockHistory,
+} from "../db/db1.js";
 
 /**
  * Get stock for a single SKU
@@ -21,7 +21,7 @@ export async function getStock(skuId, env) {
     if (!stock) {
       return null;
     }
-    
+
     return {
       sku_id: stock.sku_id,
       product_id: stock.product_id,
@@ -32,10 +32,10 @@ export async function getStock(skuId, env) {
       low_stock_threshold: stock.low_stock_threshold,
       status: stock.status,
       created_at: stock.created_at,
-      updated_at: stock.updated_at
+      updated_at: stock.updated_at,
     };
   } catch (err) {
-    logError('getStock: Service error', err, { skuId });
+    logError("getStock: Service error", err, { skuId });
     throw err;
   }
 }
@@ -46,7 +46,7 @@ export async function getStock(skuId, env) {
 export async function getStocks(skuIds, env) {
   try {
     const stocks = await getSkuStocks(skuIds, env);
-    return stocks.map(stock => ({
+    return stocks.map((stock) => ({
       sku_id: stock.sku_id,
       product_id: stock.product_id,
       sku_code: stock.sku_code,
@@ -54,10 +54,10 @@ export async function getStocks(skuIds, env) {
       reserved_quantity: stock.reserved_quantity,
       available_quantity: stock.available_quantity,
       low_stock_threshold: stock.low_stock_threshold,
-      status: stock.status
+      status: stock.status,
     }));
   } catch (err) {
-    logError('getStocks: Service error', err, { skuIds });
+    logError("getStocks: Service error", err, { skuIds });
     throw err;
   }
 }
@@ -68,7 +68,7 @@ export async function getStocks(skuIds, env) {
 export async function getProductStocks(productId, env) {
   try {
     const stocks = await getProductStock(productId, env);
-    return stocks.map(stock => ({
+    return stocks.map((stock) => ({
       sku_id: stock.sku_id,
       product_id: stock.product_id,
       sku_code: stock.sku_code,
@@ -76,10 +76,10 @@ export async function getProductStocks(productId, env) {
       reserved_quantity: stock.reserved_quantity,
       available_quantity: stock.available_quantity,
       low_stock_threshold: stock.low_stock_threshold,
-      status: stock.status
+      status: stock.status,
     }));
   } catch (err) {
-    logError('getProductStocks: Service error', err, { productId });
+    logError("getProductStocks: Service error", err, { productId });
     throw err;
   }
 }
@@ -90,10 +90,13 @@ export async function getProductStocks(productId, env) {
 export async function initializeStock(stockData, env) {
   try {
     const stock = await initializeSkuStock(stockData, env);
-    logger('stock.initialized', { skuId: stock.sku_id, quantity: stock.quantity });
+    logger("stock.initialized", {
+      skuId: stock.sku_id,
+      quantity: stock.quantity,
+    });
     return stock;
   } catch (err) {
-    logError('initializeStock: Service error', err, { stockData });
+    logError("initializeStock: Service error", err, { stockData });
     throw err;
   }
 }
@@ -104,10 +107,10 @@ export async function initializeStock(stockData, env) {
 export async function updateStock(skuId, updates, userId, env) {
   try {
     const stock = await updateSkuStock(skuId, updates, userId, env);
-    logger('stock.updated', { skuId, updates });
+    logger("stock.updated", { skuId, updates });
     return stock;
   } catch (err) {
-    logError('updateStock: Service error', err, { skuId, updates });
+    logError("updateStock: Service error", err, { skuId, updates });
     throw err;
   }
 }
@@ -115,13 +118,31 @@ export async function updateStock(skuId, updates, userId, env) {
 /**
  * Adjust stock quantity (increase or decrease)
  */
-export async function adjustStock(skuId, adjustmentQuantity, userId, env, reason = 'Stock adjustment', reservationId = null) {
+export async function adjustStock(
+  skuId,
+  adjustmentQuantity,
+  userId,
+  env,
+  reason = "Stock adjustment",
+  reservationId = null,
+) {
   try {
-    const stock = await adjustStockQuantity(skuId, adjustmentQuantity, userId, env, reason, reservationId);
-    logger('stock.adjusted', { skuId, adjustmentQuantity, availableQuantity: stock.available_quantity });
+    const stock = await adjustStockQuantity(
+      skuId,
+      adjustmentQuantity,
+      userId,
+      env,
+      reason,
+      reservationId,
+    );
+    logger("stock.adjusted", {
+      skuId,
+      adjustmentQuantity,
+      availableQuantity: stock.available_quantity,
+    });
     return stock;
   } catch (err) {
-    logError('adjustStock: Service error', err, { skuId, adjustmentQuantity });
+    logError("adjustStock: Service error", err, { skuId, adjustmentQuantity });
     throw err;
   }
 }
@@ -129,13 +150,36 @@ export async function adjustStock(skuId, adjustmentQuantity, userId, env, reason
 /**
  * Reserve stock (for cart/checkout)
  */
-export async function reserveStockForCart(skuId, quantity, reservationId, userId, env, expiresAt = null) {
+export async function reserveStockForCart(
+  skuId,
+  quantity,
+  reservationId,
+  userId,
+  env,
+  expiresAt = null,
+) {
   try {
-    const stock = await reserveStock(skuId, quantity, reservationId, userId, env, expiresAt);
-    logger('stock.reserved', { skuId, quantity, reservationId, availableQuantity: stock.available_quantity });
+    const stock = await reserveStock(
+      skuId,
+      quantity,
+      reservationId,
+      userId,
+      env,
+      expiresAt,
+    );
+    logger("stock.reserved", {
+      skuId,
+      quantity,
+      reservationId,
+      availableQuantity: stock.available_quantity,
+    });
     return stock;
   } catch (err) {
-    logError('reserveStockForCart: Service error', err, { skuId, quantity, reservationId });
+    logError("reserveStockForCart: Service error", err, {
+      skuId,
+      quantity,
+      reservationId,
+    });
     throw err;
   }
 }
@@ -143,13 +187,34 @@ export async function reserveStockForCart(skuId, quantity, reservationId, userId
 /**
  * Release reserved stock
  */
-export async function releaseReservedStock(skuId, reservationId, quantity, userId, env) {
+export async function releaseReservedStock(
+  skuId,
+  reservationId,
+  quantity,
+  userId,
+  env,
+) {
   try {
-    const stock = await releaseStock(skuId, reservationId, quantity, userId, env);
-    logger('stock.released', { skuId, reservationId, quantity, availableQuantity: stock.available_quantity });
+    const stock = await releaseStock(
+      skuId,
+      reservationId,
+      quantity,
+      userId,
+      env,
+    );
+    logger("stock.released", {
+      skuId,
+      reservationId,
+      quantity,
+      availableQuantity: stock.available_quantity,
+    });
     return stock;
   } catch (err) {
-    logError('releaseReservedStock: Service error', err, { skuId, reservationId, quantity });
+    logError("releaseReservedStock: Service error", err, {
+      skuId,
+      reservationId,
+      quantity,
+    });
     throw err;
   }
 }
@@ -162,7 +227,7 @@ export async function getHistory(skuId, page, limit, env) {
     const history = await getStockHistory(skuId, page, limit, env);
     return history;
   } catch (err) {
-    logError('getHistory: Service error', err, { skuId, page, limit });
+    logError("getHistory: Service error", err, { skuId, page, limit });
     throw err;
   }
 }
@@ -174,7 +239,7 @@ export async function checkAvailability(skuIds, env) {
   try {
     const stocks = await getSkuStocks(skuIds, env);
     const availability = {};
-    
+
     for (const stock of stocks) {
       availability[stock.sku_id] = {
         sku_id: stock.sku_id,
@@ -182,10 +247,10 @@ export async function checkAvailability(skuIds, env) {
         quantity: stock.quantity,
         reserved_quantity: stock.reserved_quantity,
         status: stock.status,
-        in_stock: stock.available_quantity > 0
+        in_stock: stock.available_quantity > 0,
       };
     }
-    
+
     // Include SKUs that weren't found
     for (const skuId of skuIds) {
       if (!availability[skuId]) {
@@ -194,15 +259,15 @@ export async function checkAvailability(skuIds, env) {
           available_quantity: 0,
           quantity: 0,
           reserved_quantity: 0,
-          status: 'not_found',
-          in_stock: false
+          status: "not_found",
+          in_stock: false,
         };
       }
     }
-    
+
     return availability;
   } catch (err) {
-    logError('checkAvailability: Service error', err, { skuIds });
+    logError("checkAvailability: Service error", err, { skuIds });
     throw err;
   }
 }
@@ -217,35 +282,42 @@ export async function deductStockForOrder(skuId, quantity, orderId, env) {
     if (!stock) {
       throw new Error(`Stock not found for SKU: ${skuId}`);
     }
-    
+
     // Check if enough stock is available
     if (stock.available_quantity < quantity) {
-      throw new Error(`Insufficient stock for SKU ${skuId}. Available: ${stock.available_quantity}, Required: ${quantity}`);
+      throw new Error(
+        `Insufficient stock for SKU ${skuId}. Available: ${stock.available_quantity}, Required: ${quantity}`,
+      );
     }
-    
+
     // Deduct stock (negative adjustment)
-    const reason = orderId ? `Order ${orderId} - Payment captured` : 'Payment captured';
+    const reason = orderId
+      ? `Order ${orderId} - Payment captured`
+      : "Payment captured";
     const adjustedStock = await adjustStockQuantity(
       skuId,
       -quantity, // Negative to deduct
-      'system',
+      "system",
       env,
       reason,
-      null
+      null,
     );
-    
-    logger('stock.deducted_for_order', {
+
+    logger("stock.deducted_for_order", {
       skuId,
       quantity,
       orderId,
       remaining_quantity: adjustedStock.quantity,
-      remaining_available: adjustedStock.available_quantity
+      remaining_available: adjustedStock.available_quantity,
     });
-    
+
     return adjustedStock;
   } catch (err) {
-    logError('deductStockForOrder: Service error', err, { skuId, quantity, orderId });
+    logError("deductStockForOrder: Service error", err, {
+      skuId,
+      quantity,
+      orderId,
+    });
     throw err;
   }
 }
-

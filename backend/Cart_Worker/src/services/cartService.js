@@ -1,5 +1,5 @@
 // services/cartService.js
-import { logger, logError, logWarn } from '../utils/logger.js';
+import { logger, logError, logWarn } from "../utils/logger.js";
 import {
   getOrCreateCart,
   getCartById as getCartByIdDb,
@@ -8,8 +8,8 @@ import {
   updateItemQuantity,
   removeItemFromCart,
   clearCart,
-  getCartItem
-} from '../db/db1.js';
+  getCartItem,
+} from "../db/db1.js";
 
 /**
  * Get price from Pricing Worker via service binding
@@ -18,31 +18,38 @@ async function getPriceFromPricingWorker(skuId, env) {
   try {
     const pricingWorker = env.PRICING_WORKER;
     if (!pricingWorker) {
-      logError('getPriceFromPricingWorker: PRICING_WORKER binding not available', null, { skuId });
+      logError(
+        "getPriceFromPricingWorker: PRICING_WORKER binding not available",
+        null,
+        { skuId },
+      );
       return null;
     }
-    
-    const priceRequest = new Request(`https://pricing-worker/api/v1/prices/${encodeURIComponent(skuId)}`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'X-Source': 'cart-worker-service-binding'
-      }
-    });
-    
+
+    const priceRequest = new Request(
+      `https://pricing-worker/api/v1/prices/${encodeURIComponent(skuId)}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "X-Source": "cart-worker-service-binding",
+        },
+      },
+    );
+
     const response = await pricingWorker.fetch(priceRequest);
     if (!response.ok) {
-      logError('getPriceFromPricingWorker: Failed to get price', null, {
+      logError("getPriceFromPricingWorker: Failed to get price", null, {
         skuId,
-        status: response.status
+        status: response.status,
       });
       return null;
     }
-    
+
     const priceData = await response.json();
-    return priceData.effective_price || priceData.price || 0.00;
+    return priceData.effective_price || priceData.price || 0.0;
   } catch (err) {
-    logError('getPriceFromPricingWorker: Error', err, { skuId });
+    logError("getPriceFromPricingWorker: Error", err, { skuId });
     return null;
   }
 }
@@ -54,46 +61,53 @@ async function checkStockFromInventoryWorker(skuId, quantity, env) {
   try {
     const inventoryWorker = env.INVENTORY_WORKER;
     if (!inventoryWorker) {
-      logError('checkStockFromInventoryWorker: INVENTORY_WORKER binding not available', null, { skuId });
-      return { available: false, reason: 'Inventory Worker not available' };
+      logError(
+        "checkStockFromInventoryWorker: INVENTORY_WORKER binding not available",
+        null,
+        { skuId },
+      );
+      return { available: false, reason: "Inventory Worker not available" };
     }
-    
-    const stockRequest = new Request(`https://inventory-worker/api/v1/stock/${encodeURIComponent(skuId)}`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'X-Source': 'cart-worker-service-binding'
-      }
-    });
-    
+
+    const stockRequest = new Request(
+      `https://inventory-worker/api/v1/stock/${encodeURIComponent(skuId)}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "X-Source": "cart-worker-service-binding",
+        },
+      },
+    );
+
     const response = await inventoryWorker.fetch(stockRequest);
     if (!response.ok) {
-      logError('checkStockFromInventoryWorker: Failed to check stock', null, {
+      logError("checkStockFromInventoryWorker: Failed to check stock", null, {
         skuId,
-        status: response.status
+        status: response.status,
       });
-      return { available: false, reason: 'Stock check failed' };
+      return { available: false, reason: "Stock check failed" };
     }
-    
+
     const stockData = await response.json();
     const availableQuantity = stockData.available_quantity || 0;
-    
+
     if (availableQuantity < quantity) {
       return {
         available: false,
         reason: `Insufficient stock. Available: ${availableQuantity}, Requested: ${quantity}`,
-        availableQuantity
+        availableQuantity,
       };
     }
-    
+
     return {
       available: true,
       availableQuantity,
-      stock: stockData
+      stock: stockData,
     };
   } catch (err) {
-    logError('checkStockFromInventoryWorker: Error', err, { skuId });
-    return { available: false, reason: 'Stock check error' };
+    logError("checkStockFromInventoryWorker: Error", err, { skuId });
+    return { available: false, reason: "Stock check error" };
   }
 }
 
@@ -104,28 +118,28 @@ export async function getCart(userId, sessionId, env) {
   try {
     const cart = await getOrCreateCart(userId, sessionId, env);
     if (!cart) {
-      throw new Error('Failed to create cart');
+      throw new Error("Failed to create cart");
     }
     const items = await getCartItems(cart.cart_id, env);
-    
+
     return {
       cart_id: cart.cart_id,
       user_id: cart.user_id,
       session_id: cart.session_id,
       status: cart.status,
       currency: cart.currency,
-      items: items.map(item => ({
+      items: items.map((item) => ({
         item_id: item.item_id,
         sku_id: item.sku_id,
         quantity: item.quantity,
-        currency: item.currency
+        currency: item.currency,
       })),
       item_count: items.length,
       created_at: cart.created_at,
-      updated_at: cart.updated_at
+      updated_at: cart.updated_at,
     };
   } catch (err) {
-    logError('getCart: Service error', err, { userId, sessionId });
+    logError("getCart: Service error", err, { userId, sessionId });
     throw err;
   }
 }
@@ -139,27 +153,27 @@ export async function getCartByIdService(cartId, env) {
     if (!cart) {
       return null;
     }
-    
+
     const items = await getCartItems(cartId, env);
-    
+
     return {
       cart_id: cart.cart_id,
       user_id: cart.user_id,
       session_id: cart.session_id,
       status: cart.status,
       currency: cart.currency,
-      items: items.map(item => ({
+      items: items.map((item) => ({
         item_id: item.item_id,
         sku_id: item.sku_id,
         quantity: item.quantity,
-        currency: item.currency
+        currency: item.currency,
       })),
       item_count: items.length,
       created_at: cart.created_at,
-      updated_at: cart.updated_at
+      updated_at: cart.updated_at,
     };
   } catch (err) {
-    logError('getCartById: Service error', err, { cartId });
+    logError("getCartById: Service error", err, { cartId });
     throw err;
   }
 }
@@ -170,19 +184,23 @@ export async function getCartByIdService(cartId, env) {
 export async function addItem(cartId, skuId, quantity, env) {
   try {
     // Check stock availability
-    const stockCheck = await checkStockFromInventoryWorker(skuId, quantity, env);
+    const stockCheck = await checkStockFromInventoryWorker(
+      skuId,
+      quantity,
+      env,
+    );
     if (!stockCheck.available) {
-      throw new Error(stockCheck.reason || 'Insufficient stock');
+      throw new Error(stockCheck.reason || "Insufficient stock");
     }
-    
-    const currency = 'USD'; // Default currency
-    
+
+    const currency = "USD"; // Default currency
+
     const item = await addItemToCart(cartId, skuId, quantity, currency, env);
-    
-    logger('cart.item.added', { cartId, skuId, quantity });
+
+    logger("cart.item.added", { cartId, skuId, quantity });
     return item;
   } catch (err) {
-    logError('addItem: Service error', err, { cartId, skuId, quantity });
+    logError("addItem: Service error", err, { cartId, skuId, quantity });
     throw err;
   }
 }
@@ -200,11 +218,11 @@ export async function updateQuantity(itemId, quantity, delta, env) {
     // Get current item to check if it exists and get current quantity
     const currentItem = await getCartItem(itemId, env);
     if (!currentItem) {
-      throw new Error('Cart item not found');
+      throw new Error("Cart item not found");
     }
-    
+
     let newQuantity;
-    
+
     // If delta is provided, calculate relative change
     if (delta !== undefined && delta !== null) {
       newQuantity = currentItem.quantity + delta;
@@ -216,23 +234,32 @@ export async function updateQuantity(itemId, quantity, delta, env) {
       // Use absolute quantity
       newQuantity = quantity;
     } else {
-      throw new Error('Either quantity or delta is required');
+      throw new Error("Either quantity or delta is required");
     }
-    
+
     // If increasing quantity, check stock availability
     if (newQuantity > currentItem.quantity) {
       const quantityIncrease = newQuantity - currentItem.quantity;
-      const stockCheck = await checkStockFromInventoryWorker(currentItem.sku_id, newQuantity, env);
+      const stockCheck = await checkStockFromInventoryWorker(
+        currentItem.sku_id,
+        newQuantity,
+        env,
+      );
       if (!stockCheck.available) {
-        throw new Error(stockCheck.reason || 'Insufficient stock');
+        throw new Error(stockCheck.reason || "Insufficient stock");
       }
     }
-    
+
     const item = await updateItemQuantity(itemId, newQuantity, env);
-    logger('cart.item.updated', { itemId, oldQuantity: currentItem.quantity, newQuantity, delta });
+    logger("cart.item.updated", {
+      itemId,
+      oldQuantity: currentItem.quantity,
+      newQuantity,
+      delta,
+    });
     return item;
   } catch (err) {
-    logError('updateQuantity: Service error', err, { itemId, quantity, delta });
+    logError("updateQuantity: Service error", err, { itemId, quantity, delta });
     throw err;
   }
 }
@@ -243,10 +270,10 @@ export async function updateQuantity(itemId, quantity, delta, env) {
 export async function removeItem(itemId, env) {
   try {
     await removeItemFromCart(itemId, env);
-    logger('cart.item.removed', { itemId });
+    logger("cart.item.removed", { itemId });
     return true;
   } catch (err) {
-    logError('removeItem: Service error', err, { itemId });
+    logError("removeItem: Service error", err, { itemId });
     throw err;
   }
 }
@@ -257,10 +284,10 @@ export async function removeItem(itemId, env) {
 export async function clear(cartId, env) {
   try {
     await clearCart(cartId, env);
-    logger('cart.cleared', { cartId });
+    logger("cart.cleared", { cartId });
     return true;
   } catch (err) {
-    logError('clear: Service error', err, { cartId });
+    logError("clear: Service error", err, { cartId });
     throw err;
   }
 }
@@ -272,49 +299,47 @@ export async function calculateTotal(cartId, env) {
   try {
     const cart = await getCartByIdService(cartId, env);
     if (!cart) {
-      throw new Error('Cart not found');
+      throw new Error("Cart not found");
     }
-    
+
     const items = cart.items || [];
     const pricingWorker = env.PRICING_WORKER;
-    
+
     let subtotal = 0;
     const itemTotals = [];
-    
+
     for (const item of items) {
       // Get current price from Pricing Worker
-      let currentPrice = 0.00;
-      
+      let currentPrice = 0.0;
+
       if (pricingWorker) {
         const price = await getPriceFromPricingWorker(item.sku_id, env);
         if (price !== null) {
           currentPrice = price;
         }
       }
-      
+
       const itemTotal = currentPrice * item.quantity;
       subtotal += itemTotal;
-      
+
       itemTotals.push({
         item_id: item.item_id,
         sku_id: item.sku_id,
         quantity: item.quantity,
         unit_price: currentPrice,
-        total: itemTotal
+        total: itemTotal,
       });
     }
-    
+
     return {
       cart_id: cartId,
       subtotal: Math.round(subtotal * 100) / 100, // Round to 2 decimal places
-      currency: cart.currency || 'USD',
+      currency: cart.currency || "USD",
       item_count: items.length,
-      items: itemTotals
+      items: itemTotals,
     };
   } catch (err) {
-    logError('calculateTotal: Service error', err, { cartId });
+    logError("calculateTotal: Service error", err, { cartId });
     throw err;
   }
 }
-
-

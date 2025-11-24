@@ -9,12 +9,14 @@ export const MAX_STOCK_QUANTITY = 999999; // Maximum allowed stock quantity
 // Whitelisted Catalog Worker URL for inter-worker communication
 // This should match the Catalog Worker's deployed URL
 export const getCatalogWorkerUrl = (env) => {
-  return env.CATALOG_WORKER_URL || 'https://w2-catalog-worker.vg-firmly.workers.dev';
+  return (
+    env.CATALOG_WORKER_URL || "https://w2-catalog-worker.vg-firmly.workers.dev"
+  );
 };
 
 // Get whitelisted URLs (can be array for multiple sources)
 export const getWhitelistedUrls = (env) => {
   const catalogUrl = getCatalogWorkerUrl(env);
   // Return array of whitelisted URLs (without trailing slash)
-  return [catalogUrl.replace(/\/$/, '')];
+  return [catalogUrl.replace(/\/$/, "")];
 };

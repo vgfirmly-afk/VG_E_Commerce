@@ -8,9 +8,14 @@ export const MAX_QUANTITY_PER_ITEM = 999; // Maximum quantity per item
 
 // Worker URLs for service bindings
 export const getPricingWorkerUrl = (env) => {
-  return env.PRICING_WORKER_URL || 'https://w2-pricing-worker.vg-firmly.workers.dev';
+  return (
+    env.PRICING_WORKER_URL || "https://w2-pricing-worker.vg-firmly.workers.dev"
+  );
 };
 
 export const getInventoryWorkerUrl = (env) => {
-  return env.INVENTORY_WORKER_URL || 'https://w2-inventory-worker.vg-firmly.workers.dev';
+  return (
+    env.INVENTORY_WORKER_URL ||
+    "https://w2-inventory-worker.vg-firmly.workers.dev"
+  );
 };

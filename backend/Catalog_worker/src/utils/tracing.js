@@ -4,9 +4,9 @@
 
 export function resolveConfig(env = {}) {
   // env may be undefined in some init contexts; guard with default {}
-  const SERVICE_NAME = env.SERVICE_NAME || 'Catalog_Worker_Service';
-  const API_KEY = env.HONEYCOMB_API_KEY || env.HONEYCOMB_API_KEY_SECRET || '';
-  const DATASET = env.HONEYCOMB_DATASET || 'workers-traces';
+  const SERVICE_NAME = env.SERVICE_NAME || "Catalog_Worker_Service";
+  const API_KEY = env.HONEYCOMB_API_KEY || env.HONEYCOMB_API_KEY_SECRET || "";
+  const DATASET = env.HONEYCOMB_DATASET || "workers-traces";
 
   // define sample rate (1 of 10 traces)
   const SAMPLE_RATE = 10;
@@ -14,10 +14,10 @@ export function resolveConfig(env = {}) {
   return {
     // exporter shape expected by the library
     exporter: {
-      url: 'https://api.honeycomb.io/v1/traces',
+      url: "https://api.honeycomb.io/v1/traces",
       headers: {
-        'x-honeycomb-team': API_KEY,
-        'x-honeycomb-dataset': DATASET,
+        "x-honeycomb-team": API_KEY,
+        "x-honeycomb-dataset": DATASET,
       },
     },
 
@@ -36,8 +36,6 @@ export function resolveConfig(env = {}) {
     // resourceAttributes: { env: env.ENVIRONMENT || 'dev' },
   };
 }
-
-
 
 // // src/tracing.js
 // import { ResolveConfigFn } from '@microlabs/otel-cf-workers';

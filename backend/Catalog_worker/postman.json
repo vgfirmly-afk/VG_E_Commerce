@@ -455,7 +455,14 @@
             "url": {
               "raw": "{{catalogBaseUrl}}/api/v1/products/{{productId}}/images/{{imageId}}",
               "host": ["{{catalogBaseUrl}}"],
-              "path": ["api", "v1", "products", "{{productId}}", "images", "{{imageId}}"]
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "images",
+                "{{imageId}}"
+              ]
             }
           }
         }
@@ -717,7 +724,14 @@
             "url": {
               "raw": "{{catalogBaseUrl}}/api/v1/products/{{productId}}/skus/{{skuId}}",
               "host": ["{{catalogBaseUrl}}"],
-              "path": ["api", "v1", "products", "{{productId}}", "skus", "{{skuId}}"]
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "skus",
+                "{{skuId}}"
+              ]
             }
           }
         },
@@ -751,7 +765,14 @@
             "url": {
               "raw": "{{catalogBaseUrl}}/api/v1/products/{{productId}}/skus/{{skuId}}",
               "host": ["{{catalogBaseUrl}}"],
-              "path": ["api", "v1", "products", "{{productId}}", "skus", "{{skuId}}"]
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "skus",
+                "{{skuId}}"
+              ]
             }
           }
         }

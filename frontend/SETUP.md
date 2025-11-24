@@ -3,14 +3,16 @@
 ## Quick Start
 
 1. **Install Dependencies**
+
    ```bash
    cd frontend
    npm install
    ```
 
 2. **Configure Environment Variables**
-   
+
    Create a `.env` file in the `frontend` directory with the following variables:
+
    ```env
    VITE_AUTH_BASE_URL=https://w2-auth-worker.vg-firmly.workers.dev
    VITE_CATALOG_BASE_URL=https://w2-catalog-worker.vg-firmly.workers.dev
@@ -26,6 +28,7 @@
    **Note:** Update the URLs to match your actual Cloudflare Worker deployments.
 
 3. **Run Development Server**
+
    ```bash
    npm run dev
    ```
@@ -33,6 +36,7 @@
    The application will be available at `http://localhost:5173`
 
 4. **Build for Production**
+
    ```bash
    npm run build
    ```
@@ -45,18 +49,21 @@
 ## Features Implemented
 
 ### ✅ Authentication
+
 - User registration and login
 - Guest session support (stored in localStorage)
 - Token management with refresh capability
 - Protected routes
 
 ### ✅ Home Page
+
 - Displays products grouped by category
 - Each category in a single row
 - Product cards with images, title, description, and category
 - Responsive grid layout
 
 ### ✅ Product Detail Page
+
 - Full product information display
 - Multiple SKU variants selection
 - Price display for each SKU
@@ -64,6 +71,7 @@
 - Quantity selector
 
 ### ✅ Shopping Cart
+
 - View all cart items
 - Increase/decrease quantity
 - Remove items from cart
@@ -71,6 +79,7 @@
 - Proceed to checkout button
 
 ### ✅ Checkout Flow
+
 1. **Delivery Address** - Collect delivery information
 2. **Billing Address** - Optional (can use same as delivery)
 3. **Shipping Method** - Select from available shipping options
@@ -78,6 +87,7 @@
 5. **Payment** - PayPal integration (redirects to PayPal for payment)
 
 ### ✅ Order Status Page
+
 - Shows payment status (success/pending/failed)
 - Displays order details
 - Shows delivery address
@@ -167,6 +177,7 @@ All stores persist data to localStorage for session persistence.
 ## Styling
 
 The application uses Tailwind CSS 3 with:
+
 - Responsive design (mobile-first)
 - Modern UI components
 - Consistent color scheme (blue primary)
@@ -177,4 +188,3 @@ The application uses Tailwind CSS 3 with:
 - Modern browsers (Chrome, Firefox, Safari, Edge)
 - LocalStorage support required
 - ES6+ JavaScript support required
-

@@ -1,0 +1,71 @@
+{
+  "name": "cicd",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/vgfirmly-afk/VG_E_Commerce#readme",
+  "bugs": {
+    "url": "https://github.com/vgfirmly-afk/VG_E_Commerce/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vgfirmly-afk/VG_E_Commerce.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "workspaces": [
+    "backend/*",
+    "frontend/*"
+  ],
+  "scripts": {
+    "check": "npm run lint && npm test",
+    "test": "mocha --recursive --exit",
+    "coverage": "npx c8 --reporter=html --reporter=text mocha --recursive --exit",
+    "coverage:check": "npx c8 --check-coverage --lines 10 --branches 10 --functions 10 --statements 10 mocha --recursive --exit",
+    "prepare": "husky",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write .",
+    "format": "prettier --write .",
+    "knip": "knip"
+  },
+  "dependencies": {
+    "itty-router": "^2.5.3",
+    "joi": "^18.0.1"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
+    "chai": "^4.3.7",
+    "eslint": "^9.39.1",
+    "husky": "^9.1.7",
+    "knip": "^5.69.1",
+    "mocha": "^10.2.0",
+    "nyc": "^15.1.0",
+    "prettier": "^3.6.2",
+    "sinon": "^15.2.0"
+  },
+  "nyc": {
+    "all": true,
+    "include": [
+      "src/**/*.js",
+      "index.js",
+      "db.js",
+      "**.svelte"
+    ],
+    "exclude": [
+      "test/**"
+    ],
+    "extension": [
+      ".js"
+    ],
+    "reporter": [
+      "html",
+      "text"
+    ],
+    "report-dir": "./coverage",
+    "check-coverage": false,
+    "instrument": true,
+    "sourceMap": false
+  }
+}

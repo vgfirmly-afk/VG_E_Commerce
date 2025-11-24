@@ -39,7 +39,9 @@ npm run tail:pretty
 ### 1. Local Debugging with Breakpoints
 
 **Using VS Code:**
+
 1. Create `.vscode/launch.json`:
+
 ```json
 {
   "version": "0.2.0",
@@ -63,22 +65,25 @@ npm run tail:pretty
 ### 2. Console Logging
 
 Add strategic console.log statements:
+
 ```javascript
-console.log('[DEBUG]', {
+console.log("[DEBUG]", {
   variable: value,
   request: request.url,
-  env: Object.keys(env)
+  env: Object.keys(env),
 });
 ```
 
 ### 3. Remote Log Streaming
 
 Watch live logs from production:
+
 ```bash
 npm run tail:pretty
 ```
 
 This shows:
+
 - Request/response logs
 - Error stack traces
 - Console.log output
@@ -89,17 +94,20 @@ This shows:
 To debug the Pricing Worker health check issue:
 
 1. **Start local debug mode:**
+
 ```bash
 npm run debug
 ```
 
 2. **In another terminal, tail Pricing Worker logs:**
+
 ```bash
 cd ../Pricing_Worker
 npm run tail:pretty
 ```
 
 3. **Make a test request:**
+
 ```bash
 curl -X POST http://localhost:8787/api/v1/products \
   -H "Content-Type: application/json" \
@@ -117,11 +125,13 @@ curl -X POST http://localhost:8787/api/v1/products \
 For advanced debugging, use Chrome DevTools:
 
 1. Start with inspector:
+
 ```bash
 wrangler dev --local --inspector-port=9229
 ```
 
 2. Open Chrome and navigate to:
+
 ```
 chrome://inspect
 ```
@@ -131,11 +141,13 @@ chrome://inspect
 ### 6. Environment-Specific Debugging
 
 **Local (.dev.vars):**
+
 - Uses local D1 database
 - Uses local KV (in-memory)
 - Uses local R2 (Miniflare)
 
 **Remote (Cloudflare Edge):**
+
 - Uses production D1
 - Uses production KV
 - Uses production R2
@@ -146,25 +158,28 @@ chrome://inspect
 **For the health check issue:**
 
 1. **Check request URL:**
+
 ```javascript
-console.log('[HEALTH CHECK]', {
+console.log("[HEALTH CHECK]", {
   pricingWorkerUrl: env.PRICING_WORKER_URL,
   healthEndpoint: `${pricingWorkerUrl}/_/health`,
-  constructedUrl: healthEndpoint
+  constructedUrl: healthEndpoint,
 });
 ```
 
 2. **Check response details:**
+
 ```javascript
-console.log('[HEALTH RESPONSE]', {
+console.log("[HEALTH RESPONSE]", {
   status: healthResponse.status,
   statusText: healthResponse.statusText,
   headers: Object.fromEntries(healthResponse.headers),
-  body: parsedBody
+  body: parsedBody,
 });
 ```
 
 3. **Compare with direct curl:**
+
 ```bash
 curl -v https://w2-pricing-worker.vg-firmly.workers.dev/_/health
 ```
@@ -224,4 +239,3 @@ wrangler dev --local --log-level=debug
 # - Response status
 # - Response time
 ```
-

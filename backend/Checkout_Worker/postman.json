@@ -276,7 +276,14 @@
             "url": {
               "raw": "{{checkoutBaseUrl}}/api/v1/checkout/sessions/:session_id/delivery-address",
               "host": ["{{checkoutBaseUrl}}"],
-              "path": ["api", "v1", "checkout", "sessions", ":session_id", "delivery-address"],
+              "path": [
+                "api",
+                "v1",
+                "checkout",
+                "sessions",
+                ":session_id",
+                "delivery-address"
+              ],
               "variable": [
                 {
                   "key": "session_id",
@@ -344,7 +351,14 @@
             "url": {
               "raw": "{{checkoutBaseUrl}}/api/v1/checkout/sessions/:session_id/billing-address",
               "host": ["{{checkoutBaseUrl}}"],
-              "path": ["api", "v1", "checkout", "sessions", ":session_id", "billing-address"],
+              "path": [
+                "api",
+                "v1",
+                "checkout",
+                "sessions",
+                ":session_id",
+                "billing-address"
+              ],
               "variable": [
                 {
                   "key": "session_id",
@@ -393,7 +407,14 @@
             "url": {
               "raw": "{{checkoutBaseUrl}}/api/v1/checkout/sessions/:session_id/shipping-methods",
               "host": ["{{checkoutBaseUrl}}"],
-              "path": ["api", "v1", "checkout", "sessions", ":session_id", "shipping-methods"],
+              "path": [
+                "api",
+                "v1",
+                "checkout",
+                "sessions",
+                ":session_id",
+                "shipping-methods"
+              ],
               "variable": [
                 {
                   "key": "session_id",
@@ -451,7 +472,14 @@
             "url": {
               "raw": "{{checkoutBaseUrl}}/api/v1/checkout/sessions/:session_id/shipping-method",
               "host": ["{{checkoutBaseUrl}}"],
-              "path": ["api", "v1", "checkout", "sessions", ":session_id", "shipping-method"],
+              "path": [
+                "api",
+                "v1",
+                "checkout",
+                "sessions",
+                ":session_id",
+                "shipping-method"
+              ],
               "variable": [
                 {
                   "key": "session_id",
@@ -506,7 +534,14 @@
             "url": {
               "raw": "{{checkoutBaseUrl}}/api/v1/checkout/sessions/:session_id/summary",
               "host": ["{{checkoutBaseUrl}}"],
-              "path": ["api", "v1", "checkout", "sessions", ":session_id", "summary"],
+              "path": [
+                "api",
+                "v1",
+                "checkout",
+                "sessions",
+                ":session_id",
+                "summary"
+              ],
               "variable": [
                 {
                   "key": "session_id",
@@ -884,4 +919,3 @@
     }
   ]
 }
-

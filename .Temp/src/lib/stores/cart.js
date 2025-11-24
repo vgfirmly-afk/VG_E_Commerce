@@ -1,5 +1,5 @@
-import { writable } from 'svelte/store';
-import * as cartAPI from '../api/cart.js';
+import { writable } from "svelte/store";
+import * as cartAPI from "../api/cart.js";
 
 function createCartStore() {
   const { subscribe, set, update } = writable({
@@ -10,18 +10,23 @@ function createCartStore() {
   });
 
   // Initialize session ID if not exists
-  if (typeof window !== 'undefined' && !localStorage.getItem('sessionId')) {
-    localStorage.setItem('sessionId', `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  if (typeof window !== "undefined" && !localStorage.getItem("sessionId")) {
+    localStorage.setItem(
+      "sessionId",
+      `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    );
   }
 
   return {
     subscribe,
     loadCart: async () => {
-      update(state => ({ ...state, loading: true }));
+      update((state) => ({ ...state, loading: true }));
       try {
         const cart = await cartAPI.getCart();
-        const total = cart.cart_id ? await cartAPI.getCartTotal(cart.cart_id) : { total: 0 };
-        
+        const total = cart.cart_id
+          ? await cartAPI.getCartTotal(cart.cart_id)
+          : { total: 0 };
+
         set({
           cart,
           items: cart.items || [],
@@ -29,8 +34,8 @@ function createCartStore() {
           loading: false,
         });
       } catch (error) {
-        console.error('Failed to load cart:', error);
-        update(state => ({ ...state, loading: false }));
+        console.error("Failed to load cart:", error);
+        update((state) => ({ ...state, loading: false }));
       }
     },
     addItem: async (cartId, item) => {
@@ -73,4 +78,3 @@ function createCartStore() {
 }
 
 export const cartStore = createCartStore();
-

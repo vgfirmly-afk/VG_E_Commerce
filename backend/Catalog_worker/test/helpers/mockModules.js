@@ -13,7 +13,7 @@ export function createMockableModule(moduleExports) {
         mockable._mocks.set(key, newValue);
       },
       configurable: true,
-      enumerable: true
+      enumerable: true,
     });
   }
   return mockable;
@@ -32,7 +32,6 @@ export function createModuleProxy(moduleExports) {
     set(target, prop, value) {
       mocks.set(prop, value);
       return true;
-    }
+    },
   });
 }
-

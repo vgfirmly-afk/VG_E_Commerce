@@ -104,22 +104,23 @@ https://w2-payment-worker.vg-firmly.workers.dev/api/v1/webhooks/paypal
 
 ## Event Type Mapping
 
-| PayPal Event Type | Handler Function | Payment Status | Actions |
-|-------------------|------------------|----------------|---------|
-| `PAYMENT.CAPTURE.COMPLETED` | `handlePaymentCaptureCompleted` | `captured` | Updates payment, notifies all workers |
-| `PAYMENT.CAPTURE.DENIED` | `handlePaymentCaptureDenied` | `approved` (with failure reason) | Updates payment, notifies Checkout |
-| `PAYMENT.CAPTURE.DECLINED` | `handlePaymentCaptureDenied` | `approved` (with failure reason) | Updates payment, notifies Checkout |
-| `PAYMENT.ORDER.CANCELLED` | `handleOrderCancelled` | `cancelled` | Updates payment, notifies Checkout |
-| `PAYMENT.ORDER.CREATED` | `handleOrderCreated` | `created` | Updates payment (optional) |
-| `CHECKOUT.ORDER.APPROVED` | `handleOrderApproved` | `approved` | Updates payment status |
-| `CHECKOUT.ORDER.COMPLETED` | `handleOrderCompleted` | `captured` | Updates payment, notifies all workers |
-| `CHECKOUT.ORDER.DECLINED` | `handleOrderCancelled` | `cancelled` | Updates payment, notifies Checkout |
-| `CHECKOUT.ORDER.SAVED` | (logs only) | - | Logs event, no action needed |
-| `CHECKOUT.ORDER.VOIDED` | `handleOrderCancelled` | `cancelled` | Updates payment, notifies Checkout |
+| PayPal Event Type           | Handler Function                | Payment Status                   | Actions                               |
+| --------------------------- | ------------------------------- | -------------------------------- | ------------------------------------- |
+| `PAYMENT.CAPTURE.COMPLETED` | `handlePaymentCaptureCompleted` | `captured`                       | Updates payment, notifies all workers |
+| `PAYMENT.CAPTURE.DENIED`    | `handlePaymentCaptureDenied`    | `approved` (with failure reason) | Updates payment, notifies Checkout    |
+| `PAYMENT.CAPTURE.DECLINED`  | `handlePaymentCaptureDenied`    | `approved` (with failure reason) | Updates payment, notifies Checkout    |
+| `PAYMENT.ORDER.CANCELLED`   | `handleOrderCancelled`          | `cancelled`                      | Updates payment, notifies Checkout    |
+| `PAYMENT.ORDER.CREATED`     | `handleOrderCreated`            | `created`                        | Updates payment (optional)            |
+| `CHECKOUT.ORDER.APPROVED`   | `handleOrderApproved`           | `approved`                       | Updates payment status                |
+| `CHECKOUT.ORDER.COMPLETED`  | `handleOrderCompleted`          | `captured`                       | Updates payment, notifies all workers |
+| `CHECKOUT.ORDER.DECLINED`   | `handleOrderCancelled`          | `cancelled`                      | Updates payment, notifies Checkout    |
+| `CHECKOUT.ORDER.SAVED`      | (logs only)                     | -                                | Logs event, no action needed          |
+| `CHECKOUT.ORDER.VOIDED`     | `handleOrderCancelled`          | `cancelled`                      | Updates payment, notifies Checkout    |
 
 ## Webhook Payload Structure
 
 ### PAYMENT.CAPTURE.COMPLETED
+
 ```json
 {
   "id": "webhook-event-id",
@@ -132,17 +133,21 @@ https://w2-payment-worker.vg-firmly.workers.dev/api/v1/webhooks/paypal
         "order_id": "paypal-order-id"
       }
     },
-    "purchase_units": [{
-      "payments": {
-        "captures": [{
-          "id": "capture-id",
-          "amount": {
-            "value": "100.00",
-            "currency_code": "USD"
-          }
-        }]
+    "purchase_units": [
+      {
+        "payments": {
+          "captures": [
+            {
+              "id": "capture-id",
+              "amount": {
+                "value": "100.00",
+                "currency_code": "USD"
+              }
+            }
+          ]
+        }
       }
-    }],
+    ],
     "payer": {
       "email_address": "buyer@example.com",
       "name": {
@@ -155,6 +160,7 @@ https://w2-payment-worker.vg-firmly.workers.dev/api/v1/webhooks/paypal
 ```
 
 ### PAYMENT.CAPTURE.DENIED
+
 ```json
 {
   "id": "webhook-event-id",
@@ -174,6 +180,7 @@ https://w2-payment-worker.vg-firmly.workers.dev/api/v1/webhooks/paypal
 ```
 
 ### CHECKOUT.ORDER.COMPLETED
+
 ```json
 {
   "id": "webhook-event-id",
@@ -181,18 +188,22 @@ https://w2-payment-worker.vg-firmly.workers.dev/api/v1/webhooks/paypal
   "resource": {
     "id": "paypal-order-id",
     "status": "COMPLETED",
-    "purchase_units": [{
-      "payments": {
-        "captures": [{
-          "id": "capture-id",
-          "status": "COMPLETED",
-          "amount": {
-            "value": "100.00",
-            "currency_code": "USD"
-          }
-        }]
+    "purchase_units": [
+      {
+        "payments": {
+          "captures": [
+            {
+              "id": "capture-id",
+              "status": "COMPLETED",
+              "amount": {
+                "value": "100.00",
+                "currency_code": "USD"
+              }
+            }
+          ]
+        }
       }
-    }],
+    ],
     "payer": {
       "email_address": "buyer@example.com",
       "name": {
@@ -301,4 +312,3 @@ curl -X POST https://w2-payment-worker.vg-firmly.workers.dev/api/v1/webhooks/pay
 - [ ] Idempotency checks are working
 - [ ] All service bindings are configured
 - [ ] Frontend URLs are set in config
-

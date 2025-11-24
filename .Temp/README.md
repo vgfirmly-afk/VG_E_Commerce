@@ -20,6 +20,7 @@ A modern Svelte application with TailwindCSS for the e-commerce microservices ba
 ## Setup
 
 1. Install dependencies:
+
 ```bash
 npm install
 ```
@@ -32,6 +33,7 @@ npm install
    - Pricing Worker: `https://w2-pricing-worker.vg-firmly.workers.dev`
 
    To override with environment variables (e.g., for local development), create a `.env` file:
+
    ```bash
    VITE_AUTH_WORKER_URL=http://localhost:8787
    VITE_CART_WORKER_URL=http://localhost:8788
@@ -41,6 +43,7 @@ npm install
    ```
 
 3. Start the development server:
+
 ```bash
 npm run dev
 ```
@@ -102,6 +105,7 @@ The frontend integrates with the following microservices:
 ## Features in Detail
 
 ### Home Page
+
 - Displays company name and login/signup options in header
 - Shows user name/email when logged in
 - Lists all categories
@@ -110,6 +114,7 @@ The frontend integrates with the following microservices:
 - Product cards with images and "View" button
 
 ### Product Detail Page
+
 - Full product information
 - Amazon-style SKU selection
 - Shows price and stock for each SKU
@@ -117,6 +122,7 @@ The frontend integrates with the following microservices:
 - Quantity selector
 
 ### Cart Page
+
 - View all cart items
 - Update quantities
 - Remove items
@@ -148,6 +154,7 @@ The application uses **httpOnly cookies** for secure token storage:
 ### Backend Requirements
 
 The backend must be configured to:
+
 1. Set httpOnly cookies on login/register
 2. Read tokens from cookies (not request body)
 3. Clear cookies on logout
@@ -162,4 +169,3 @@ See `BACKEND_REQUIREMENTS.md` for detailed backend implementation guide.
 - All API calls handle errors gracefully with user-friendly messages
 - The router uses hash-based routing for client-side navigation
 - All requests include credentials (cookies) automatically
-

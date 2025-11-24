@@ -3,11 +3,13 @@
 ## Where Tokens Are Currently Stored
 
 ### ✅ What's Working:
+
 1. **Email & Username**: Stored in `localStorage` (visible in DevTools)
 2. **Tokens in Response**: Backend returns tokens in login response body
 3. **Immediate Auth**: Frontend uses token from response for `/me` call via Authorization header
 
 ### ❌ What's NOT Working Yet:
+
 1. **httpOnly Cookies**: Backend is NOT setting httpOnly cookies yet
 2. **Cookie-based Auth**: Subsequent requests still need Authorization header (not using cookies)
 
@@ -64,24 +66,24 @@ Update `backend/Auth_Worker/src/handlers/authHandlers.js` login function to set 
 ```javascript
 export const login = async (request, env) => {
   // ... existing login logic ...
-  
+
   const response = new Response(
-    JSON.stringify({ 
-      accessToken: result.accessToken, 
-      refreshToken: result.refreshToken 
-    }), 
-    { 
-      status: 200, 
-      headers: { 
-        'Content-Type': 'application/json',
-        'Set-Cookie': [
+    JSON.stringify({
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    }),
+    {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Set-Cookie": [
           `accessToken=${result.accessToken}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900`,
-          `refreshToken=${result.refreshToken}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=2592000`
-        ]
-      } 
-    }
+          `refreshToken=${result.refreshToken}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=2592000`,
+        ],
+      },
+    },
   );
-  
+
   return response;
 };
 ```
@@ -95,13 +97,14 @@ export const login = async (request, env) => {
 ## Summary
 
 **Current State:**
+
 - ✅ Tokens returned in login response
 - ✅ Frontend uses them for immediate auth
 - ❌ Backend does NOT set httpOnly cookies
 - ❌ Tokens not persisted (only in memory during session)
 
 **To Fix:**
+
 - Backend must set httpOnly cookies in login response
 - Then frontend will automatically use cookies for all requests
 - Tokens will persist across page refreshes
-

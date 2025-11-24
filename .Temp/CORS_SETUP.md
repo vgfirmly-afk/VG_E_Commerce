@@ -23,46 +23,54 @@ Create a new file in each worker: `src/middleware/cors.js`
  */
 export function handleCORS(request, response) {
   // Get the origin from the request
-  const origin = request.headers.get('Origin');
-  
+  const origin = request.headers.get("Origin");
+
   // List of allowed origins (add your frontend URLs here)
   // For development: http://localhost:5173, http://127.0.0.1:5173
   // For production: your frontend domain
   const allowedOrigins = [
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
     // Add your production frontend URL here
     // 'https://your-frontend-domain.com',
   ];
-  
+
   // Check if origin is allowed
-  const isAllowedOrigin = origin && allowedOrigins.some(allowed => {
-    return origin === allowed || origin.startsWith(allowed);
-  });
-  
+  const isAllowedOrigin =
+    origin &&
+    allowedOrigins.some((allowed) => {
+      return origin === allowed || origin.startsWith(allowed);
+    });
+
   // Use the request origin if allowed, otherwise use the first allowed origin
   const allowedOrigin = isAllowedOrigin ? origin : allowedOrigins[0];
-  
+
   // Create headers object
   const headers = new Headers(response?.headers || {});
-  
+
   // Set CORS headers
-  headers.set('Access-Control-Allow-Origin', allowedOrigin || '*');
-  headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Id, X-Session-Id, X-Source');
-  headers.set('Access-Control-Allow-Credentials', 'true'); // Required for cookies
-  headers.set('Access-Control-Max-Age', '86400'); // 24 hours
-  
+  headers.set("Access-Control-Allow-Origin", allowedOrigin || "*");
+  headers.set(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+  );
+  headers.set(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-User-Id, X-Session-Id, X-Source",
+  );
+  headers.set("Access-Control-Allow-Credentials", "true"); // Required for cookies
+  headers.set("Access-Control-Max-Age", "86400"); // 24 hours
+
   // If this is a preflight request, return early
-  if (request.method === 'OPTIONS') {
+  if (request.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
       headers: headers,
     });
   }
-  
+
   // For regular requests, add CORS headers to the response
   if (response) {
     // Clone response to modify headers
@@ -73,7 +81,7 @@ export function handleCORS(request, response) {
     });
     return newResponse;
   }
-  
+
   return { headers };
 }
 
@@ -81,15 +89,15 @@ export function handleCORS(request, response) {
  * CORS wrapper for fetch handlers
  */
 export function withCORS(handler) {
-  return async function(request, env, ctx) {
+  return async function (request, env, ctx) {
     // Handle preflight OPTIONS request
-    if (request.method === 'OPTIONS') {
+    if (request.method === "OPTIONS") {
       return handleCORS(request, null);
     }
-    
+
     // Call the actual handler
     const response = await handler(request, env, ctx);
-    
+
     // Add CORS headers to the response
     return handleCORS(request, response);
   };
@@ -101,6 +109,7 @@ export function withCORS(handler) {
 Update `src/index.js` in each worker (Auth, Cart, Catalog, Inventory, Pricing):
 
 **Before:**
+
 ```javascript
 async function baseFetch(request, env, ctx) {
   // ... existing code
@@ -110,18 +119,23 @@ async function baseFetch(request, env, ctx) {
 ```
 
 **After:**
+
 ```javascript
-import { withCORS } from './middleware/cors.js';
+import { withCORS } from "./middleware/cors.js";
 
 async function baseFetch(request, env, ctx) {
   // Handle CORS preflight
-  if (request.method === 'OPTIONS') {
-    return withCORS(() => new Response(null, { status: 204 }))(request, env, ctx);
+  if (request.method === "OPTIONS") {
+    return withCORS(() => new Response(null, { status: 204 }))(
+      request,
+      env,
+      ctx,
+    );
   }
-  
+
   // ... existing code
   const response = await router.handle(request, env, ctx);
-  
+
   // Add CORS headers to response
   return withCORS(() => response)(request, env, ctx);
 }
@@ -130,7 +144,7 @@ async function baseFetch(request, env, ctx) {
 **Or simpler approach - wrap the entire handler:**
 
 ```javascript
-import { withCORS } from './middleware/cors.js';
+import { withCORS } from "./middleware/cors.js";
 
 async function baseFetch(request, env, ctx) {
   try {
@@ -167,21 +181,19 @@ For better security, use environment variables:
 ```javascript
 // src/middleware/cors.js
 export function handleCORS(request, response, env) {
-  const origin = request.headers.get('Origin');
-  
+  const origin = request.headers.get("Origin");
+
   // Get allowed origins from environment or use defaults
-  const allowedOrigins = env.ALLOWED_ORIGINS 
-    ? env.ALLOWED_ORIGINS.split(',')
-    : [
-        'http://localhost:5173',
-        'http://127.0.0.1:5173',
-      ];
-  
+  const allowedOrigins = env.ALLOWED_ORIGINS
+    ? env.ALLOWED_ORIGINS.split(",")
+    : ["http://localhost:5173", "http://127.0.0.1:5173"];
+
   // ... rest of the code
 }
 ```
 
 Then set in `wrangler.toml`:
+
 ```toml
 [vars]
 ALLOWED_ORIGINS = "http://localhost:5173,https://your-frontend-domain.com"
@@ -194,14 +206,15 @@ If you want a quick fix without creating a separate middleware file, add this to
 ```javascript
 async function baseFetch(request, env, ctx) {
   // Handle CORS preflight
-  if (request.method === 'OPTIONS') {
+  if (request.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
       headers: {
-        'Access-Control-Allow-Origin': request.headers.get('Origin') || '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-User-Id, X-Session-Id',
-        'Access-Control-Allow-Credentials': 'true',
+        "Access-Control-Allow-Origin": request.headers.get("Origin") || "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers":
+          "Content-Type, Authorization, X-User-Id, X-Session-Id",
+        "Access-Control-Allow-Credentials": "true",
       },
     });
   }
@@ -209,19 +222,27 @@ async function baseFetch(request, env, ctx) {
   try {
     // ... existing code
     const response = await router.handle(request, env, ctx);
-    
+
     // Add CORS headers to response
     if (response && response instanceof Response) {
-      const origin = request.headers.get('Origin');
-      const allowedOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
-      const allowedOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
-      
-      response.headers.set('Access-Control-Allow-Origin', allowedOrigin);
-      response.headers.set('Access-Control-Allow-Credentials', 'true');
-      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Id, X-Session-Id');
+      const origin = request.headers.get("Origin");
+      const allowedOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
+      const allowedOrigin = allowedOrigins.includes(origin)
+        ? origin
+        : allowedOrigins[0];
+
+      response.headers.set("Access-Control-Allow-Origin", allowedOrigin);
+      response.headers.set("Access-Control-Allow-Credentials", "true");
+      response.headers.set(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, DELETE, OPTIONS",
+      );
+      response.headers.set(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization, X-User-Id, X-Session-Id",
+      );
     }
-    
+
     return response;
   } catch (err) {
     // ... error handling
@@ -251,7 +272,7 @@ After adding CORS:
 
 - **"No 'Access-Control-Allow-Origin' header"**: CORS headers not set on backend
 - **"Credentials flag is true, but 'Access-Control-Allow-Credentials' is not 'true'"**: Missing or incorrect credentials header
-- **"Access-Control-Allow-Origin cannot be '*' when credentials are true"**: Must use specific origin, not wildcard
+- **"Access-Control-Allow-Origin cannot be '\*' when credentials are true"**: Must use specific origin, not wildcard
 
 ## Deployment
 
@@ -260,4 +281,3 @@ After updating your workers with CORS:
 1. Deploy each worker: `wrangler deploy`
 2. Test from your frontend
 3. If using production frontend, add its URL to `allowedOrigins`
-

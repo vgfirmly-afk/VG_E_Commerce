@@ -1,0 +1,42 @@
+echo "Running pre-commit checks..."
+npm run format
+
+# # # Lint the codebase to ensure code quality
+echo "Linting the codebase..."
+npm run lint
+
+echo "Checking for unused files/dependencies..."
+npm run knip
+
+
+echo "Running tests..."
+# npm test
+npm --workspace backend/Auth_Worker run test
+npm --workspace backend/Catalog_worker run test
+npm --workspace backend/Cart_Worker run test
+npm --workspace backend/Checkout_Worker run test
+npm --workspace backend/Fullfilment_Worker run test
+npm --workspace backend/Inventory_Worker run test
+npm --workspace backend/Pricing_Worker run test
+npm --workspace backend/Payment_worker run test
+
+echo "Unit Tests Completed"
+
+#!/bin/sh
+
+
+echo "Running coverage check..."
+
+npm --workspace backend/Auth_Worker run coverage
+npm --workspace backend/Catalog_worker run coverage
+npm --workspace backend/Cart_Worker run coverage
+npm --workspace backend/Checkout_Worker run coverage
+npm --workspace backend/Fullfilment_Worker run coverage
+npm --workspace backend/Inventory_Worker run coverage
+npm --workspace backend/Pricing_Worker run coverage
+npm --workspace backend/Payment_worker run coverage
+
+
+echo "Coverage Checks Completed"
+
+echo "Pre-commit checks completed successfully"

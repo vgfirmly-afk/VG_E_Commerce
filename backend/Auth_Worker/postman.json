@@ -49,13 +49,8 @@
         ],
         "url": {
           "raw": "{{baseUrl}}/_/health",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "_",
-            "health"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["_", "health"]
         }
       },
       "response": []
@@ -80,15 +75,8 @@
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/auth/register",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "auth",
-            "register"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "auth", "register"]
         }
       },
       "response": []
@@ -113,15 +101,8 @@
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/auth/login",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "auth",
-            "login"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "auth", "login"]
         }
       },
       "event": [
@@ -159,15 +140,8 @@
         ],
         "url": {
           "raw": "{{baseUrl}}/api/v1/auth/me",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "auth",
-            "me"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "auth", "me"]
         }
       },
       "response": []
@@ -192,16 +166,8 @@
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/auth/token/refresh",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "auth",
-            "token",
-            "refresh"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "auth", "token", "refresh"]
         }
       },
       "event": [
@@ -243,15 +209,8 @@
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/auth/logout",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "auth",
-            "logout"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "auth", "logout"]
         }
       },
       "response": []

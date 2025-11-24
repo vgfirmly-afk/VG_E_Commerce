@@ -1,5 +1,5 @@
 // src/middleware/logger.js
-import { trace, context } from '@opentelemetry/api';
+import { trace, context } from "@opentelemetry/api";
 
 /**
  * withLogger(handler) -> returns a fetch-style handler
@@ -9,11 +9,8 @@ export default function withLogger(handler) {
   return async function (request, env, ctx) {
     // active span is available once the otel wrapper has created the request span
     const span = trace.getSpan(context.active());
-    const traceId = span ? span.spanContext().traceId : 'none';
-    const spanId = span ? span.spanContext().spanId : 'none';
-
-
-
+    const traceId = span ? span.spanContext().traceId : "none";
+    const spanId = span ? span.spanContext().spanId : "none";
 
     // ---- ADD THIS BLOCK: inject Cloudflare Ray ID into the span ----
     if (span) {
@@ -24,33 +21,35 @@ export default function withLogger(handler) {
       if (colo) span.setAttribute("colo", colo);
     }
 
-
     // log incoming request (structured) - add to span as event
     if (span) {
-      span.addEvent('request.start', {
+      span.addEvent("request.start", {
         method: request.method,
         url: request.url,
         timestamp: Date.now(),
       });
     }
-    console.log("[Logger]",JSON.stringify({
-      ts: new Date().toISOString(),
-      msg: `${request.method} ${request.url}`,
-      trace_id: traceId,
-      span_id: spanId,
-    }));
+    console.log(
+      "[Logger]",
+      JSON.stringify({
+        ts: new Date().toISOString(),
+        msg: `${request.method} ${request.url}`,
+        trace_id: traceId,
+        span_id: spanId,
+      }),
+    );
 
     // call the real handler
     const res = await handler(request, env, ctx);
 
     // ensure response is a Response object and set trace header
     try {
-      if (res && typeof res.headers?.set === 'function') {
-        res.headers.set('x-trace-id', traceId);
-        res.headers.set('x-span-id', spanId);
+      if (res && typeof res.headers?.set === "function") {
+        res.headers.set("x-trace-id", traceId);
+        res.headers.set("x-span-id", spanId);
         // Add response event to span
         if (span) {
-          span.addEvent('response.end', {
+          span.addEvent("response.end", {
             status: res.status,
             timestamp: Date.now(),
           });
@@ -58,17 +57,12 @@ export default function withLogger(handler) {
       }
     } catch (e) {
       // never crash logging
-      console.error('failed to set trace headers', e);
+      console.error("failed to set trace headers", e);
     }
 
     return res;
   };
 }
-
-
-
-
-
 
 // // src/middleware/logger.js
 // import { trace, context } from '@opentelemetry/api';

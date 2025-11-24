@@ -64,26 +64,31 @@ This document explains the **correct PayPal payment flow** using webhooks for se
 ## Webhook Events Handled
 
 ### 1. `CHECKOUT.ORDER.APPROVED`
+
 - **When**: User approves payment on PayPal
 - **Action**: Updates payment status to `approved`
 - **Stores**: Payer email, name, PayerID
 
 ### 2. `PAYMENT.CAPTURE.COMPLETED`
+
 - **When**: Payment is successfully captured
 - **Action**: Updates payment status to `captured`
 - **Stores**: Transaction ID, capture details, payer info
 
 ### 3. `CHECKOUT.ORDER.COMPLETED`
+
 - **When**: Order is fully completed
 - **Action**: Updates payment status to `captured` (if not already)
 - **Stores**: Complete transaction details
 
 ### 4. `PAYMENT.CAPTURE.DENIED`
+
 - **When**: Payment capture is denied
 - **Action**: Updates payment with failure reason
 - **Status**: Remains `approved` but with failure_reason
 
 ### 5. `CHECKOUT.ORDER.CANCELLED`
+
 - **When**: User cancels the order
 - **Action**: Updates payment status to `cancelled`
 - **Stores**: Cancellation reason
@@ -119,6 +124,7 @@ When creating payment intent, set:
 ```
 
 These URLs should:
+
 - Display payment status to user
 - Call backend to get current payment status
 - Show success/failure message
@@ -130,15 +136,15 @@ These URLs should:
 async function handlePaymentSuccess(token, payerId) {
   // Call backend to get current payment status
   const response = await fetch(
-    `/api/v1/payments/callback/success?token=${token}&PayerID=${payerId}`
+    `/api/v1/payments/callback/success?token=${token}&PayerID=${payerId}`,
   );
   const data = await response.json();
-  
+
   // Display status to user
-  if (data.payment.status === 'captured') {
-    showSuccessMessage('Payment successful!');
-  } else if (data.payment.status === 'approved') {
-    showMessage('Payment approved. Processing...');
+  if (data.payment.status === "captured") {
+    showSuccessMessage("Payment successful!");
+  } else if (data.payment.status === "approved") {
+    showMessage("Payment approved. Processing...");
     // Poll for status update (webhook may be delayed)
     pollPaymentStatus(data.payment.payment_id);
   }
@@ -150,6 +156,7 @@ async function handlePaymentSuccess(token, payerId) {
 ### Signature Verification
 
 PayPal sends webhook signature in headers:
+
 - `PAYPAL-AUTH-ALGO`
 - `PAYPAL-CERT-URL`
 - `PAYPAL-TRANSMISSION-ID`
@@ -162,6 +169,7 @@ PayPal sends webhook signature in headers:
 ### Webhook Retry Logic
 
 PayPal automatically retries webhooks if:
+
 - Response is not 200 OK
 - Response takes too long
 - Network error occurs
@@ -257,4 +265,3 @@ ngrok http 8787
 - **Always return 200 OK** from webhook handler
 - **Log everything** for debugging
 - **Verify webhook signatures** in production
-

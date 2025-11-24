@@ -3,6 +3,7 @@
 ## Why You Can't See httpOnly Cookies in JavaScript
 
 **httpOnly cookies are intentionally hidden from JavaScript** - this is a security feature to prevent XSS attacks. You cannot access them via:
+
 - `document.cookie`
 - DevTools Console
 - Application → Cookies tab (they won't show up there)
@@ -59,8 +60,11 @@ Based on the backend code, **the login endpoint is NOT setting httpOnly cookies 
 ```javascript
 // Current backend code (authHandlers.js)
 return new Response(
-  JSON.stringify({ accessToken: result.accessToken, refreshToken: result.refreshToken }), 
-  { status: 200, headers: { 'Content-Type': 'application/json' } }
+  JSON.stringify({
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
+  }),
+  { status: 200, headers: { "Content-Type": "application/json" } },
 );
 ```
 
@@ -71,17 +75,20 @@ The backend login handler needs to be updated to SET cookies:
 ```javascript
 // Updated backend code should be:
 const response = new Response(
-  JSON.stringify({ accessToken: result.accessToken, refreshToken: result.refreshToken }), 
-  { 
-    status: 200, 
-    headers: { 
-      'Content-Type': 'application/json',
-      'Set-Cookie': [
+  JSON.stringify({
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
+  }),
+  {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json",
+      "Set-Cookie": [
         `accessToken=${result.accessToken}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900`,
-        `refreshToken=${result.refreshToken}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=2592000`
-      ]
-    } 
-  }
+        `refreshToken=${result.refreshToken}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=2592000`,
+      ],
+    },
+  },
 );
 return response;
 ```
@@ -101,4 +108,3 @@ return response;
 - **Your backend currently doesn't set cookies** - it only returns tokens in response body
 - **Frontend currently works** by using tokens from response body in Authorization header
 - **To use httpOnly cookies**, backend must be updated to set them (see BACKEND_REQUIREMENTS.md)
-
