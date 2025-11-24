@@ -2,10 +2,12 @@ name: Deploy to Staging
 
 on:
   push:
-    branches: [Features/cd5, features/cd5, main, develop]
+    branches: 
+      - "**"
     paths: ['backend/**', '.github/workflows/staging-deploy.yml']
   pull_request:
-    branches: [Features/cd5, features/cd5, main, develop]
+    branches: 
+      - "**"
     paths: ['backend/**', '.github/workflows/staging-deploy.yml']
   workflow_dispatch:
 
