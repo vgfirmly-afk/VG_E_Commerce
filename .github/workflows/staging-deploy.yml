@@ -64,7 +64,7 @@ jobs:
 
       - name: Check if worker changed
         id: check_changes
-        run: |
+        run: | 
           CHANGED=false
           WORKER_DIR="${{ matrix.worker_dir }}"
           
