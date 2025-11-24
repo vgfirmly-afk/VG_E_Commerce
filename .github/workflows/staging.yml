@@ -96,76 +96,110 @@ jobs:
             exit 1
           fi
 
-      - name: Test and select Cloudflare API token
-        id: cf_token_check
+      - name: Step 1: Check API token availability
+        id: check_token
         run: |
-          # Test staging token first
-          if [ -n "${{ secrets.CF_API_TOKEN_STAGING }}" ]; then
-            echo "Testing CF_API_TOKEN_STAGING..."
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X GET "https://api.cloudflare.com/client/v4/user/tokens/verify" \
-              -H "Authorization: Bearer ${{ secrets.CF_API_TOKEN_STAGING }}" \
-              -H "Content-Type: application/json" || echo "000")
-            
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "use_staging=true" >> $GITHUB_OUTPUT
-              echo "✓ CF_API_TOKEN_STAGING is valid"
-              exit 0
-            else
-              echo "⚠ CF_API_TOKEN_STAGING exists but is invalid (HTTP $HTTP_CODE)"
-              echo "  Possible issues:"
-              echo "  - Token is expired or revoked"
-              echo "  - Token has insufficient permissions"
-              echo "  - Token value is incorrect"
-            fi
-          else
-            echo "⚠ CF_API_TOKEN_STAGING is not set in staging environment"
-          fi
-          
-          # Fallback to production token
-          if [ -n "${{ secrets.CF_API_TOKEN_PROD }}" ]; then
-            echo "Testing CF_API_TOKEN_PROD as fallback..."
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X GET "https://api.cloudflare.com/client/v4/user/tokens/verify" \
-              -H "Authorization: Bearer ${{ secrets.CF_API_TOKEN_PROD }}" \
-              -H "Content-Type: application/json" || echo "000")
-            
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "use_staging=false" >> $GITHUB_OUTPUT
-              echo "⚠ Using CF_API_TOKEN_PROD (staging token invalid/missing)"
-              echo "::warning::Using production token for staging. Set up CF_API_TOKEN_STAGING in the 'staging' environment."
-              exit 0
-            else
-              echo "::error::CF_API_TOKEN_PROD is also invalid (HTTP $HTTP_CODE)"
-            fi
-          fi
-          
-          echo "::error::No valid Cloudflare API token found!"
+          echo "🔍 Checking for Cloudflare API tokens..."
           echo ""
-          echo "SOLUTION:"
-          echo "1. Go to: Repository Settings > Environments > staging > Secrets"
-          echo "2. Add secret: CF_API_TOKEN_STAGING"
-          echo "3. Use the SAME token value as CF_API_TOKEN_PROD (or create new token)"
-          echo "4. Token needs: Account:Read, Workers:Edit, D1:Edit, KV:Edit, R2:Edit"
-          echo "5. Create token: https://dash.cloudflare.com/profile/api-tokens"
-          exit 1
+          
+          # Check staging token
+          if [ -n "${{ secrets.CF_API_TOKEN_STAGING }}" ]; then
+            TOKEN_LEN=$(echo -n "${{ secrets.CF_API_TOKEN_STAGING }}" | wc -c)
+            echo "✓ CF_API_TOKEN_STAGING is available (length: $TOKEN_LEN characters)"
+            echo "use_staging=true" >> $GITHUB_OUTPUT
+            SELECTED_TOKEN="CF_API_TOKEN_STAGING"
+          else
+            echo "⚠ CF_API_TOKEN_STAGING is NOT set in staging environment"
+            
+            # Check production token as fallback
+            if [ -n "${{ secrets.CF_API_TOKEN_PROD }}" ]; then
+              TOKEN_LEN=$(echo -n "${{ secrets.CF_API_TOKEN_PROD }}" | wc -c)
+              echo "✓ CF_API_TOKEN_PROD is available (length: $TOKEN_LEN characters)"
+              echo "use_staging=false" >> $GITHUB_OUTPUT
+              SELECTED_TOKEN="CF_API_TOKEN_PROD"
+              echo "::warning::Will use CF_API_TOKEN_PROD as fallback"
+            else
+              echo "✗ CF_API_TOKEN_PROD is also NOT set"
+              echo "::error::No Cloudflare API token found!"
+              echo ""
+              echo "SOLUTION:"
+              echo "1. Go to: Repository Settings > Environments > staging > Secrets"
+              echo "2. Add secret: CF_API_TOKEN_STAGING"
+              echo "3. Use the SAME token value as CF_API_TOKEN_PROD"
+              exit 1
+            fi
+          fi
+          
+          echo ""
+          echo "Selected token: $SELECTED_TOKEN"
+          echo "token_name=$SELECTED_TOKEN" >> $GITHUB_OUTPUT
 
-      - name: Deploy to staging using Wrangler (with staging token)
-        if: steps.cf_token_check.outputs.use_staging == 'true'
+      - name: Step 2: Verify token with Cloudflare API
+        id: verify_token
+        run: |
+          if [ "${{ steps.check_token.outputs.use_staging }}" = "true" ]; then
+            TOKEN="${{ secrets.CF_API_TOKEN_STAGING }}"
+            TOKEN_NAME="CF_API_TOKEN_STAGING"
+          else
+            TOKEN="${{ secrets.CF_API_TOKEN_PROD }}"
+            TOKEN_NAME="CF_API_TOKEN_PROD"
+          fi
+          
+          echo "🔐 Testing $TOKEN_NAME with Cloudflare API..."
+          echo "Making request to: https://api.cloudflare.com/client/v4/user/tokens/verify"
+          echo ""
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" 2>&1)
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          echo "Response HTTP Code: $HTTP_CODE"
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✓ Token is valid and accessible!"
+            echo "Response: $BODY" | head -c 200
+            echo ""
+            echo "token_valid=true" >> $GITHUB_OUTPUT
+          else
+            echo "✗ Token authentication failed!"
+            echo "HTTP Code: $HTTP_CODE"
+            echo "Response: $BODY"
+            echo ""
+            echo "Possible issues:"
+            echo "  - Token is expired or revoked"
+            echo "  - Token has insufficient permissions"
+            echo "  - Token value is incorrect"
+            echo ""
+            echo "::error::Token verification failed (HTTP $HTTP_CODE)"
+            echo "token_valid=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Step 3: Deploy to staging using Wrangler (staging token)
+        if: steps.verify_token.outputs.token_valid == 'true' && steps.check_token.outputs.use_staging == 'true'
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN_STAGING }}
         run: |
           cd "${{ matrix.dir }}"
-          echo "Deploying from: $(pwd)"
-          echo "Using: CF_API_TOKEN_STAGING"
+          echo "🚀 Deploying to staging..."
+          echo "Working directory: $(pwd)"
+          echo "Using token: CF_API_TOKEN_STAGING"
+          echo ""
           wrangler deploy --env staging
 
-      - name: Deploy to staging using Wrangler (with prod token fallback)
-        if: steps.cf_token_check.outputs.use_staging != 'true'
+      - name: Step 3: Deploy to staging using Wrangler (prod token fallback)
+        if: steps.verify_token.outputs.token_valid == 'true' && steps.check_token.outputs.use_staging != 'true'
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN_PROD }}
         run: |
           cd "${{ matrix.dir }}"
-          echo "Deploying from: $(pwd)"
-          echo "Using: CF_API_TOKEN_PROD (fallback)"
+          echo "🚀 Deploying to staging..."
+          echo "Working directory: $(pwd)"
+          echo "Using token: CF_API_TOKEN_PROD (fallback)"
+          echo ""
           wrangler deploy --env staging
 
       - name: Wait for staging propagation
