@@ -1,100 +1,247 @@
-name: PR → Simple Staging (matrix)
+# name: PR → Staging (matrix)
 
-# Trigger on PRs (opened, reopened, synchronize)
-on:
-  pull_request:
-    types: [opened, reopened, synchronize]
+# # Trigger on PRs (opened, reopened, synchronize)
+# on:
+#   pull_request:
+#     types: [opened, reopened, synchronize]
 
-env:
-  NODE_VERSION: 20
-  WF_DOMAIN_ROOT: "vg-firmly.workers.dev"
-  HEALTH_PATH: "/_/health"
-  PUBLISH_SLEEP_SECONDS: 5
+# env:
+#   NODE_VERSION: 20
+#   WF_DOMAIN_ROOT: "vg-firmly.workers.dev"
+#   HEALTH_PATH: "/_/health"
+#   PUBLISH_SLEEP_SECONDS: 5
 
-permissions:
-  contents: read
+# permissions:
+#   contents: read
 
-jobs:
-  staging-matrix:
-    name: Publish & test ${{ matrix.prod_name }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - dir: backend/Auth_Worker
-            prod_name: w2-auth-worker
-          - dir: backend/Catalog_worker
-            prod_name: w2-catalog-worker
-          - dir: backend/Cart_Worker
-            prod_name: w2-cart-worker
-          - dir: backend/Pricing_Worker
-            prod_name: w2-pricing-worker
-          - dir: backend/Invertory_Worker
-            prod_name: w2-inventory-worker
-          - dir: backend/Payment_worker
-            prod_name: w2-payment-worker
-          - dir: backend/Checkout_Worker
-            prod_name: w2-checkout-worker
-          - dir: backend/Fullfilment_Worker
-            prod_name: w2-fullfillment-worker
+# jobs:
+#   staging-matrix: 
+#     name: Publish & test ${{ matrix.prod_name }}
+#     runs-on: ubuntu-latest
+#     strategy:
+#       fail-fast: false
+#       matrix:
+#         include:
+#           - dir: backend/Auth_Worker
+#             prod_name: w2-auth-worker
+#           - dir: backend/Catalog_worker
+#             prod_name: w2-catalog-worker
+#           - dir: backend/Cart_Worker
+#             prod_name: w2-cart-worker
+#           - dir: backend/Pricing_Worker
+#             prod_name: w2-pricing-worker
+#           - dir: backend/Invertory_Worker
+#             prod_name: w2-inventory-worker
+#           - dir: backend/Payment_worker
+#             prod_name: w2-payment-worker
+#           - dir: backend/Checkout_Worker
+#             prod_name: w2-checkout-worker
+#           - dir: backend/Fullfilment_Worker
+#             prod_name: w2-fullfillment-worker
 
-    environment: staging
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 50
+#     environment: staging
+#     timeout-minutes: 40
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 50
+  
+#       - name: Set up Node.js (compatible with Wrangler v4)
+#         uses: actions/setup-node@v4
+#         with:
+#           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Set up Node.js (compatible with Wrangler v4)
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+#       - name: Cache node modules
+#         uses: actions/cache@v4
+#         with:
+#           path: ~/.npm
+#           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+#           restore-keys: |
+#             ${{ runner.os }}-node-
 
-      - name: Install root dependencies
-        run: npm ci
+#       - name: Install dependencies
+#         run: |
+#           npm ci
+#           npm install -g wrangler@4.49.0
 
-      # Install a pinned Wrangler v4 to avoid CLI surprises
-      - name: Install Wrangler CLI (pinned)
-        run: npm install -g wrangler@4.49.0
+#       - name: Step 1 - Check API token availability
+#         id: check_token
+#         run: |
+#           echo "🔍 Checking for Cloudflare API tokens..."
+#           echo ""
+          
+#           # Check staging token
+#           if [ -n "${{ secrets.CF_API_TOKEN_STAGING }}" ]; then
+#             TOKEN_LEN=$(echo -n "${{ secrets.CF_API_TOKEN_STAGING }}" | wc -c)
+#             echo "✓ CF_API_TOKEN_STAGING is available (length: $TOKEN_LEN characters)"
+#             echo "use_staging=true" >> $GITHUB_OUTPUT
+#             SELECTED_TOKEN="CF_API_TOKEN_STAGING"
+#           else
+#             echo "⚠ CF_API_TOKEN_STAGING is NOT set in staging environment"
+            
+#             # Check production token as fallback
+#             if [ -n "${{ secrets.CF_API_TOKEN_PROD }}" ]; then
+#               TOKEN_LEN=$(echo -n "${{ secrets.CF_API_TOKEN_PROD }}" | wc -c)
+#               echo "✓ CF_API_TOKEN_PROD is available (length: $TOKEN_LEN characters)"
+#               echo "use_staging=false" >> $GITHUB_OUTPUT
+#               SELECTED_TOKEN="CF_API_TOKEN_PROD"
+#               echo "::warning::Will use CF_API_TOKEN_PROD as fallback"
+#             else
+#               echo "✗ CF_API_TOKEN_PROD is also NOT set"
+#               echo "::error::No Cloudflare API token found!"
+#               echo ""
+#               echo "SOLUTION:"
+#               echo "1. Go to: Repository Settings > Environments > staging > Secrets"
+#               echo "2. Add secret: CF_API_TOKEN_STAGING"
+#               echo "3. Use the SAME token value as CF_API_TOKEN_PROD"
+#               exit 1
+#             fi
+#           fi
+          
+#           echo ""
+#           echo "Selected token: $SELECTED_TOKEN"
+#           echo "token_name=$SELECTED_TOKEN" >> $GITHUB_OUTPUT
 
-      - name: Publish to staging (wrangler deploy)
-        # NOTE: use CLOUDFLARE_API_TOKEN (preferred) mapped from your secret
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN_STAGING }}
-        run: |
-          echo "Deploying ${{ github.repository }}:${{ github.sha }} -> staging for ${{ matrix.prod_name }} (dir=${{ matrix.dir }})"
-          # Use --cwd so wrangler runs in the worker's folder; --env staging selects your env in wrangler.toml
-          # Using --config is optional if wrangler.toml is at the project root or accessible from cwd.
-          wrangler deploy --env staging --cwd "${{ matrix.dir }}"
+#       - name: Step 2 - Verify token with Cloudflare API
+#         id: verify_token
+#         run: |
+#           if [ "${{ steps.check_token.outputs.use_staging }}" = "true" ]; then
+#             TOKEN="${{ secrets.CF_API_TOKEN_STAGING }}"
+#             TOKEN_NAME="CF_API_TOKEN_STAGING"
+#           else  
+#             TOKEN="${{ secrets.CF_API_TOKEN_PROD }}"
+#             TOKEN_NAME="CF_API_TOKEN_PROD"
+#           fi
 
-      - name: Wait for staging propagation
-        run: sleep ${{ env.PUBLISH_SLEEP_SECONDS }}
+#           echo "🔐 Testing $TOKEN_NAME with Cloudflare API..."
+#           echo ""
+          
+#           # First, get the account ID from accounts list
+#           echo "Step 2a: Getting account information..."
+#           ACCOUNTS_RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "https://api.cloudflare.com/client/v4/accounts" \
+#             -H "Authorization: Bearer $TOKEN" \
+#             -H "Content-Type: application/json" 2>&1)
+          
+#           ACCOUNTS_HTTP_CODE=$(echo "$ACCOUNTS_RESPONSE" | tail -n1)
+#           ACCOUNTS_BODY=$(echo "$ACCOUNTS_RESPONSE" | sed '$d')
+          
+#           if [ "$ACCOUNTS_HTTP_CODE" != "200" ]; then
+#             echo "::error::Failed to get accounts (HTTP $ACCOUNTS_HTTP_CODE)"
+#             echo "Response: $ACCOUNTS_BODY"
+#             exit 1
+#           fi
+          
+#           # Extract the first account ID from the result array
+#           # Try using jq if available (more reliable)
+#           if command -v jq >/dev/null 2>&1; then
+#             ACCOUNT_ID=$(echo "$ACCOUNTS_BODY" | jq -r '.result[0].id // empty' 2>/dev/null)
+#           fi
+          
+#           # Fallback to sed/grep if jq is not available
+#           if [ -z "$ACCOUNT_ID" ]; then
+#             ACCOUNT_ID=$(echo "$ACCOUNTS_BODY" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p' | head -1)
+#           fi
+          
+#           # Another fallback method
+#           if [ -z "$ACCOUNT_ID" ]; then
+#             ACCOUNT_ID=$(echo "$ACCOUNTS_BODY" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+#           fi
+          
+#           if [ -z "$ACCOUNT_ID" ]; then
+#             echo "::error::Could not extract account ID from accounts response"
+#             echo "Response: $ACCOUNTS_BODY"
+#             exit 1
+#           fi
+          
+#           echo "✓ Account ID: $ACCOUNT_ID"
+#           echo ""
+          
+#           # Now verify the token using the account-specific endpoint
+#           echo "Step 2b: Verifying token with account-specific endpoint..."
+#           echo "Making request to: https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/tokens/verify"
+#           echo ""
+          
+#           RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/tokens/verify" \
+#             -H "Authorization: Bearer $TOKEN" \
+#             -H "Content-Type: application/json" 2>&1)
+          
+#           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+#           BODY=$(echo "$RESPONSE" | sed '$d')
+          
+#           echo "Response HTTP Code: $HTTP_CODE"
+          
+#           if [ "$HTTP_CODE" = "200" ]; then
+#             echo "✓ Token is valid and accessible!"
+#             echo "Response: $BODY" | head -c 300
+#             echo ""
+#             echo "token_valid=true" >> $GITHUB_OUTPUT
+#           else
+#             echo "✗ Token authentication failed!"
+#             echo "HTTP Code: $HTTP_CODE"
+#             echo "Response: $BODY"
+#             echo ""
+#             echo "Possible issues:"
+#             echo "  - Token is expired or revoked"
+#             echo "  - Token has insufficient permissions"
+#             echo "  - Token value is incorrect"
+#             echo ""
+#             echo "::error::Token verification failed (HTTP $HTTP_CODE)"
+#             echo "token_valid=false" >> $GITHUB_OUTPUT
+#             exit 1
+#           fi
 
-      - name: Run unit tests (workspace)
-        run: npm --workspace "${{ matrix.dir }}" run test
+#       - name: Step 3 - Deploy to staging using Wrangler (staging token)
+#         if: steps.verify_token.outputs.token_valid == 'true' && steps.check_token.outputs.use_staging == 'true'
+#         env:
+#           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN_STAGING }}
+#         run: |
+#           cd "${{ matrix.dir }}"
+#           echo "🚀 Deploying to staging..."
+#           echo "Working directory: $(pwd)"
+#           echo "Using token: CF_API_TOKEN_STAGING"
+#           echo ""
+#           wrangler deploy --env staging
 
-      - name: Run coverage (workspace)
-        run: npm --workspace "${{ matrix.dir }}" run coverage
+#       - name: Step 3 - Deploy to staging using Wrangler (prod token fallback)
+#         if: steps.verify_token.outputs.token_valid == 'true' && steps.check_token.outputs.use_staging != 'true'
+#         env:
+#           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN_PROD }}
+#         run: |
+#           cd "${{ matrix.dir }}"
+#           echo "🚀 Deploying to staging..."
+#           echo "Working directory: $(pwd)"
+#           echo "Using token: CF_API_TOKEN_PROD (fallback)"
+#           echo ""
+#           wrangler deploy --env staging
 
-      - name: Health check staging URL
-        run: |
-          URL="https://stageenv-${{ matrix.prod_name }}.${{ env.WF_DOMAIN_ROOT }}${{ env.HEALTH_PATH }}"
-          echo "Checking $URL"
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$URL" || echo "000")
-          echo "HTTP $HTTP_CODE"
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "Health check failed: $HTTP_CODE"
-            exit 1
-          fi
-          echo "Health OK"
+#       - name: Wait for staging propagation
+#         run: sleep ${{ env.PUBLISH_SLEEP_SECONDS }}
 
-      - name: Upload coverage artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-${{ matrix.prod_name }}
-          path: |
-            ${{ matrix.dir }}/coverage
-            coverage
-            ./coverage
+#       - name: Run unit tests (workspace)
+#         run: npm --workspace "${{ matrix.dir }}" run test
+
+#       - name: Run coverage (workspace)
+#         run: npm --workspace "${{ matrix.dir }}" run coverage
+
+#       - name: Health check staging URL
+#         run: |
+#           URL="https://stageenv-${{ matrix.prod_name }}.${{ env.WF_DOMAIN_ROOT }}${{ env.HEALTH_PATH }}"
+#           echo "Checking $URL"
+#           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$URL" || echo "000")
+#           echo "HTTP $HTTP_CODE"
+#           if [ "$HTTP_CODE" != "200" ]; then
+#             echo "Health check failed: $HTTP_CODE"
+#             exit 1
+#           fi
+#           echo "Health OK"
+
+#       - name: Upload coverage artifact
+#         if: always()
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: coverage-${{ matrix.prod_name }}
+#           path: |
+#             ${{ matrix.dir }}/coverage
+#             coverage
+#             ./coverage

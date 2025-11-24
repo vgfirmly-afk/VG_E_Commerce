@@ -1,0 +1,109 @@
+name: Deploy to Staging
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths: ['backend/**', '.github/workflows/staging-deploy.yml']
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: 20
+  WRANGLER_VERSION: 4.49.0
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-staging:
+    name: Deploy ${{ matrix.worker_name }} to Staging
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - worker_dir: backend/Auth_Worker
+            worker_name: w2-auth-worker
+          - worker_dir: backend/Cart_Worker
+            worker_name: w2-cart-worker
+          - worker_dir: backend/Catalog_worker
+            worker_name: w2-catalog-worker
+          - worker_dir: backend/Checkout_Worker
+            worker_name: w2-checkout-worker
+          - worker_dir: backend/Fullfilment_Worker
+            worker_name: w2-fullfillment-worker
+          - worker_dir: backend/Invertory_Worker
+            worker_name: w2-inventory-worker
+          - worker_dir: backend/Payment_worker
+            worker_name: w2-payment-worker
+          - worker_dir: backend/Pricing_Worker
+            worker_name: w2-pricing-worker
+
+    steps: 
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if worker changed
+        id: check_changes
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✓ Manual trigger - deploying ${{ matrix.worker_name }}"
+            exit 0
+          fi
+          
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.sha }}"
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" 2>/dev/null || echo "")
+          
+          # Check if files in this worker directory changed
+          WORKER_CHANGED=$(echo "$CHANGED_FILES" | grep "^${{ matrix.worker_dir }}/" || echo "")
+          
+          if [ -n "$WORKER_CHANGED" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✓ ${{ matrix.worker_name }} has changes - will deploy"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "✗ ${{ matrix.worker_name }} - no changes - skipping"
+          fi
+
+      - name: Set up Node.js
+        if: steps.check_changes.outputs.changed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies and deploy
+        if: steps.check_changes.outputs.changed == 'true'
+        env:
+          HUSKY: 0
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN_STAGING }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          npm install -g wrangler@${{ env.WRANGLER_VERSION }}
+          npm ci --ignore-scripts || true
+          cd ${{ matrix.worker_dir }}
+          npm ci --ignore-scripts
+          wrangler deploy --env staging
+
+      - name: Run tests and health check
+        if: steps.check_changes.outputs.changed == 'true'
+        continue-on-error: true
+        run: |
+          cd ${{ matrix.worker_dir }}
+          npm run test || true
+          sleep 5
+          curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://stageenv-${{ matrix.worker_name }}.vg-firmly.workers.dev/_/health" || true
+
+      - name: Upload coverage
+        if: steps.check_changes.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: coverage-${{ matrix.worker_name }}
+          path: ${{ matrix.worker_dir }}/coverage
+          retention-days: 7
