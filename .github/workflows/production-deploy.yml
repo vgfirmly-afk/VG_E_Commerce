@@ -182,6 +182,7 @@ jobs:
             exit 1
           fi
 
+
       - name: Rollback deployment
         id: rollback
         if: steps.check_changes.outputs.changed == 'true' && steps.health_check.outcome == 'failure'
