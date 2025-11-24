@@ -120,7 +120,7 @@ jobs:
             -d "{\"text\":\"✅ *Deployment Successful*\\n*Worker:* ${{ matrix.worker_name }}\\n*URL:* $WORKER_URL\\n*PR:* $PR_URL\"}" \
             "$SLACK_WEBHOOK_URL" || true
 
-      - name: Send Slack notification - Skipped
+      - name: Send Slack notification - Skipped  
         if: steps.check_changes.outputs.changed == 'false'
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
