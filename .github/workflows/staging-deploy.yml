@@ -65,20 +65,41 @@ jobs:
       - name: Check if worker changed
         id: check_changes
         run: |
+          CHANGED=false
+          
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
+            CHANGED=true
           elif [ "${{ github.event_name }}" = "pull_request" ]; then
-            if git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -q "^${{ matrix.worker_dir }}/"; then
-              echo "changed=true" >> $GITHUB_OUTPUT
-            else
-              echo "changed=false" >> $GITHUB_OUTPUT
-            fi
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.sha }}"
+            CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" 2>/dev/null || echo "")
           else
-            if git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -q "^${{ matrix.worker_dir }}/"; then
-              echo "changed=true" >> $GITHUB_OUTPUT
+            BEFORE_SHA="${{ github.event.before }}"
+            AFTER_SHA="${{ github.sha }}"
+            
+            if [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+              CHANGED_FILES=$(git diff --name-only "$BEFORE_SHA" "$AFTER_SHA" 2>/dev/null || echo "")
             else
-              echo "changed=false" >> $GITHUB_OUTPUT
+              CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
             fi
+          fi
+          
+          # Check if any backend files changed (exclude workflow file)
+          BACKEND_CHANGED=$(echo "$CHANGED_FILES" | grep -E "^backend/" | grep -v "^\.github/" || echo "")
+          
+          # Only check worker if backend files actually changed
+          if [ -n "$BACKEND_CHANGED" ]; then
+            if echo "$CHANGED_FILES" | grep -q "^${{ matrix.worker_dir }}/"; then
+              CHANGED=true
+            fi
+          fi
+          
+          if [ "$CHANGED" = "true" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✓ ${{ matrix.worker_name }} has changes - will deploy"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "✗ ${{ matrix.worker_name }} has no changes - skipping"
           fi
 
       - name: Set up Node.js
