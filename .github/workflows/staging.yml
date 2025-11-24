@@ -96,11 +96,35 @@ jobs:
             exit 1
           fi
 
+      - name: Test Cloudflare API token
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN_STAGING }}
+        run: |
+          if [ -z "$CF_API_TOKEN" ]; then
+            echo "::error::CF_API_TOKEN is not set. Please add CF_API_TOKEN_STAGING secret to the 'staging' environment."
+            exit 1
+          fi
+          echo "Testing token authentication..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            -H "Content-Type: application/json" || echo "000")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Token authentication failed (HTTP $HTTP_CODE)"
+            echo "Please verify:"
+            echo "1. CF_API_TOKEN_STAGING secret exists in GitHub Environment 'staging'"
+            echo "2. Token is valid and not expired"
+            echo "3. Token has required permissions: Account:Read, Workers:Edit, D1:Edit, KV:Edit, R2:Edit"
+            exit 1
+          fi
+          echo "✓ Token is valid"
+
       - name: Deploy to staging using Wrangler
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN_STAGING }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN_STAGING }}
         run: |
           cd "${{ matrix.dir }}"
+          echo "Deploying from: $(pwd)"
           wrangler deploy --env staging
 
       - name: Wait for staging propagation
