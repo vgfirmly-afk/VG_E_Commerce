@@ -7,7 +7,6 @@ on:
       - features/cd5
       - main
       - develop
-    # Only trigger if backend files change (optional - remove paths to trigger on any change)
     paths:
       - 'backend/**'
       - '.github/workflows/staging-deploy.yml'
@@ -60,19 +59,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-      
-      - name: Debug workflow trigger
-        run: |
-          echo "🔍 Workflow Debug Information:"
-          echo "Branch: ${{ github.ref }}"
-          echo "Event: ${{ github.event_name }}"
-          echo "Actor: ${{ github.actor }}"
-          echo "Repository: ${{ github.repository }}"
-          echo "Commit: ${{ github.sha }}"
-          echo "Changed files:"
-          git diff --name-only HEAD~1 HEAD || echo "Unable to determine changed files"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
