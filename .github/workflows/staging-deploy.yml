@@ -50,7 +50,7 @@ jobs:
           fetch-depth: ${{ github.event_name == 'pull_request' && 0 || 2 }}
 
       - name: Check if worker changed
-        id: check_changes
+        id: check_changes 
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
