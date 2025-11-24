@@ -1,9 +1,0 @@
-CF API token : Staging_API_Token
-5RPPGaUOdgTtjNhZDeRabNMDGO01LGIPY6ROlXm-
-
-
-CF API token : Production_API_Token	
-r6PBn9qINo99K0DGG2v2gXqQaUSC5JSm0xsRakpv
-
-CF Account id
-5d86cf27a6d201bc7da73af4fb9dd8f0
