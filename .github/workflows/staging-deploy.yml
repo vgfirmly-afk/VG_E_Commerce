@@ -107,3 +107,24 @@ jobs:
           name: coverage-${{ matrix.worker_name }}
           path: ${{ matrix.worker_dir }}/coverage
           retention-days: 7
+
+      - name: Send Slack notification - Deployment success
+        if: steps.check_changes.outputs.changed == 'true' && success()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          WORKER_URL="https://stageenv-${{ matrix.worker_name }}.vg-firmly.workers.dev"
+          PR_URL="${{ github.event.pull_request.html_url }}"
+          [ -z "$PR_URL" ] && PR_URL="Manual trigger"
+          curl -X POST -H 'Content-type: application/json' \
+            -d "{\"text\":\"✅ *Deployment Successful*\\n*Worker:* ${{ matrix.worker_name }}\\n*URL:* $WORKER_URL\\n*PR:* $PR_URL\"}" \
+            "$SLACK_WEBHOOK_URL" || true
+
+      - name: Send Slack notification - Skipped
+        if: steps.check_changes.outputs.changed == 'false'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            -d "{\"text\":\"⏭️ *Deployment Skipped*\\n*Worker:* ${{ matrix.worker_name }}\\n*Reason:* No changes detected in this worker\"}" \
+            "$SLACK_WEBHOOK_URL" || true
