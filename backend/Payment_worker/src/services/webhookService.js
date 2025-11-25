@@ -416,7 +416,7 @@ export async function verifyWebhookSignature(headers, body, env) {
 /**
  * Handle PayPal webhook event
  * This is where the actual payment processing happens (server-to-server)
- * Only handles CHECKOUT.ORDER.APPROVED - all other events are ignored
+ * Handles CHECKOUT.ORDER.APPROVED and PAYMENT.CAPTURE.DECLINED events
  */
 export async function handleWebhookEvent(event, env) {
   try {
@@ -429,21 +429,30 @@ export async function handleWebhookEvent(event, env) {
       resource_type: resource?.type,
     });
 
-    // Only handle CHECKOUT.ORDER.APPROVED - all other events are ignored
+    // Handle CHECKOUT.ORDER.APPROVED - triggers payment capture
     if (eventType === "CHECKOUT.ORDER.APPROVED") {
       console.log("CHECKOUT.ORDER.APPROVED", resource);
       return await handleOrderApproved(resource, env);
+    }
+
+    // Handle PAYMENT.CAPTURE.DECLINED - payment capture was declined
+    if (eventType === "PAYMENT.CAPTURE.DECLINED") {
+      logger("webhook.capture.declined", {
+        event_id: event.id,
+        resource_id: resource?.id,
+      });
+      return await handlePaymentCaptureDenied(resource, env);
     }
 
     // Log and ignore all other event types
     logger("webhook.event.ignored", {
       event_type: eventType,
       event_id: event.id,
-      message: "Only CHECKOUT.ORDER.APPROVED is processed",
+      message: "Event type not processed",
     });
     return {
       processed: false,
-      message: `Event type ${eventType} ignored - only CHECKOUT.ORDER.APPROVED is processed`,
+      message: `Event type ${eventType} ignored - only CHECKOUT.ORDER.APPROVED and PAYMENT.CAPTURE.DECLINED are processed`,
     };
   } catch (err) {
     logError("handleWebhookEvent: Error processing webhook", err, { event });
@@ -588,16 +597,27 @@ async function handlePaymentCaptureDenied(resource, env) {
     const orderId = resource.supplementary_data?.related_ids?.order_id;
 
     if (!orderId) {
+      logWarn("handlePaymentCaptureDenied: No order ID in resource", {
+        resource_id: resource?.id,
+      });
       return { processed: false, error: "No order ID found" };
     }
 
     let payment = await getPaymentByOrderId(orderId, env);
     if (!payment) {
+      logWarn("handlePaymentCaptureDenied: Payment not found", { orderId });
       return { processed: false, error: "Payment not found" };
     }
 
-    const failureReason = resource.reason_code || "Payment capture denied";
+    // Extract failure reason from PayPal error details
+    const reasonCode = resource.reason_code || "INSTRUMENT_DECLINED";
+    const reasonDescription = resource.reason_description || 
+      (resource.details?.[0]?.description) || 
+      "The instrument presented was either declined by the processor or bank, or it can't be used for this payment.";
+    
+    const failureReason = `${reasonCode}: ${reasonDescription}`;
 
+    // Update payment status to approved (not captured) with failure reason
     payment = await updatePaymentStatus(
       payment.payment_id,
       "approved",
@@ -606,8 +626,12 @@ async function handlePaymentCaptureDenied(resource, env) {
         metadata: {
           ...(payment.metadata || {}),
           capture_denied: {
-            reason_code: resource.reason_code,
-            reason_description: resource.reason_description,
+            reason_code: reasonCode,
+            reason_description: reasonDescription,
+            capture_id: resource.id,
+            capture_status: resource.status,
+            amount: resource.amount,
+            details: resource.details,
           },
           webhook_received_at: new Date().toISOString(),
         },
@@ -620,10 +644,18 @@ async function handlePaymentCaptureDenied(resource, env) {
       "capture_denied",
       {
         paypal_order_id: orderId,
-        reason_code: resource.reason_code,
+        reason_code: reasonCode,
+        capture_id: resource.id,
       },
       env,
     );
+
+    logger("webhook.payment.capture.denied", {
+      payment_id: payment.payment_id,
+      paypal_order_id: orderId,
+      reason_code: reasonCode,
+      capture_id: resource.id,
+    });
 
     // Notify Checkout Worker about denial
     notifyCheckoutWorker(payment, env).catch((err) => {
@@ -636,6 +668,7 @@ async function handlePaymentCaptureDenied(resource, env) {
       processed: true,
       payment_id: payment.payment_id,
       status: "approved",
+      message: `Payment capture denied: ${reasonCode}`,
     };
   } catch (err) {
     logError("handlePaymentCaptureDenied: Error", err, { resource });
@@ -696,6 +729,38 @@ async function handleOrderApproved(resource, env) {
     // Check order status and handle accordingly
     let captureResult = null; // Will hold the capture result
     let shouldCapture = true;
+
+    // Check if order is already DECLINED - don't attempt capture
+    if (orderStatus === "DECLINED" || orderStatus === "VOIDED") {
+      logWarn("handleOrderApproved: Order already DECLINED/VOIDED", {
+        payment_id: payment.payment_id,
+        paypal_order_id: orderId,
+        order_status: orderStatus,
+      });
+
+      // Update payment status to reflect the declined state
+      payment = await updatePaymentStatus(
+        payment.payment_id,
+        "approved",
+        {
+          failure_reason: `Order ${orderStatus.toLowerCase()} - payment capture declined`,
+          metadata: {
+            ...(payment.metadata || {}),
+            order_status: orderStatus,
+            capture_declined: true,
+            webhook_received_at: new Date().toISOString(),
+          },
+        },
+        env,
+      );
+
+      return {
+        processed: true,
+        payment_id: payment.payment_id,
+        status: "approved",
+        message: `Order ${orderStatus.toLowerCase()} - capture not attempted`,
+      };
+    }
 
     if (orderStatus === "COMPLETED") {
       // Order already completed/captured - use existing capture data from resource
@@ -786,6 +851,35 @@ async function handleOrderApproved(resource, env) {
 
           captureResult = paypalOrder;
           shouldCapture = false;
+        } else if (paypalOrder.status === "DECLINED" || paypalOrder.status === "VOIDED") {
+          // Order declined - don't attempt capture
+          logWarn("handleOrderApproved: Order DECLINED/VOIDED from PayPal", {
+            payment_id: payment.payment_id,
+            paypal_order_id: orderId,
+            order_status: paypalOrder.status,
+          });
+
+          payment = await updatePaymentStatus(
+            payment.payment_id,
+            "approved",
+            {
+              failure_reason: `Order ${paypalOrder.status.toLowerCase()} - payment capture declined`,
+              metadata: {
+                ...(payment.metadata || {}),
+                order_status: paypalOrder.status,
+                capture_declined: true,
+                webhook_received_at: new Date().toISOString(),
+              },
+            },
+            env,
+          );
+
+          return {
+            processed: true,
+            payment_id: payment.payment_id,
+            status: "approved",
+            message: `Order ${paypalOrder.status.toLowerCase()} - capture not attempted`,
+          };
         } else if (paypalOrder.status !== "APPROVED") {
           // Still not ready
           return {
@@ -852,6 +946,24 @@ async function handleOrderApproved(resource, env) {
             throw new Error("Capture returned null");
           }
 
+          // Check if capture was actually declined
+          const captureStatus = captureAttemptResult.status;
+          if (captureStatus === "DECLINED") {
+            const purchaseUnit = captureAttemptResult.purchase_units?.[0];
+            const captureData = purchaseUnit?.payments?.captures?.[0];
+            const reasonCode = captureData?.reason_code || "INSTRUMENT_DECLINED";
+            
+            logError("handleOrderApproved: Capture declined by PayPal", null, {
+              payment_id: payment.payment_id,
+              paypal_order_id: orderId,
+              reason_code: reasonCode,
+              capture_id: captureData?.id,
+            });
+
+            // Don't retry - payment was declined
+            throw new Error(`Payment capture declined: ${reasonCode}`);
+          }
+
           // Success - break out of retry loop
           logger("webhook.order.approved.capture_success", {
             payment_id: payment.payment_id,
@@ -868,6 +980,19 @@ async function handleOrderApproved(resource, env) {
             attempt,
             max_retries: maxRetries,
           });
+
+          // If error indicates payment was declined, don't retry
+          const errorMessage = captureErr?.message || "";
+          if (errorMessage.includes("DECLINED") || 
+              errorMessage.includes("INSTRUMENT_DECLINED") ||
+              errorMessage.includes("declined")) {
+            logWarn("handleOrderApproved: Payment declined - stopping retries", {
+              payment_id: payment.payment_id,
+              paypal_order_id: orderId,
+              error: errorMessage,
+            });
+            break; // Stop retrying if payment was declined
+          }
 
           // If this is not the last attempt, wait before retrying
           if (attempt < maxRetries) {
