@@ -62,12 +62,15 @@ export async function getProductImage(productId, imageId) {
   return response.blob();
 }
 
-export async function searchProducts(query, page = 1, limit = 20) {
+export async function searchProducts(query, page = 1, limit = 20, category = "") {
   const params = new URLSearchParams({
     q: query,
     page: page.toString(),
     limit: limit.toString(),
   });
+  if (category) {
+    params.append("category", category);
+  }
   const response = await fetchWithCredentials(
     `${API_BASE}/api/v1/search?${params}`,
     {

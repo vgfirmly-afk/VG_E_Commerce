@@ -1,6 +1,7 @@
 import { writable } from "svelte/store";
 import { browser } from "$app/environment";
 import { getMe } from "../api/auth.js";
+import { getUserIdCookie, clearUserIdCookie } from "../utils/cookies.js";
 
 // Auth state - uses httpOnly cookies, no localStorage for tokens
 const createAuthStore = () => {
@@ -22,7 +23,8 @@ const createAuthStore = () => {
       });
     },
     logout: () => {
-      // Clear user state, cookies will be cleared by backend
+      // Clear user state and userId cookie
+      clearUserIdCookie();
       set({
         user: null,
         isAuthenticated: false,
@@ -31,9 +33,22 @@ const createAuthStore = () => {
     },
     init: async () => {
       // Check authentication by calling /me endpoint
-      // Cookies are automatically sent
+      // Only call if we have userId cookie (indicates tokens might exist)
       if (browser) {
         set({ user: null, isAuthenticated: false, loading: true });
+        
+        // Check if userId cookie exists before making request
+        const userId = getUserIdCookie();
+        if (!userId) {
+          // No userId cookie, definitely not authenticated
+          set({
+            user: null,
+            isAuthenticated: false,
+            loading: false,
+          });
+          return;
+        }
+        
         try {
           const user = await getMe();
           set({
@@ -43,6 +58,7 @@ const createAuthStore = () => {
           });
         } catch (err) {
           // Not authenticated or error
+          clearUserIdCookie(); // Clear invalid userId cookie
           set({
             user: null,
             isAuthenticated: false,

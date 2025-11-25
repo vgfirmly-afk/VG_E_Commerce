@@ -270,6 +270,46 @@ async function getCheckoutSessionFromCheckoutWorker(sessionId, env) {
 }
 
 /**
+ * Clear cart via Cart Worker
+ */
+async function clearCartViaCartWorker(cartId, env) {
+  try {
+    const cartWorker = env.CART_WORKER;
+    if (!cartWorker) {
+      logWarn("clearCartViaCartWorker: CART_WORKER binding not available", {
+        cartId,
+      });
+      return false;
+    }
+
+    const url = `https://cart-worker/api/v1/cart/${encodeURIComponent(cartId)}`;
+    const response = await cartWorker.fetch(
+      new Request(url, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Source": "payment-worker-webhook",
+        },
+      }),
+    );
+
+    if (!response.ok) {
+      logError("clearCartViaCartWorker: Failed to clear cart", null, {
+        cartId,
+        status: response.status,
+      });
+      return false;
+    }
+
+    logger("cart.cleared.via.webhook", { cartId });
+    return true;
+  } catch (err) {
+    logError("clearCartViaCartWorker: Error", err, { cartId });
+    return false;
+  }
+}
+
+/**
  * Get product_id for SKU from Catalog Worker
  */
 async function getProductIdForSku(skuId, env) {
@@ -376,6 +416,7 @@ export async function verifyWebhookSignature(headers, body, env) {
 /**
  * Handle PayPal webhook event
  * This is where the actual payment processing happens (server-to-server)
+ * Only handles CHECKOUT.ORDER.APPROVED - all other events are ignored
  */
 export async function handleWebhookEvent(event, env) {
   try {
@@ -388,58 +429,22 @@ export async function handleWebhookEvent(event, env) {
       resource_type: resource?.type,
     });
 
-    // Handle different webhook event types
-    switch (eventType) {
-      case "PAYMENT.CAPTURE.COMPLETED":
-        console.log("PAYMENT.CAPTURE.COMPLETED", resource);
-        return await handlePaymentCaptureCompleted(resource, env);
-
-      case "PAYMENT.CAPTURE.DENIED":
-        console.log("PAYMENT.CAPTURE.DENIED", resource);
-        return await handlePaymentCaptureDenied(resource, env);
-
-      case "PAYMENT.CAPTURE.DECLINED":
-        console.log("PAYMENT.CAPTURE.DECLINED", resource);
-        return await handlePaymentCaptureDenied(resource, env); // Same handler as DENIED
-
-      case "PAYMENT.ORDER.CANCELLED":
-        console.log("PAYMENT.ORDER.CANCELLED", resource);
-        return await handleOrderCancelled(resource, env);
-
-      case "PAYMENT.ORDER.CREATED":
-        console.log("PAYMENT.ORDER.CREATED", resource);
-        return await handleOrderCreated(resource, env);
-
-      case "CHECKOUT.ORDER.APPROVED":
-        console.log("CHECKOUT.ORDER.APPROVED", resource);
-        return await handleOrderApproved(resource, env);
-
-      case "CHECKOUT.ORDER.COMPLETED":
-        console.log("CHECKOUT.ORDER.COMPLETED", resource);
-        return await handleOrderCompleted(resource, env);
-
-      case "CHECKOUT.ORDER.DECLINED":
-        console.log("CHECKOUT.ORDER.DECLINED", resource);
-        return await handleOrderCancelled(resource, env); // Treat DECLINED as cancelled
-
-      case "CHECKOUT.ORDER.SAVED":
-        // Order saved but not yet approved - just log it
-        logger("webhook.checkout.order.saved", { orderId: resource.id });
-        return { processed: true, message: "Order saved (no action needed)" };
-
-      case "CHECKOUT.ORDER.VOIDED":
-        return await handleOrderCancelled(resource, env); // Treat VOIDED as cancelled
-
-      default:
-        logger("webhook.event.ignored", {
-          event_type: eventType,
-          event_id: event.id,
-        });
-        return {
-          processed: false,
-          message: `Event type ${eventType} not handled`,
-        };
+    // Only handle CHECKOUT.ORDER.APPROVED - all other events are ignored
+    if (eventType === "CHECKOUT.ORDER.APPROVED") {
+      console.log("CHECKOUT.ORDER.APPROVED", resource);
+      return await handleOrderApproved(resource, env);
     }
+
+    // Log and ignore all other event types
+    logger("webhook.event.ignored", {
+      event_type: eventType,
+      event_id: event.id,
+      message: "Only CHECKOUT.ORDER.APPROVED is processed",
+    });
+    return {
+      processed: false,
+      message: `Event type ${eventType} ignored - only CHECKOUT.ORDER.APPROVED is processed`,
+    };
   } catch (err) {
     logError("handleWebhookEvent: Error processing webhook", err, { event });
     throw err;
@@ -640,54 +645,414 @@ async function handlePaymentCaptureDenied(resource, env) {
 
 /**
  * Handle CHECKOUT.ORDER.APPROVED webhook
- * Order was approved by user
+ * This is the ONLY webhook event we process from PayPal
+ * Performs all post-payment operations:
+ * 1. Capture payment
+ * 2. Create order (via Fulfillment Worker)
+ * 3. Clear cart (via Cart Worker)
+ * 4. Deduct inventory (via Inventory Worker)
  */
 async function handleOrderApproved(resource, env) {
   try {
     const orderId = resource.id;
 
+    // Find payment by PayPal order ID
     let payment = await getPaymentByOrderId(orderId, env);
     if (!payment) {
+      logError("handleOrderApproved: Payment not found", null, { orderId });
       return { processed: false, error: "Payment not found" };
     }
 
-    // Update to approved if not already
-    if (payment.status !== "approved" && payment.status !== "captured") {
+    // Step 1: Check order status and capture the payment
+    logger("webhook.order.approved.capturing", {
+      payment_id: payment.payment_id,
+      paypal_order_id: orderId,
+      order_status: resource.status,
+    });
+
+    // Check if order is already captured
+    if (payment.status === "captured") {
+      logger("webhook.order.already_captured", {
+        payment_id: payment.payment_id,
+        paypal_order_id: orderId,
+      });
+      // Order already captured, skip capture but continue with other operations
+      return {
+        processed: true,
+        payment_id: payment.payment_id,
+        status: "captured",
+        message: "Payment already captured",
+      };
+    }
+
+    // Check order status from webhook resource first
+    const orderStatus = resource.status;
+    logger("webhook.order.approved.status", {
+      payment_id: payment.payment_id,
+      paypal_order_id: orderId,
+      order_status: orderStatus,
+    });
+
+    // Check order status and handle accordingly
+    let captureResult = null; // Will hold the capture result
+    let shouldCapture = true;
+
+    if (orderStatus === "COMPLETED") {
+      // Order already completed/captured - use existing capture data from resource
+      logWarn("handleOrderApproved: Order already COMPLETED", {
+        payment_id: payment.payment_id,
+        paypal_order_id: orderId,
+      });
+      
+      const purchaseUnit = resource.purchase_units?.[0];
+      const captureData = purchaseUnit?.payments?.captures?.[0];
       const payer = resource.payer;
 
       payment = await updatePaymentStatus(
         payment.payment_id,
-        "approved",
+        "captured",
         {
+          paypal_transaction_id: captureData?.id || null,
           payer_email: payer?.email_address || null,
           payer_name: payer?.name
             ? `${payer.name.given_name} ${payer.name.surname}`.trim()
             : null,
+          captured_at: new Date().toISOString(),
           metadata: {
             ...(payment.metadata || {}),
-            payer_id: payer?.payer_id,
+            paypal_capture: {
+              id: captureData?.id,
+              status: captureData?.status,
+              amount: captureData?.amount,
+            },
             webhook_received_at: new Date().toISOString(),
           },
         },
         env,
       );
-
-      await logPaymentEvent(
-        payment.payment_id,
-        "approved",
-        {
+      
+      // Use the resource as capture result
+      captureResult = resource;
+      shouldCapture = false;
+    } else if (orderStatus !== "APPROVED") {
+      // Order not in APPROVED status - get fresh status from PayPal
+      logWarn("handleOrderApproved: Order not in APPROVED status from webhook", {
+        payment_id: payment.payment_id,
+        paypal_order_id: orderId,
+        webhook_status: orderStatus,
+      });
+      
+      // Get fresh order status from PayPal
+      let paypalOrder;
+      try {
+        paypalOrder = await getPayPalOrder(orderId, env);
+        logger("webhook.order.status_checked", {
+          payment_id: payment.payment_id,
           paypal_order_id: orderId,
-          payer_id: payer?.payer_id,
-          source: "webhook",
+          order_status: paypalOrder.status,
+        });
+        
+        if (paypalOrder.status === "COMPLETED") {
+          // Order completed between webhook and check
+          const purchaseUnit = paypalOrder.purchase_units?.[0];
+          const captureData = purchaseUnit?.payments?.captures?.[0];
+          const payer = paypalOrder.payer;
+
+          payment = await updatePaymentStatus(
+            payment.payment_id,
+            "captured",
+            {
+              paypal_transaction_id: captureData?.id || null,
+              payer_email: payer?.email_address || null,
+              payer_name: payer?.name
+                ? `${payer.name.given_name} ${payer.name.surname}`.trim()
+                : null,
+              captured_at: new Date().toISOString(),
+              metadata: {
+                ...(payment.metadata || {}),
+                paypal_capture: {
+                  id: captureData?.id,
+                  status: captureData?.status,
+                  amount: captureData?.amount,
+                },
+                webhook_received_at: new Date().toISOString(),
+              },
+            },
+            env,
+          );
+          
+          captureResult = paypalOrder;
+          shouldCapture = false;
+        } else if (paypalOrder.status !== "APPROVED") {
+          // Still not ready
+          return {
+            processed: false,
+            payment_id: payment.payment_id,
+            status: payment.status,
+            message: `Order not ready for capture. Current status: ${paypalOrder.status}. Waiting for APPROVED status.`,
+          };
+        }
+      } catch (orderErr) {
+        logError("handleOrderApproved: Failed to get PayPal order status", orderErr, {
+          payment_id: payment.payment_id,
+          paypal_order_id: orderId,
+        });
+        // Continue with capture attempt anyway if status was APPROVED in webhook
+        if (orderStatus !== "APPROVED") {
+          return {
+            processed: false,
+            payment_id: payment.payment_id,
+            status: payment.status,
+            message: `Could not verify order status. Webhook status: ${orderStatus}`,
+          };
+        }
+      }
+    }
+
+    // Capture the payment if needed
+    if (shouldCapture) {
+      // Add a small delay to ensure PayPal has fully processed the approval
+      // PayPal sometimes needs a moment to finalize the approval before capture
+      // This delay prevents "Payment capture declined" errors due to timing
+      const initialDelayMs = 1000; // 1 second initial delay
+      logger("webhook.order.approved.waiting_before_capture", {
+        payment_id: payment.payment_id,
+        paypal_order_id: orderId,
+        delay_ms: initialDelayMs,
+        reason: "Waiting for PayPal to finalize approval before capture",
+      });
+      
+      await new Promise((resolve) => setTimeout(resolve, initialDelayMs));
+      
+      // Retry logic with exponential backoff
+      let captureAttemptResult = null;
+      let lastError = null;
+      const maxRetries = 3;
+      const baseDelay = 1000; // 1 second
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          logger("webhook.order.approved.capture_attempt", {
+            payment_id: payment.payment_id,
+            paypal_order_id: orderId,
+            attempt,
+            max_retries: maxRetries,
+          });
+          
+          captureAttemptResult = await capturePayPalOrder(orderId, env);
+          
+          if (!captureAttemptResult) {
+            throw new Error("Capture returned null");
+          }
+          
+          // Success - break out of retry loop
+          logger("webhook.order.approved.capture_success", {
+            payment_id: payment.payment_id,
+            paypal_order_id: orderId,
+            attempt,
+          });
+          captureResult = captureAttemptResult;
+          break;
+        } catch (captureErr) {
+          lastError = captureErr;
+          logError("handleOrderApproved: Capture attempt failed", captureErr, {
+            payment_id: payment.payment_id,
+            paypal_order_id: orderId,
+            attempt,
+            max_retries: maxRetries,
+          });
+          
+          // If this is not the last attempt, wait before retrying
+          if (attempt < maxRetries) {
+            const retryDelay = baseDelay * Math.pow(2, attempt - 1); // Exponential backoff: 1s, 2s, 4s
+            logger("webhook.order.approved.retrying_capture", {
+              payment_id: payment.payment_id,
+              paypal_order_id: orderId,
+              attempt,
+              next_attempt: attempt + 1,
+              retry_delay_ms: retryDelay,
+              reason: "PayPal may need more time to process approval",
+            });
+            await new Promise((resolve) => setTimeout(resolve, retryDelay));
+          }
+        }
+      }
+      
+      // If all retries failed
+      if (!captureResult) {
+        logError("handleOrderApproved: All capture attempts failed", lastError, {
+          payment_id: payment.payment_id,
+          paypal_order_id: orderId,
+          total_attempts: maxRetries,
+        });
+        
+        // Update payment to approved with failure reason
+        payment = await updatePaymentStatus(
+          payment.payment_id,
+          "approved",
+          {
+            failure_reason: `Capture failed after ${maxRetries} attempts: ${lastError?.message || "Unknown error"}`,
+            metadata: {
+              ...(payment.metadata || {}),
+              capture_error: lastError?.message,
+              capture_attempts: maxRetries,
+              webhook_received_at: new Date().toISOString(),
+            },
+          },
+          env,
+        );
+        
+        return {
+          processed: false,
+          payment_id: payment.payment_id,
+          status: "approved",
+          error: `Failed to capture payment after ${maxRetries} attempts: ${lastError?.message || "Unknown error"}`,
+        };
+      }
+    }
+
+    // Extract capture details
+    const purchaseUnit = captureResult.purchase_units?.[0];
+    const captureData = purchaseUnit?.payments?.captures?.[0];
+    const payer = captureResult.payer || resource.payer;
+
+    // Update payment status to captured
+    payment = await updatePaymentStatus(
+      payment.payment_id,
+      "captured",
+      {
+        paypal_transaction_id: captureData?.id || null,
+        payer_email: payer?.email_address || null,
+        payer_name: payer?.name
+          ? `${payer.name.given_name} ${payer.name.surname}`.trim()
+          : null,
+        captured_at: new Date().toISOString(),
+        metadata: {
+          ...(payment.metadata || {}),
+          paypal_capture: {
+            id: captureData?.id,
+            status: captureData?.status,
+            amount: captureData?.amount,
+            final_capture: captureData?.final_capture,
+          },
+          webhook_received_at: new Date().toISOString(),
         },
-        env,
-      );
+      },
+      env,
+    );
+
+    // Log capture event
+    await logPaymentEvent(
+      payment.payment_id,
+      "captured",
+      {
+        paypal_order_id: orderId,
+        paypal_transaction_id: captureData?.id,
+        amount: captureData?.amount?.value,
+        source: "webhook",
+      },
+      env,
+    );
+
+    logger("webhook.payment.captured", {
+      payment_id: payment.payment_id,
+      paypal_order_id: orderId,
+      transaction_id: captureData?.id,
+    });
+
+    // Step 2: Get checkout session to get order details and cart_id
+    const checkoutSession = await getCheckoutSessionFromCheckoutWorker(
+      payment.checkout_session_id,
+      env,
+    );
+
+    if (!checkoutSession) {
+      logError("handleOrderApproved: Checkout session not found", null, {
+        checkout_session_id: payment.checkout_session_id,
+      });
+      // Continue with other operations even if checkout session not found
+    }
+
+    // Step 3: Create order via Fulfillment Worker
+    if (checkoutSession) {
+      try {
+        // Enrich checkout session items with product_id
+        if (checkoutSession.items) {
+          checkoutSession.items = await enrichOrderItemsWithProductIds(
+            checkoutSession.items,
+            env,
+          );
+        }
+
+        await notifyFulfillmentWorker(payment, checkoutSession, env);
+        logger("webhook.order.created", {
+          payment_id: payment.payment_id,
+          checkout_session_id: payment.checkout_session_id,
+        });
+      } catch (fulfillmentErr) {
+        logError("handleOrderApproved: Failed to create order", fulfillmentErr, {
+          payment_id: payment.payment_id,
+        });
+        // Don't throw - log error but continue
+      }
+    }
+
+    // Step 4: Deduct inventory via Inventory Worker
+    if (checkoutSession && checkoutSession.items) {
+      try {
+        const enrichedItems = await enrichOrderItemsWithProductIds(
+          checkoutSession.items,
+          env,
+        );
+        await notifyInventoryWorker(payment, enrichedItems, env);
+        logger("webhook.inventory.deducted", {
+          payment_id: payment.payment_id,
+        });
+      } catch (inventoryErr) {
+        logError("handleOrderApproved: Failed to deduct inventory", inventoryErr, {
+          payment_id: payment.payment_id,
+        });
+        // Don't throw - log error but continue
+      }
+    }
+
+    // Step 5: Clear cart via Cart Worker
+    if (checkoutSession && checkoutSession.cart_id) {
+      try {
+        const cartCleared = await clearCartViaCartWorker(
+          checkoutSession.cart_id,
+          env,
+        );
+        if (cartCleared) {
+          logger("webhook.cart.cleared", {
+            payment_id: payment.payment_id,
+            cart_id: checkoutSession.cart_id,
+          });
+        }
+      } catch (cartErr) {
+        logError("handleOrderApproved: Failed to clear cart", cartErr, {
+          payment_id: payment.payment_id,
+          cart_id: checkoutSession.cart_id,
+        });
+        // Don't throw - log error but continue
+      }
+    }
+
+    // Step 6: Notify Checkout Worker about payment completion
+    try {
+      await notifyCheckoutWorker(payment, env);
+    } catch (checkoutErr) {
+      logError("handleOrderApproved: Failed to notify checkout worker", checkoutErr, {
+        payment_id: payment.payment_id,
+      });
+      // Don't throw - log error but continue
     }
 
     return {
       processed: true,
       payment_id: payment.payment_id,
-      status: "approved",
+      status: "captured",
+      message: "Payment captured and all post-payment operations completed",
     };
   } catch (err) {
     logError("handleOrderApproved: Error", err, { resource });

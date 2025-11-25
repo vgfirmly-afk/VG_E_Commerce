@@ -128,23 +128,18 @@ async function fetchProductStock(productId, env) {
 
 /**
  * Get product by ID with caching and enriched SKU data (prices and stock)
+ * @param {string} productId - Product ID
+ * @param {Object} env - Environment
+ * @param {boolean} skipEnrichment - If true, skip fetching prices and stocks
  */
-export async function getProduct(productId, env) {
+export async function getProduct(productId, env, skipEnrichment = false) {
   try {
-    // Check cache first
-    const cacheKey = `product:${productId}`;
-    let cached = await env.CATALOG_KV?.get(cacheKey, "json");
-
     let parsedProduct;
     let skus;
 
-    if (cached) {
-      logger("product.cache.hit", { productId });
-      parsedProduct = cached;
-      // Get SKUs from cached product or fetch fresh
-      skus = cached.skus || (await getProductSkus(productId, env));
-    } else {
-      // Get from database
+    // If skipEnrichment is true, bypass cache to avoid returning enriched cached data
+    if (skipEnrichment) {
+      // Get from database directly (no cache)
       const product = await getProductById(productId, env);
       if (!product) {
         return null;
@@ -162,10 +157,62 @@ export async function getProduct(productId, env) {
             ? JSON.parse(sku.attributes || "{}")
             : sku.attributes,
       }));
+
+      // Return early without enrichment
+      return parsedProduct;
     }
 
-    // Always fetch prices and stock in parallel using service bindings (bulk calls)
-    // This ensures we always have the latest price and stock data, even for cached products
+    // Normal flow with caching and enrichment
+    const cacheKey = `product:${productId}`;
+    let cached = await env.CATALOG_KV?.get(cacheKey, "json");
+    let shouldCache = false;
+    let fromCache = false;
+
+    if (cached) {
+      logger("product.cache.hit", { productId });
+      fromCache = true;
+      // Use cached product data - it already includes enriched SKUs with prices and stock
+      parsedProduct = cached;
+      skus = cached.skus || [];
+      
+      // Check if cached SKUs already have price and stock data
+      const hasEnrichedData = cached.skus && cached.skus.length > 0 && 
+        cached.skus.some(sku => sku.price || sku.stock);
+      
+      if (hasEnrichedData) {
+        // Cached data is already enriched, return it immediately
+        logger("product.cache.enriched.hit", { productId });
+        return parsedProduct;
+      }
+      
+      // Cached data exists but not enriched, we'll enrich it below
+      // But we still have the base product and SKUs from cache
+      shouldCache = true; // Cache the enriched result
+    } else {
+      // Cache miss - get from database
+      logger("product.cache.miss", { productId });
+      const product = await getProductById(productId, env);
+      if (!product) {
+        return null;
+      }
+
+      // Get SKUs
+      skus = await getProductSkus(productId, env);
+
+      // Parse JSON fields
+      parsedProduct = parseProductJsonFields(product);
+      parsedProduct.skus = skus.map((sku) => ({
+        ...sku,
+        attributes:
+          typeof sku.attributes === "string"
+            ? JSON.parse(sku.attributes || "{}")
+            : sku.attributes,
+      }));
+      
+      shouldCache = true; // Cache the enriched result
+    }
+
+    // Fetch prices and stock in parallel using service bindings (only if not already enriched)
     const [prices, stocks] = await Promise.all([
       fetchProductPrices(productId, env),
       fetchProductStock(productId, env),
@@ -183,7 +230,9 @@ export async function getProduct(productId, env) {
     });
 
     // Merge price and stock data into each SKU
-    parsedProduct.skus = skus.map((sku) => {
+    // Use skus from cache if available, otherwise use parsedProduct.skus
+    const skusToEnrich = skus.length > 0 ? skus : parsedProduct.skus || [];
+    parsedProduct.skus = skusToEnrich.map((sku) => {
       const skuData = {
         ...sku,
         attributes:
@@ -221,11 +270,12 @@ export async function getProduct(productId, env) {
       return skuData;
     });
 
-    // Cache the enriched result
-    if (env.CATALOG_KV) {
+    // Cache the enriched result (either from DB or enriched from cache)
+    if (env.CATALOG_KV && shouldCache) {
       await env.CATALOG_KV.put(cacheKey, JSON.stringify(parsedProduct), {
         expirationTtl: CACHE_TTL_SECONDS,
       });
+      logger("product.cached", { productId, fromCache });
     }
 
     logger("product.fetched", {
@@ -255,26 +305,29 @@ export async function listProducts(query, env) {
       status = "active",
     } = query;
 
-    let products;
+    let result;
     if (q) {
       // Search by keyword
-      products = await searchProducts(q, { page, limit, category }, env);
+      result = await searchProducts(q, { page, limit, category }, env);
     } else {
       // Regular list
-      products = await getProducts(
+      result = await getProducts(
         { category, page, limit, featured, status },
         env,
       );
     }
 
     // Parse JSON fields for each product
-    const parsedProducts = products.map(parseProductJsonFields);
+    const parsedProducts = (result.products || []).map(parseProductJsonFields);
 
     // Get SKUs for each product (optional, can be lazy loaded)
     // For list view, we might not need all SKUs
 
-    logger("products.listed", { count: parsedProducts.length, page, limit });
-    return parsedProducts;
+    logger("products.listed", { count: parsedProducts.length, page, limit, total: result.total });
+    return {
+      products: parsedProducts,
+      total: result.total || 0,
+    };
   } catch (err) {
     logError("listProducts: Error", err, { query });
     throw err;
@@ -439,6 +492,9 @@ export async function uploadProductImage(productId, imageId, imageFile, env) {
     // Generate public URL (R2 public URLs need to be configured via custom domain or use signed URLs)
     // For now, return the path - you'll need to configure a custom domain or use signed URLs
     const publicUrl = `/api/v1/products/${productId}/images/${imageId}`;
+
+    // Invalidate cache since product media has changed
+    await invalidateProductCache(productId, env);
 
     logger("product.image.uploaded", { productId, imageId, r2Path });
     return { imageId, r2Path, url: publicUrl };
@@ -706,9 +762,17 @@ function prepareProductJsonFields(product) {
 
 /**
  * Helper: Invalidate product cache
+ * Removes the product from KV cache when product or SKU data is modified
  */
 async function invalidateProductCache(productId, env) {
-  if (env.CATALOG_KV) {
-    await env.CATALOG_KV.delete(`product:${productId}`);
+  try {
+    if (env.CATALOG_KV) {
+      const cacheKey = `product:${productId}`;
+      await env.CATALOG_KV.delete(cacheKey);
+      logger("product.cache.invalidated", { productId, cacheKey });
+    }
+  } catch (err) {
+    logError("invalidateProductCache: Error", err, { productId });
+    // Don't throw - cache invalidation failure shouldn't break the operation
   }
 }

@@ -81,6 +81,65 @@ router.post("/api/v1/checkout/sessions", async (request, env, ctx) => {
   }
 });
 
+router.post("/api/v1/checkout/checkout_cart", async (request, env, ctx) => {
+  try {
+    const contentType = request.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      return new Response(
+        JSON.stringify({
+          error: "validation_error",
+          message: "Content-Type must be application/json",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseErr) {
+      return new Response(
+        JSON.stringify({
+          error: "validation_error",
+          message: "Invalid JSON in request body",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    const { error, value } = validateCreateCheckoutSession(body);
+    if (error) {
+      return new Response(
+        JSON.stringify({
+          error: "validation_error",
+          message: "Invalid request data",
+          details: error.details.map((d) => ({
+            path: d.path.join("."),
+            message: d.message,
+            type: d.type,
+          })),
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    request.validatedBody = value;
+    return await checkoutHandlers.createSession(request, request.env || env);
+  } catch (err) {
+    console.error(
+      "[Checkout Router] Error in POST /api/v1/checkout/sessions:",
+      err,
+    );
+    return new Response(
+      JSON.stringify({
+        error: "internal_error",
+        message: err?.message ?? String(err),
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
+});
+
 // Get checkout session
 router.get(
   "/api/v1/checkout/sessions/:session_id",

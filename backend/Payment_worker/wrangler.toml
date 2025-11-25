@@ -42,6 +42,10 @@ service = "w2-fullfillment-worker"
 binding = "CATALOG_WORKER"
 service = "w2-catalog-worker"
 
+[[services]]
+binding = "CART_WORKER"
+service = "w2-cart-worker"
+
 # Frontend URLs for payment redirects
 # Set these in wrangler.toml or as environment variables
 # FRONTEND_SUCCESS_URL = "https://your-frontend.com/payment/success"
@@ -87,6 +91,10 @@ service = "stageenv-w2-fullfillment-worker"
 binding = "CATALOG_WORKER"
 service = "stageenv-w2-catalog-worker"
 
+[[env.staging.services]]
+binding = "CART_WORKER"
+service = "stageenv-w2-cart-worker"
+
 # --------------------------
 # dev environment
 # --------------------------
@@ -119,6 +127,10 @@ service = "devenv-w2-fullfillment-worker"
 binding = "CATALOG_WORKER"
 service = "devenv-w2-catalog-worker"
 
+[[env.dev.services]]
+binding = "CART_WORKER"
+service = "devenv-w2-cart-worker"
+
 # --------------------------
 # prod environment
 # --------------------------
@@ -150,6 +162,10 @@ service = "w2-fullfillment-worker"
 [[env.prod.services]]
 binding = "CATALOG_WORKER"
 service = "w2-catalog-worker"
+
+[[env.prod.services]]
+binding = "CART_WORKER"
+service = "w2-cart-worker"
 
 
 

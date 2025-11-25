@@ -55,6 +55,50 @@ async function getPriceFromPricingWorker(skuId, env) {
 }
 
 /**
+ * Get full price data from Pricing Worker via service binding
+ * Returns the complete price object including product_name, attributes, stock, etc.
+ */
+async function getFullPriceDataFromPricingWorker(skuId, env) {
+  try {
+    const pricingWorker = env.PRICING_WORKER;
+    if (!pricingWorker) {
+      logError(
+        "getFullPriceDataFromPricingWorker: PRICING_WORKER binding not available",
+        null,
+        { skuId },
+      );
+      return null;
+    }
+
+    const priceRequest = new Request(
+      `https://pricing-worker/api/v1/prices/${encodeURIComponent(skuId)}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "X-Source": "cart-worker-service-binding",
+        },
+      },
+    );
+
+    const response = await pricingWorker.fetch(priceRequest);
+    if (!response.ok) {
+      logError("getFullPriceDataFromPricingWorker: Failed to get price", null, {
+        skuId,
+        status: response.status,
+      });
+      return null;
+    }
+
+    const priceData = await response.json();
+    return priceData;
+  } catch (err) {
+    logError("getFullPriceDataFromPricingWorker: Error", err, { skuId });
+    return null;
+  }
+}
+
+/**
  * Check stock availability from Inventory Worker via service binding
  */
 async function checkStockFromInventoryWorker(skuId, quantity, env) {
@@ -340,6 +384,86 @@ export async function calculateTotal(cartId, env) {
     };
   } catch (err) {
     logError("calculateTotal: Service error", err, { cartId });
+    throw err;
+  }
+}
+
+/**
+ * Get or create cart with enriched pricing data
+ * - Gets or creates cart based on userId and sessionId
+ * - If cart has items:
+ *   - Fetches prices for all SKUs in parallel from Pricing Worker
+ *   - Calculates cart total using the fetched prices (no duplicate calls)
+ *   - Merges all data into a single response
+ */
+export async function getCartWithEnrichedPricing(userId, sessionId, env) {
+  try {
+    // Get or create cart
+    const cart = await getCart(userId, sessionId, env);
+    
+    if (!cart || !cart.items || cart.items.length === 0) {
+      // Return cart without pricing data if no items
+      return {
+        ...cart,
+        total: null,
+        item_prices: [],
+      };
+    }
+
+    // Fetch prices for all SKUs in parallel (only once)
+    const pricePromises = cart.items.map((item) =>
+      getFullPriceDataFromPricingWorker(item.sku_id, env)
+    );
+    
+    const priceResults = await Promise.all(pricePromises);
+
+    // Calculate total using the already-fetched price data (avoid duplicate calls)
+    let subtotal = 0;
+    const itemTotals = [];
+    const itemPrices = cart.items.map((item, index) => {
+      const priceData = priceResults[index];
+      // Extract price from the fetched data
+      const currentPrice = priceData 
+        ? (priceData.effective_price || priceData.price || 0.0)
+        : 0.0;
+      
+      const itemTotal = currentPrice * item.quantity;
+      subtotal += itemTotal;
+
+      itemTotals.push({
+        item_id: item.item_id,
+        sku_id: item.sku_id,
+        quantity: item.quantity,
+        unit_price: currentPrice,
+        total: itemTotal,
+      });
+
+      return {
+        item_id: item.item_id,
+        sku_id: item.sku_id,
+        quantity: item.quantity,
+        currency: item.currency,
+        price_data: priceData || null,
+      };
+    });
+
+    // Build total object using the calculated values
+    const total = {
+      cart_id: cart.cart_id,
+      subtotal: Math.round(subtotal * 100) / 100, // Round to 2 decimal places
+      currency: cart.currency || "USD",
+      item_count: cart.items.length,
+      items: itemTotals,
+    };
+
+    // Merge all data
+    return {
+      ...cart,
+      total: total,
+      item_prices: itemPrices,
+    };
+  } catch (err) {
+    logError("getCartWithEnrichedPricing: Service error", err, { userId, sessionId });
     throw err;
   }
 }

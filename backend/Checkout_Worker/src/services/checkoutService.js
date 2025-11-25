@@ -221,7 +221,10 @@ export async function createSession(cartId, userId, guestSessionId, env) {
       sessionId: session.session_id,
       cartId,
     });
-    return session;
+
+    // Return full session data (same format as getSession)
+    // This eliminates the need for a separate GET call after creation
+    return await getSession(session.session_id, env);
   } catch (err) {
     logError("createSession: Service error", err, { cartId, userId });
     throw err;
@@ -312,7 +315,27 @@ export async function setDeliveryAddress(
       sessionId,
       addressId: deliveryAddress.address_id,
     });
-    return await getSession(sessionId, env);
+
+    // Get full session data
+    const fullSession = await getSession(sessionId, env);
+
+    // Get available shipping methods now that delivery address is set
+    let shippingMethods = [];
+    try {
+      shippingMethods = await getAvailableShippingMethods(sessionId, env);
+    } catch (shippingErr) {
+      // If shipping methods can't be fetched (e.g., address not valid), log but don't fail
+      logWarn("setDeliveryAddress: Could not fetch shipping methods", {
+        sessionId,
+        error: shippingErr.message,
+      });
+    }
+
+    // Return session data with shipping methods included
+    return {
+      ...fullSession,
+      shipping_methods: shippingMethods,
+    };
   } catch (err) {
     logError("setDeliveryAddress: Service error", err, { sessionId });
     throw err;

@@ -11,6 +11,28 @@ import { logger, logError } from "../utils/logger.js";
 import { PRODUCTS_PER_PAGE, MAX_PRODUCTS_PER_PAGE } from "../../config.js";
 
 /**
+ * Helper function to build pagination metadata
+ */
+function buildPaginationMetadata(total, page, limit) {
+  const totalPages = Math.ceil(total / limit);
+  const hasNext = page < totalPages;
+  const hasPrevious = page > 1;
+  const nextPage = hasNext ? page + 1 : null;
+  const previousPage = hasPrevious ? page - 1 : null;
+
+  return {
+    total,
+    totalPages,
+    currentPage: page,
+    limit,
+    hasNext,
+    hasPrevious,
+    nextPage,
+    previousPage,
+  };
+}
+
+/**
  * GET /products - List products with pagination and filters
  */
 export async function listProducts(request, env) {
@@ -46,11 +68,15 @@ export async function listProducts(request, env) {
       );
     }
 
-    const products = await catalogService.listProducts(value, env);
+    const result = await catalogService.listProducts(value, env);
+    const { products: productsList, total } = result;
+
+    // Build pagination metadata
+    const pagination = buildPaginationMetadata(total, value.page, value.limit);
 
     return new Response(
       JSON.stringify({
-        products: products.map((p) => {
+        products: productsList.map((p) => {
           // Extract images from media field
           let images = [];
           if (p.media) {
@@ -99,9 +125,7 @@ export async function listProducts(request, env) {
             categories: categories,
           };
         }),
-        page: value.page,
-        limit: value.limit,
-        count: products.length,
+        pagination,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
@@ -133,7 +157,11 @@ export async function getProduct(request, env) {
       );
     }
 
-    const product = await catalogService.getProduct(productId, env);
+    // Check if skipEnrichment query parameter is set (for service-to-service calls)
+    const url = new URL(request.url);
+    const skipEnrichment = url.searchParams.get("skipEnrichment") === "true";
+
+    const product = await catalogService.getProduct(productId, env, skipEnrichment);
 
     if (!product) {
       return new Response(
@@ -298,7 +326,7 @@ export async function searchProductsHandler(request, env) {
       );
     }
 
-    const products = await catalogService.listProducts(
+    const result = await catalogService.listProducts(
       {
         q: value.q,
         category: value.category,
@@ -307,10 +335,14 @@ export async function searchProductsHandler(request, env) {
       },
       env,
     );
+    const { products: productsList, total } = result;
+
+    // Build pagination metadata
+    const pagination = buildPaginationMetadata(total, value.page, value.limit);
 
     return new Response(
       JSON.stringify({
-        products: products.map((p) => {
+        products: productsList.map((p) => {
           // Extract images from media field
           let images = [];
           if (p.media) {
@@ -359,9 +391,7 @@ export async function searchProductsHandler(request, env) {
             categories: categories,
           };
         }),
-        page: value.page,
-        limit: value.limit,
-        count: products.length,
+        pagination,
         keyword: value.q,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } },
