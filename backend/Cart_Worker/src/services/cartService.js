@@ -400,7 +400,7 @@ export async function getCartWithEnrichedPricing(userId, sessionId, env) {
   try {
     // Get or create cart
     const cart = await getCart(userId, sessionId, env);
-    
+
     if (!cart || !cart.items || cart.items.length === 0) {
       // Return cart without pricing data if no items
       return {
@@ -412,9 +412,9 @@ export async function getCartWithEnrichedPricing(userId, sessionId, env) {
 
     // Fetch prices for all SKUs in parallel (only once)
     const pricePromises = cart.items.map((item) =>
-      getFullPriceDataFromPricingWorker(item.sku_id, env)
+      getFullPriceDataFromPricingWorker(item.sku_id, env),
     );
-    
+
     const priceResults = await Promise.all(pricePromises);
 
     // Calculate total using the already-fetched price data (avoid duplicate calls)
@@ -423,10 +423,10 @@ export async function getCartWithEnrichedPricing(userId, sessionId, env) {
     const itemPrices = cart.items.map((item, index) => {
       const priceData = priceResults[index];
       // Extract price from the fetched data
-      const currentPrice = priceData 
-        ? (priceData.effective_price || priceData.price || 0.0)
+      const currentPrice = priceData
+        ? priceData.effective_price || priceData.price || 0.0
         : 0.0;
-      
+
       const itemTotal = currentPrice * item.quantity;
       subtotal += itemTotal;
 
@@ -463,7 +463,10 @@ export async function getCartWithEnrichedPricing(userId, sessionId, env) {
       item_prices: itemPrices,
     };
   } catch (err) {
-    logError("getCartWithEnrichedPricing: Service error", err, { userId, sessionId });
+    logError("getCartWithEnrichedPricing: Service error", err, {
+      userId,
+      sessionId,
+    });
     throw err;
   }
 }

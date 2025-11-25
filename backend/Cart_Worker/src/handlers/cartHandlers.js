@@ -318,24 +318,31 @@ export async function getEnrichedCart(request, env) {
   try {
     // Get user ID from header (if logged in) or session ID (for anonymous)
     // Support both X-User-Id and x-userid (case-insensitive)
-    const userId = request.headers.get("X-User-Id") || 
-                   request.headers.get("x-userid") || 
-                   null;
-    const sessionId = request.headers.get("X-Session-Id") || 
-                      request.headers.get("x-session-id") || 
-                      null;
+    const userId =
+      request.headers.get("X-User-Id") ||
+      request.headers.get("x-userid") ||
+      null;
+    const sessionId =
+      request.headers.get("X-Session-Id") ||
+      request.headers.get("x-session-id") ||
+      null;
 
     if (!userId && !sessionId) {
       return new Response(
         JSON.stringify({
           error: "validation_error",
-          message: "Either X-User-Id (or x-userid) or X-Session-Id (or x-session-id) header is required",
+          message:
+            "Either X-User-Id (or x-userid) or X-Session-Id (or x-session-id) header is required",
         }),
         { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
 
-    const enrichedCart = await cartService.getCartWithEnrichedPricing(userId, sessionId, env);
+    const enrichedCart = await cartService.getCartWithEnrichedPricing(
+      userId,
+      sessionId,
+      env,
+    );
 
     return new Response(JSON.stringify(enrichedCart), {
       status: 200,

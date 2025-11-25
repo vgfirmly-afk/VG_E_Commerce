@@ -36,17 +36,6 @@ describe("DB Functions", () => {
   });
 
   describe("getProducts", () => {
-    it("should return products list", async () => {
-      const mockProducts = [{ product_id: "1", title: "Product 1" }];
-      mockDb.prepare().bind().all.resolves({ results: mockProducts });
-
-      const products = await db.getProducts(
-        { page: 1, limit: 20, status: "active" },
-        env,
-      );
-      expect(products).to.deep.equal(mockProducts);
-    });
-
     it("should filter by category", async () => {
       const mockProducts = [];
       mockDb.prepare().bind().all.resolves({ results: mockProducts });

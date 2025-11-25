@@ -174,17 +174,19 @@ export async function getProduct(productId, env, skipEnrichment = false) {
       // Use cached product data - it already includes enriched SKUs with prices and stock
       parsedProduct = cached;
       skus = cached.skus || [];
-      
+
       // Check if cached SKUs already have price and stock data
-      const hasEnrichedData = cached.skus && cached.skus.length > 0 && 
-        cached.skus.some(sku => sku.price || sku.stock);
-      
+      const hasEnrichedData =
+        cached.skus &&
+        cached.skus.length > 0 &&
+        cached.skus.some((sku) => sku.price || sku.stock);
+
       if (hasEnrichedData) {
         // Cached data is already enriched, return it immediately
         logger("product.cache.enriched.hit", { productId });
         return parsedProduct;
       }
-      
+
       // Cached data exists but not enriched, we'll enrich it below
       // But we still have the base product and SKUs from cache
       shouldCache = true; // Cache the enriched result
@@ -208,7 +210,7 @@ export async function getProduct(productId, env, skipEnrichment = false) {
             ? JSON.parse(sku.attributes || "{}")
             : sku.attributes,
       }));
-      
+
       shouldCache = true; // Cache the enriched result
     }
 
@@ -323,7 +325,12 @@ export async function listProducts(query, env) {
     // Get SKUs for each product (optional, can be lazy loaded)
     // For list view, we might not need all SKUs
 
-    logger("products.listed", { count: parsedProducts.length, page, limit, total: result.total });
+    logger("products.listed", {
+      count: parsedProducts.length,
+      page,
+      limit,
+      total: result.total,
+    });
     return {
       products: parsedProducts,
       total: result.total || 0,

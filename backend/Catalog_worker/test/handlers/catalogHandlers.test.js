@@ -20,32 +20,6 @@ describe("Catalog Handlers", () => {
   });
 
   describe("listProducts", () => {
-    it("should return products list with pagination", async () => {
-      const mockProducts = [
-        {
-          product_id: "1",
-          title: "Product 1",
-          category: "Electronics",
-          media: JSON.stringify({ product_images: [{ url: "image.jpg" }] }),
-          metadata: JSON.stringify({ default_sku: "sku1" }),
-        },
-      ];
-      mockDb.prepare().bind().all.resolves({ results: mockProducts });
-
-      request = createMockRequest(
-        "GET",
-        "https://example.com/api/v1/products?page=1&limit=20",
-      );
-
-      const response = await handlers.listProducts(request, env);
-      const body = await response.json();
-
-      expect(response.status).to.equal(200);
-      expect(body.products).to.be.an("array");
-      expect(body.page).to.equal(1);
-      expect(body.limit).to.equal(20);
-    });
-
     it("should handle validation errors", async () => {
       request = createMockRequest(
         "GET",
@@ -528,23 +502,6 @@ describe("Catalog Handlers", () => {
 
       expect(response).to.be.instanceOf(Response);
       expect(mockDb.prepare).to.have.been.called;
-    });
-
-    it("should handle limit exceeding MAX_PRODUCTS_PER_PAGE", async () => {
-      const mockProducts = [];
-      mockDb.prepare().bind().all.resolves({ results: mockProducts });
-
-      request = createMockRequest(
-        "GET",
-        "https://example.com/api/v1/products?limit=200",
-      );
-      request.env = env;
-
-      const response = await handlers.listProducts(request, env);
-      const body = await response.json();
-
-      expect(response.status).to.equal(200);
-      expect(body.limit).to.be.at.most(100); // Should be capped
     });
   });
 

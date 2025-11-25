@@ -36,7 +36,7 @@ const createAuthStore = () => {
       // Only call if we have userId cookie (indicates tokens might exist)
       if (browser) {
         set({ user: null, isAuthenticated: false, loading: true });
-        
+
         // Check if userId cookie exists before making request
         const userId = getUserIdCookie();
         if (!userId) {
@@ -48,7 +48,7 @@ const createAuthStore = () => {
           });
           return;
         }
-        
+
         try {
           const user = await getMe();
           set({

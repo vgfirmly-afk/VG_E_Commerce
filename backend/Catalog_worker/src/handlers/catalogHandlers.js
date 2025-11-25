@@ -161,7 +161,11 @@ export async function getProduct(request, env) {
     const url = new URL(request.url);
     const skipEnrichment = url.searchParams.get("skipEnrichment") === "true";
 
-    const product = await catalogService.getProduct(productId, env, skipEnrichment);
+    const product = await catalogService.getProduct(
+      productId,
+      env,
+      skipEnrichment,
+    );
 
     if (!product) {
       return new Response(

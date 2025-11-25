@@ -1,5 +1,10 @@
 import { API_BASE_URLS } from "../config.js";
-import { hasAuthCookies, setUserIdCookie, clearUserIdCookie, getUserIdCookie } from "../utils/cookies.js";
+import {
+  hasAuthCookies,
+  setUserIdCookie,
+  clearUserIdCookie,
+  getUserIdCookie,
+} from "../utils/cookies.js";
 
 const API_BASE = API_BASE_URLS.AUTH;
 
@@ -25,7 +30,7 @@ async function refreshTokenAndRetry(originalRequest) {
       {
         method: "POST",
         body: JSON.stringify({}), // Backend reads refreshToken from cookie
-      }
+      },
     );
 
     if (!refreshResponse.ok) {
@@ -101,7 +106,7 @@ export async function login(email, password) {
   if (!response.ok) {
     throw new Error(data.message || "Login failed");
   }
-  
+
   // Tokens are in httpOnly cookies set by backend AND in response body
   // Use accessToken from response to immediately fetch user data
   // This avoids waiting for cookies to be set
@@ -124,7 +129,7 @@ export async function login(email, password) {
       // Try to extract userId from token payload (sub field contains userId)
       try {
         // Decode JWT to get userId (we only need the payload, no verification needed for this)
-        const payload = JSON.parse(atob(data.accessToken.split('.')[1]));
+        const payload = JSON.parse(atob(data.accessToken.split(".")[1]));
         if (payload.sub) {
           setUserIdCookie(payload.sub, 30);
           return { ...data, userId: payload.sub };
@@ -136,7 +141,7 @@ export async function login(email, password) {
       return data;
     }
   }
-  
+
   return data;
 }
 
@@ -156,21 +161,21 @@ export async function refreshToken() {
     clearUserIdCookie();
     throw new Error(data.message || "Token refresh failed");
   }
-  
+
   // New tokens are set in cookies by backend via Set-Cookie headers
   // Update userId cookie if we have user info
   if (data.userId || data.user?.userId) {
     const userId = data.userId || data.user.userId;
     setUserIdCookie(userId, 30);
   }
-  
+
   return data;
 }
 
 export async function logout() {
   // Clear userId cookie immediately
   clearUserIdCookie();
-  
+
   // Logout - backend will clear httpOnly cookies
   try {
     const response = await fetchWithCredentials(

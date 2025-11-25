@@ -48,6 +48,10 @@ module.exports = [
         Headers: "readonly",
         URL: "readonly",
         URLSearchParams: "readonly",
+        setTimeout: "readonly",
+        setInterval: "readonly",
+        clearTimeout: "readonly",
+        clearInterval: "readonly",
 
         // Encoding
         TextEncoder: "readonly",

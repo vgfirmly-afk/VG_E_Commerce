@@ -619,7 +619,7 @@ export async function getProducts(
     const res = await env.CATALOG_DB.prepare(sql)
       .bind(...bindings)
       .all();
-    
+
     return {
       products: res?.results || [],
       total: total,
@@ -668,7 +668,13 @@ export async function searchProducts(
     const countBindings = ["active"];
     const searchTerm = `%${keyword}%`;
     bindings.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
-    countBindings.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+    countBindings.push(
+      searchTerm,
+      searchTerm,
+      searchTerm,
+      searchTerm,
+      searchTerm,
+    );
 
     if (category) {
       // Category is now a direct column for fast querying
@@ -691,7 +697,7 @@ export async function searchProducts(
     const res = await env.CATALOG_DB.prepare(sql)
       .bind(...bindings)
       .all();
-    
+
     return {
       products: res?.results || [],
       total: total,

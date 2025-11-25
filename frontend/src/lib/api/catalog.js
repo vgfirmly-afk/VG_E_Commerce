@@ -62,7 +62,12 @@ export async function getProductImage(productId, imageId) {
   return response.blob();
 }
 
-export async function searchProducts(query, page = 1, limit = 20, category = "") {
+export async function searchProducts(
+  query,
+  page = 1,
+  limit = 20,
+  category = "",
+) {
   const params = new URLSearchParams({
     q: query,
     page: page.toString(),

@@ -15,7 +15,7 @@
 #   contents: read
 
 # jobs:
-#   staging-matrix: 
+#   staging-matrix:
 #     name: Publish & test ${{ matrix.prod_name }}
 #     runs-on: ubuntu-latest
 #     strategy:
@@ -46,7 +46,7 @@
 #         uses: actions/checkout@v4
 #         with:
 #           fetch-depth: 50
-  
+
 #       - name: Set up Node.js (compatible with Wrangler v4)
 #         uses: actions/setup-node@v4
 #         with:
@@ -70,7 +70,7 @@
 #         run: |
 #           echo "🔍 Checking for Cloudflare API tokens..."
 #           echo ""
-          
+
 #           # Check staging token
 #           if [ -n "${{ secrets.CF_API_TOKEN_STAGING }}" ]; then
 #             TOKEN_LEN=$(echo -n "${{ secrets.CF_API_TOKEN_STAGING }}" | wc -c)
@@ -79,7 +79,7 @@
 #             SELECTED_TOKEN="CF_API_TOKEN_STAGING"
 #           else
 #             echo "⚠ CF_API_TOKEN_STAGING is NOT set in staging environment"
-            
+
 #             # Check production token as fallback
 #             if [ -n "${{ secrets.CF_API_TOKEN_PROD }}" ]; then
 #               TOKEN_LEN=$(echo -n "${{ secrets.CF_API_TOKEN_PROD }}" | wc -c)
@@ -98,7 +98,7 @@
 #               exit 1
 #             fi
 #           fi
-          
+
 #           echo ""
 #           echo "Selected token: $SELECTED_TOKEN"
 #           echo "token_name=$SELECTED_TOKEN" >> $GITHUB_OUTPUT
@@ -109,68 +109,68 @@
 #           if [ "${{ steps.check_token.outputs.use_staging }}" = "true" ]; then
 #             TOKEN="${{ secrets.CF_API_TOKEN_STAGING }}"
 #             TOKEN_NAME="CF_API_TOKEN_STAGING"
-#           else  
+#           else
 #             TOKEN="${{ secrets.CF_API_TOKEN_PROD }}"
 #             TOKEN_NAME="CF_API_TOKEN_PROD"
 #           fi
 
 #           echo "🔐 Testing $TOKEN_NAME with Cloudflare API..."
 #           echo ""
-          
+
 #           # First, get the account ID from accounts list
 #           echo "Step 2a: Getting account information..."
 #           ACCOUNTS_RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "https://api.cloudflare.com/client/v4/accounts" \
 #             -H "Authorization: Bearer $TOKEN" \
 #             -H "Content-Type: application/json" 2>&1)
-          
+
 #           ACCOUNTS_HTTP_CODE=$(echo "$ACCOUNTS_RESPONSE" | tail -n1)
 #           ACCOUNTS_BODY=$(echo "$ACCOUNTS_RESPONSE" | sed '$d')
-          
+
 #           if [ "$ACCOUNTS_HTTP_CODE" != "200" ]; then
 #             echo "::error::Failed to get accounts (HTTP $ACCOUNTS_HTTP_CODE)"
 #             echo "Response: $ACCOUNTS_BODY"
 #             exit 1
 #           fi
-          
+
 #           # Extract the first account ID from the result array
 #           # Try using jq if available (more reliable)
 #           if command -v jq >/dev/null 2>&1; then
 #             ACCOUNT_ID=$(echo "$ACCOUNTS_BODY" | jq -r '.result[0].id // empty' 2>/dev/null)
 #           fi
-          
+
 #           # Fallback to sed/grep if jq is not available
 #           if [ -z "$ACCOUNT_ID" ]; then
 #             ACCOUNT_ID=$(echo "$ACCOUNTS_BODY" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p' | head -1)
 #           fi
-          
+
 #           # Another fallback method
 #           if [ -z "$ACCOUNT_ID" ]; then
 #             ACCOUNT_ID=$(echo "$ACCOUNTS_BODY" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
 #           fi
-          
+
 #           if [ -z "$ACCOUNT_ID" ]; then
 #             echo "::error::Could not extract account ID from accounts response"
 #             echo "Response: $ACCOUNTS_BODY"
 #             exit 1
 #           fi
-          
+
 #           echo "✓ Account ID: $ACCOUNT_ID"
 #           echo ""
-          
+
 #           # Now verify the token using the account-specific endpoint
 #           echo "Step 2b: Verifying token with account-specific endpoint..."
 #           echo "Making request to: https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/tokens/verify"
 #           echo ""
-          
+
 #           RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/tokens/verify" \
 #             -H "Authorization: Bearer $TOKEN" \
 #             -H "Content-Type: application/json" 2>&1)
-          
+
 #           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
 #           BODY=$(echo "$RESPONSE" | sed '$d')
-          
+
 #           echo "Response HTTP Code: $HTTP_CODE"
-          
+
 #           if [ "$HTTP_CODE" = "200" ]; then
 #             echo "✓ Token is valid and accessible!"
 #             echo "Response: $BODY" | head -c 300

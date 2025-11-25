@@ -703,7 +703,7 @@ async function handleOrderApproved(resource, env) {
         payment_id: payment.payment_id,
         paypal_order_id: orderId,
       });
-      
+
       const purchaseUnit = resource.purchase_units?.[0];
       const captureData = purchaseUnit?.payments?.captures?.[0];
       const payer = resource.payer;
@@ -730,18 +730,21 @@ async function handleOrderApproved(resource, env) {
         },
         env,
       );
-      
+
       // Use the resource as capture result
       captureResult = resource;
       shouldCapture = false;
     } else if (orderStatus !== "APPROVED") {
       // Order not in APPROVED status - get fresh status from PayPal
-      logWarn("handleOrderApproved: Order not in APPROVED status from webhook", {
-        payment_id: payment.payment_id,
-        paypal_order_id: orderId,
-        webhook_status: orderStatus,
-      });
-      
+      logWarn(
+        "handleOrderApproved: Order not in APPROVED status from webhook",
+        {
+          payment_id: payment.payment_id,
+          paypal_order_id: orderId,
+          webhook_status: orderStatus,
+        },
+      );
+
       // Get fresh order status from PayPal
       let paypalOrder;
       try {
@@ -751,7 +754,7 @@ async function handleOrderApproved(resource, env) {
           paypal_order_id: orderId,
           order_status: paypalOrder.status,
         });
-        
+
         if (paypalOrder.status === "COMPLETED") {
           // Order completed between webhook and check
           const purchaseUnit = paypalOrder.purchase_units?.[0];
@@ -780,7 +783,7 @@ async function handleOrderApproved(resource, env) {
             },
             env,
           );
-          
+
           captureResult = paypalOrder;
           shouldCapture = false;
         } else if (paypalOrder.status !== "APPROVED") {
@@ -793,10 +796,14 @@ async function handleOrderApproved(resource, env) {
           };
         }
       } catch (orderErr) {
-        logError("handleOrderApproved: Failed to get PayPal order status", orderErr, {
-          payment_id: payment.payment_id,
-          paypal_order_id: orderId,
-        });
+        logError(
+          "handleOrderApproved: Failed to get PayPal order status",
+          orderErr,
+          {
+            payment_id: payment.payment_id,
+            paypal_order_id: orderId,
+          },
+        );
         // Continue with capture attempt anyway if status was APPROVED in webhook
         if (orderStatus !== "APPROVED") {
           return {
@@ -821,15 +828,15 @@ async function handleOrderApproved(resource, env) {
         delay_ms: initialDelayMs,
         reason: "Waiting for PayPal to finalize approval before capture",
       });
-      
+
       await new Promise((resolve) => setTimeout(resolve, initialDelayMs));
-      
+
       // Retry logic with exponential backoff
       let captureAttemptResult = null;
       let lastError = null;
       const maxRetries = 3;
       const baseDelay = 1000; // 1 second
-      
+
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           logger("webhook.order.approved.capture_attempt", {
@@ -838,13 +845,13 @@ async function handleOrderApproved(resource, env) {
             attempt,
             max_retries: maxRetries,
           });
-          
+
           captureAttemptResult = await capturePayPalOrder(orderId, env);
-          
+
           if (!captureAttemptResult) {
             throw new Error("Capture returned null");
           }
-          
+
           // Success - break out of retry loop
           logger("webhook.order.approved.capture_success", {
             payment_id: payment.payment_id,
@@ -861,7 +868,7 @@ async function handleOrderApproved(resource, env) {
             attempt,
             max_retries: maxRetries,
           });
-          
+
           // If this is not the last attempt, wait before retrying
           if (attempt < maxRetries) {
             const retryDelay = baseDelay * Math.pow(2, attempt - 1); // Exponential backoff: 1s, 2s, 4s
@@ -877,15 +884,19 @@ async function handleOrderApproved(resource, env) {
           }
         }
       }
-      
+
       // If all retries failed
       if (!captureResult) {
-        logError("handleOrderApproved: All capture attempts failed", lastError, {
-          payment_id: payment.payment_id,
-          paypal_order_id: orderId,
-          total_attempts: maxRetries,
-        });
-        
+        logError(
+          "handleOrderApproved: All capture attempts failed",
+          lastError,
+          {
+            payment_id: payment.payment_id,
+            paypal_order_id: orderId,
+            total_attempts: maxRetries,
+          },
+        );
+
         // Update payment to approved with failure reason
         payment = await updatePaymentStatus(
           payment.payment_id,
@@ -901,7 +912,7 @@ async function handleOrderApproved(resource, env) {
           },
           env,
         );
-        
+
         return {
           processed: false,
           payment_id: payment.payment_id,
@@ -990,9 +1001,13 @@ async function handleOrderApproved(resource, env) {
           checkout_session_id: payment.checkout_session_id,
         });
       } catch (fulfillmentErr) {
-        logError("handleOrderApproved: Failed to create order", fulfillmentErr, {
-          payment_id: payment.payment_id,
-        });
+        logError(
+          "handleOrderApproved: Failed to create order",
+          fulfillmentErr,
+          {
+            payment_id: payment.payment_id,
+          },
+        );
         // Don't throw - log error but continue
       }
     }
@@ -1009,9 +1024,13 @@ async function handleOrderApproved(resource, env) {
           payment_id: payment.payment_id,
         });
       } catch (inventoryErr) {
-        logError("handleOrderApproved: Failed to deduct inventory", inventoryErr, {
-          payment_id: payment.payment_id,
-        });
+        logError(
+          "handleOrderApproved: Failed to deduct inventory",
+          inventoryErr,
+          {
+            payment_id: payment.payment_id,
+          },
+        );
         // Don't throw - log error but continue
       }
     }
@@ -1042,9 +1061,13 @@ async function handleOrderApproved(resource, env) {
     try {
       await notifyCheckoutWorker(payment, env);
     } catch (checkoutErr) {
-      logError("handleOrderApproved: Failed to notify checkout worker", checkoutErr, {
-        payment_id: payment.payment_id,
-      });
+      logError(
+        "handleOrderApproved: Failed to notify checkout worker",
+        checkoutErr,
+        {
+          payment_id: payment.payment_id,
+        },
+      );
       // Don't throw - log error but continue
     }
 

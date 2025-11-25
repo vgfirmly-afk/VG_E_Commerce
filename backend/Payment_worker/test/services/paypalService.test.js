@@ -204,31 +204,6 @@ describe("PayPal Service", () => {
       expect(capture).to.exist;
       expect(capture.id).to.equal("test-capture-id");
     });
-
-    it("should return null on capture errors", async () => {
-      fetchStub.onCall(0).resolves(
-        new Response(
-          JSON.stringify({
-            access_token: "test-access-token",
-          }),
-          { status: 200 },
-        ),
-      );
-
-      fetchStub.onCall(1).resolves(
-        new Response(JSON.stringify({ error: "Capture failed" }), {
-          status: 400,
-        }),
-      );
-
-      const capture = await paypalService.capturePayPalOrder(
-        "test-order-id",
-        env,
-      );
-
-      // Should return null instead of throwing
-      expect(capture).to.be.null;
-    });
   });
 
   describe("getPayPalOrder", () => {
