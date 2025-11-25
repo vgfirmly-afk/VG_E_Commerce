@@ -572,40 +572,58 @@ export async function getProducts(
   env,
 ) {
   try {
-    let sql = "SELECT * FROM products WHERE deleted = 0";
+    // Build WHERE clause conditions
+    let whereClause = "WHERE deleted = 0";
     const bindings = [];
+    const countBindings = [];
 
     if (status) {
-      sql += " AND status = ?";
+      whereClause += " AND status = ?";
       bindings.push(status);
+      countBindings.push(status);
     }
 
     if (category) {
       // Category is now a direct column for fast querying
-      sql += " AND category = ?";
+      whereClause += " AND category = ?";
       bindings.push(category);
+      countBindings.push(category);
     }
 
     if (featured !== undefined) {
-      sql += " AND featured = ?";
+      whereClause += " AND featured = ?";
       bindings.push(featured ? 1 : 0);
+      countBindings.push(featured ? 1 : 0);
     }
 
     if (search) {
       // Brand is now in metadata JSON, search in title, description, and metadata
-      sql +=
+      whereClause +=
         ' AND (title LIKE ? OR description LIKE ? OR json_extract(metadata, "$.brand") LIKE ? OR metadata LIKE ?)';
       const searchTerm = `%${search}%`;
       bindings.push(searchTerm, searchTerm, searchTerm, searchTerm);
+      countBindings.push(searchTerm, searchTerm, searchTerm, searchTerm);
     }
 
-    sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+    // Get total count
+    const countSql = `SELECT COUNT(*) as total FROM products ${whereClause}`;
+    const countRes = await env.CATALOG_DB.prepare(countSql)
+      .bind(...countBindings)
+      .first();
+    const total = countRes?.total || 0;
+
+    // Get paginated results
+    let sql = `SELECT * FROM products ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`;
     bindings.push(limit, (page - 1) * limit);
 
     const res = await env.CATALOG_DB.prepare(sql)
       .bind(...bindings)
       .all();
-    return res?.results || [];
+
+    return {
+      products: res?.results || [],
+      total: total,
+    };
   } catch (err) {
     logError("getProducts: Database error", err, {
       category,
@@ -644,25 +662,46 @@ export async function searchProducts(
 ) {
   try {
     // Brand and tags are now in metadata JSON
-    let sql =
-      'SELECT * FROM products WHERE deleted = 0 AND status = ? AND (title LIKE ? OR description LIKE ? OR json_extract(metadata, "$.brand") LIKE ? OR json_extract(metadata, "$.tags") LIKE ? OR metadata LIKE ?)';
+    let whereClause =
+      'WHERE deleted = 0 AND status = ? AND (title LIKE ? OR description LIKE ? OR json_extract(metadata, "$.brand") LIKE ? OR json_extract(metadata, "$.tags") LIKE ? OR metadata LIKE ?)';
     const bindings = ["active"];
+    const countBindings = ["active"];
     const searchTerm = `%${keyword}%`;
     bindings.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+    countBindings.push(
+      searchTerm,
+      searchTerm,
+      searchTerm,
+      searchTerm,
+      searchTerm,
+    );
 
     if (category) {
       // Category is now a direct column for fast querying
-      sql += " AND category = ?";
+      whereClause += " AND category = ?";
       bindings.push(category);
+      countBindings.push(category);
     }
 
-    sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+    // Get total count
+    const countSql = `SELECT COUNT(*) as total FROM products ${whereClause}`;
+    const countRes = await env.CATALOG_DB.prepare(countSql)
+      .bind(...countBindings)
+      .first();
+    const total = countRes?.total || 0;
+
+    // Get paginated results
+    let sql = `SELECT * FROM products ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`;
     bindings.push(limit, (page - 1) * limit);
 
     const res = await env.CATALOG_DB.prepare(sql)
       .bind(...bindings)
       .all();
-    return res?.results || [];
+
+    return {
+      products: res?.results || [],
+      total: total,
+    };
   } catch (err) {
     logError("searchProducts: Database error", err, { keyword, page, limit });
     throw err;

@@ -27,6 +27,11 @@ router.get("/api/v1/cart", async (request, env, ctx) => {
   return cartHandlers.getCart(request, request.env || env);
 });
 
+// New endpoint for enriched cart with pricing data
+router.get("/api/v1/cart/enriched", async (request, env, ctx) => {
+  return cartHandlers.getEnrichedCart(request, request.env || env);
+});
+
 router.get("/api/v1/cart/:cart_id", async (request, env, ctx) => {
   return cartHandlers.getCartById(request, request.env || env);
 });

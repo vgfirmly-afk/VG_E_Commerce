@@ -305,3 +305,54 @@ export async function getTotal(request, env) {
     );
   }
 }
+
+/**
+ * GET /cart/enriched - Get cart with enriched pricing data
+ * - Gets or creates cart based on x-userid and x-session-id headers
+ * - If cart has items:
+ *   - Fetches prices for all SKUs in parallel from Pricing Worker
+ *   - Gets cart total
+ *   - Merges all data into a single response
+ */
+export async function getEnrichedCart(request, env) {
+  try {
+    // Get user ID from header (if logged in) or session ID (for anonymous)
+    // Support both X-User-Id and x-userid (case-insensitive)
+    const userId =
+      request.headers.get("X-User-Id") ||
+      request.headers.get("x-userid") ||
+      null;
+    const sessionId =
+      request.headers.get("X-Session-Id") ||
+      request.headers.get("x-session-id") ||
+      null;
+
+    if (!userId && !sessionId) {
+      return new Response(
+        JSON.stringify({
+          error: "validation_error",
+          message:
+            "Either X-User-Id (or x-userid) or X-Session-Id (or x-session-id) header is required",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    const enrichedCart = await cartService.getCartWithEnrichedPricing(
+      userId,
+      sessionId,
+      env,
+    );
+
+    return new Response(JSON.stringify(enrichedCart), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    logError("getEnrichedCart: Handler error", err);
+    return new Response(
+      JSON.stringify({ error: "internal_error", message: err.message }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
+}

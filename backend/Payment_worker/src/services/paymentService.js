@@ -109,8 +109,13 @@ export async function createPaymentIntent(paymentData, env) {
       status: payment.status,
     });
 
+    // Return only essential fields and approval URL, excluding metadata with all PayPal links
     return {
-      ...payment,
+      payment_id: payment.payment_id,
+      checkout_session_id: payment.checkout_session_id,
+      status: payment.status,
+      amount: payment.amount,
+      currency: payment.currency,
       approval_url: approvalUrl,
       paypal_order_id: paypalOrder.id,
     };

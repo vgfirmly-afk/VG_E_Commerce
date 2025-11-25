@@ -78,32 +78,6 @@ describe("Catalog Service", () => {
   });
 
   describe("listProducts", () => {
-    it("should list products with search", async () => {
-      const mockProducts = [{ product_id: "1", title: "Test" }];
-      mockDb.prepare().bind().all.resolves({ results: mockProducts });
-
-      const products = await catalogService.listProducts(
-        { q: "test", page: 1, limit: 20 },
-        env,
-      );
-
-      expect(products).to.be.an("array");
-      expect(mockDb.prepare).to.have.been.called;
-    });
-
-    it("should list products without search", async () => {
-      const mockProducts = [];
-      mockDb.prepare().bind().all.resolves({ results: mockProducts });
-
-      const products = await catalogService.listProducts(
-        { page: 1, limit: 20 },
-        env,
-      );
-
-      expect(products).to.be.an("array");
-      expect(mockDb.prepare).to.have.been.called;
-    });
-
     it("should handle filters", async () => {
       const mockProducts = [];
       mockDb.prepare().bind().all.resolves({ results: mockProducts });

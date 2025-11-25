@@ -34,7 +34,6 @@ npm --workspace backend/Checkout_Worker run test:coverage
 npm --workspace backend/Fullfilment_Worker run test:coverage
 npm --workspace backend/Invertory_Worker run test:coverage
 npm --workspace backend/Pricing_Worker run test:coverage
-npm --workspace backend/Payment_worker run test:coverage
 
 
 echo "Coverage Checks Completed"

@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { getProducts, getProductsByCategory, searchProducts } from '$lib/api/catalog.js';
 	import ProductCard from '$lib/components/ProductCard.svelte';
+	import Paginator from '$lib/components/Paginator.svelte';
 
 	let allProducts = [];
 	let categories = {};
@@ -13,8 +14,7 @@
 	let searchLoading = false;
 	let currentPage = 1;
 	let pageLimit = 20;
-	let totalPages = 1;
-	let totalCount = 0;
+	let pagination = null;
 
 	onMount(async () => {
 		await loadInitialData();
@@ -28,8 +28,25 @@
 			const data = await getProducts(currentPage, pageLimit);
 			if (data && data.products) {
 				allProducts = data.products;
-				totalCount = data.count || data.products.length;
-				totalPages = Math.ceil(totalCount / pageLimit);
+				// Always create a new object reference to ensure reactivity
+				if (data.pagination) {
+					pagination = { ...data.pagination };
+				} else if (data.total !== undefined) {
+					// Fallback: create pagination object if backend returns total but not pagination
+					const totalPages = Math.ceil((data.total || data.products.length) / pageLimit);
+					pagination = {
+						total: data.total || data.products.length,
+						totalPages: totalPages,
+						currentPage: currentPage,
+						limit: pageLimit,
+						hasNext: currentPage < totalPages,
+						hasPrevious: currentPage > 1,
+						nextPage: currentPage < totalPages ? currentPage + 1 : null,
+						previousPage: currentPage > 1 ? currentPage - 1 : null,
+					};
+				} else {
+					pagination = null;
+				}
 				
 				// Extract unique categories
 				const categorySet = new Set();
@@ -65,7 +82,7 @@
 		});
 	}
 
-	async function handleSearch() {
+	async function handleSearch(resetPage = true) {
 		if (!searchQuery.trim()) {
 			currentPage = 1;
 			await loadInitialData();
@@ -75,15 +92,35 @@
 
 		searchLoading = true;
 		error = null;
-		currentPage = 1;
+		// Reset to page 1 only when starting a new search, not when paginating
+		if (resetPage && currentPage !== 1) {
+			currentPage = 1;
+		}
 		try {
-			const data = await searchProducts(searchQuery, currentPage, pageLimit);
+			const category = selectedCategory !== 'All' ? selectedCategory : '';
+			const data = await searchProducts(searchQuery, currentPage, pageLimit, category);
 			if (data && data.products) {
 				allProducts = data.products;
-				totalCount = data.count || data.products.length;
-				totalPages = Math.ceil(totalCount / pageLimit);
+				// Always create a new object reference to ensure reactivity
+				if (data.pagination) {
+					pagination = { ...data.pagination };
+				} else if (data.total !== undefined) {
+					// Fallback: create pagination object if backend returns total but not pagination
+					const totalPages = Math.ceil((data.total || data.products.length) / pageLimit);
+					pagination = {
+						total: data.total || data.products.length,
+						totalPages: totalPages,
+						currentPage: currentPage,
+						limit: pageLimit,
+						hasNext: currentPage < totalPages,
+						hasPrevious: currentPage > 1,
+						nextPage: currentPage < totalPages ? currentPage + 1 : null,
+						previousPage: currentPage > 1 ? currentPage - 1 : null,
+					};
+				} else {
+					pagination = null;
+				}
 				groupProductsByCategory(data.products);
-				selectedCategory = 'All';
 			}
 		} catch (err) {
 			error = err.message;
@@ -93,24 +130,50 @@
 		}
 	}
 
-	async function handleCategorySelect(category) {
+	async function handleCategorySelect(category, resetPage = true) {
 		selectedCategory = category;
-		searchQuery = '';
-		currentPage = 1;
+		// Only clear search query when selecting a new category (not when paginating)
+		if (resetPage) {
+			searchQuery = '';
+		}
 		
 		if (category === 'All') {
+			if (resetPage) {
+				currentPage = 1;
+			}
 			await loadInitialData();
 			return;
 		}
 
 		loading = true;
 		error = null;
+		// Reset to page 1 only when selecting a new category, not when paginating
+		if (resetPage) {
+			currentPage = 1;
+		}
 		try {
 			const data = await getProductsByCategory(category, currentPage, pageLimit);
 			if (data && data.products) {
 				allProducts = data.products;
-				totalCount = data.count || data.products.length;
-				totalPages = Math.ceil(totalCount / pageLimit);
+				// Always create a new object reference to ensure reactivity
+				if (data.pagination) {
+					pagination = { ...data.pagination };
+				} else if (data.total !== undefined) {
+					// Fallback: create pagination object if backend returns total but not pagination
+					const totalPages = Math.ceil((data.total || data.products.length) / pageLimit);
+					pagination = {
+						total: data.total || data.products.length,
+						totalPages: totalPages,
+						currentPage: currentPage,
+						limit: pageLimit,
+						hasNext: currentPage < totalPages,
+						hasPrevious: currentPage > 1,
+						nextPage: currentPage < totalPages ? currentPage + 1 : null,
+						previousPage: currentPage > 1 ? currentPage - 1 : null,
+					};
+				} else {
+					pagination = null;
+				}
 				groupProductsByCategory(data.products);
 			}
 		} catch (err) {
@@ -122,15 +185,19 @@
 	}
 
 	async function handlePageChange(newPage) {
-		if (newPage < 1 || newPage > totalPages) return;
+		if (!pagination) return;
+		if (newPage < 1 || newPage > pagination.totalPages) return;
+		
 		currentPage = newPage;
 		
 		if (searchQuery.trim()) {
-			await handleSearch();
+			// Don't reset page when paginating through search results
+			await handleSearch(false);
 		} else if (selectedCategory === 'All') {
 			await loadInitialData();
 		} else {
-			await handleCategorySelect(selectedCategory);
+			// Don't reset page when paginating through category results
+			await handleCategorySelect(selectedCategory, false);
 		}
 	}
 
@@ -228,12 +295,20 @@
 		<div class="max-w-md mx-auto bg-red-50 border-l-4 border-red-500 text-red-700 px-6 py-4 rounded shadow-lg animate-slide-up">
 			<p class="font-medium">{error}</p>
 		</div>
-	{:else if selectedCategory === 'All'}
-		<!-- Show all products -->
+	{:else}
+		<!-- Show all products or filtered products with pagination -->
 		{#if allProducts.length > 0}
 			<div class="mb-8">
 				<div class="flex items-center justify-between mb-6">
-					<h2 class="text-3xl font-bold text-gray-800">All Products</h2>
+					<h2 class="text-3xl font-bold text-gray-800">
+						{#if searchQuery.trim()}
+							Search Results
+						{:else if selectedCategory !== 'All'}
+							{selectedCategory}
+						{:else}
+							All Products
+						{/if}
+					</h2>
 					<div class="flex items-center gap-4">
 						<div class="flex items-center gap-2">
 							<label for="page-limit" class="text-sm text-gray-700">Items per page:</label>
@@ -260,34 +335,9 @@
 				</div>
 				
 				<!-- Pagination -->
-				{#if totalPages > 1}
-					<div class="mt-8 flex items-center justify-center gap-2">
-						<button
-							on:click={() => handlePageChange(currentPage - 1)}
-							disabled={currentPage === 1}
-							class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-						>
-							Previous
-						</button>
-						<div class="flex items-center gap-2">
-							<span class="text-sm text-gray-700">Page</span>
-							<input
-								type="number"
-								min="1"
-								max={totalPages}
-								bind:value={currentPage}
-								on:change={(e) => handlePageChange(Number(e.target.value))}
-								class="w-16 px-2 py-1 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-							/>
-							<span class="text-sm text-gray-700">of {totalPages}</span>
-						</div>
-						<button
-							on:click={() => handlePageChange(currentPage + 1)}
-							disabled={currentPage === totalPages}
-							class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-						>
-							Next
-						</button>
+				{#if pagination}
+					<div class="mt-8">
+						<Paginator {pagination} onPageChange={handlePageChange} />
 					</div>
 				{/if}
 			</div>
@@ -296,26 +346,5 @@
 				<p class="text-gray-600 text-lg">No products found</p>
 			</div>
 		{/if}
-	{:else}
-		<!-- Show products by category -->
-		<div class="space-y-16">
-			{#each Object.entries(categories) as [category, products], i}
-				{#if products && products.length > 0}
-					<section class="animate-fade-in" style="animation-delay: {i * 0.1}s">
-						<div class="flex items-center gap-4 mb-6">
-							<h2 class="text-3xl font-bold text-gray-800">{category}</h2>
-							<div class="flex-1 h-0.5 bg-gradient-to-r from-blue-600 to-transparent"></div>
-						</div>
-						<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-							{#each products as product, j}
-								<div class="animate-slide-up" style="animation-delay: {j * 0.05}s">
-									<ProductCard {product} />
-								</div>
-							{/each}
-						</div>
-					</section>
-				{/if}
-			{/each}
-		</div>
 	{/if}
 </div>

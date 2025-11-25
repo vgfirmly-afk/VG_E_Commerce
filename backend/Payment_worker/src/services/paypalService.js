@@ -164,8 +164,7 @@ export async function capturePayPalOrder(orderId, env) {
     return capture;
   } catch (err) {
     logError("capturePayPalOrder: Error", err, { orderId });
-    // throw err;
-    return null;
+    throw err;
   }
 }
 
